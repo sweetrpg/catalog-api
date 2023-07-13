@@ -1,0 +1,87 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+    name: api-v1
+
+spec:
+    strategy:
+        rollingUpdate:
+            maxSurge: 1
+            maxUnavailable: 1
+        type: RollingUpdate
+    selector:
+        matchLabels:
+            app: api
+            version: v1
+            platform: sweetrpg
+            package: library
+            component: api
+    template:
+        metadata:
+            labels:
+                platform: sweetrpg
+                app: api
+                package: library
+                component: api
+                version: v1
+        spec:
+            serviceAccountName: api
+            imagePullSecrets:
+                - name: sweetrpg-registry
+            containers:
+                - name: app
+                  image: ghcr.io/sweetrpg/library-api:latest
+                  imagePullPolicy: Always
+                  envFrom:
+                      - configMapRef:
+                            name: api-common
+                      - configMapRef:
+                            name: api-env
+                      - secretRef:
+                            name: api-db
+                      - secretRef:
+                            name: api-auth
+                      - secretRef:
+                            name: api-misc
+                      - secretRef:
+                            name: api-cache
+                  env: []
+                  ports:
+                      - containerPort: 8281
+                        name: http
+                  resources:
+                      requests:
+                          cpu: "20m"
+                          memory: "55m"
+                      limits:
+                          cpu: "1.0"
+                          memory: "1Gi"
+                  #   livenessProbe:
+                  #       httpGet:
+                  #           path: /health/ping
+                  #           port: 8281
+                  #       initialDelaySeconds: 90
+                  #       timeoutSeconds: 10
+                  #   readinessProbe:
+                  #       httpGet:
+                  #           path: /health/ping
+                  #           port: 8281
+                  #       initialDelaySeconds: 30
+                  #       timeoutSeconds: 10
+                  volumeMounts:
+                      - mountPath: /data
+                        name: data
+                      - mountPath: /config
+                        name: config
+            volumes:
+                - name: config
+                  secret:
+                      secretName: api-files
+                      items:
+                          - key: newrelic.ini
+                            path: newrelic.ini
+                - name: data
+                  emptyDir: {}
+            restartPolicy: Always
