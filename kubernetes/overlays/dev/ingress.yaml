@@ -1,26 +1,26 @@
----
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRoute
+# ---
+# apiVersion: traefik.containo.us/v1alpha1
+# kind: IngressRoute
 
-metadata:
-  name: api-v1
+# metadata:
+#   name: api-v1
 
-spec:
-  entryPoints:
-    - web
-  routes:
-    - match: Host(`api.catalog.dev.sweetrpg.com`) && (PathPrefix(`/0/`) || PathPrefix(`/1/`))
-      kind: Rule
-      services:
-        - kind: Service
-          name: api-v1
-          port: 8281
-          passHostHeader: true
-          responseForwarding:
-            flushInterval: 1ms
-      middlewares:
-        - name: strip-prefix
-
+# spec:
+#   entryPoints:
+#     - web
+#   routes:
+#     - match: Host(`api.catalog.dev.sweetrpg.com`) && (PathPrefix(`/0/`) || PathPrefix(`/1/`))
+#       kind: Rule
+#       services:
+#         - kind: Service
+#           name: api-v1
+#           port: 8281
+#           passHostHeader: true
+#           responseForwarding:
+#             flushInterval: 1ms
+#       middlewares:
+#         - name: strip-prefix
+#
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

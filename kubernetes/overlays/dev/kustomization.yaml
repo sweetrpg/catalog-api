@@ -13,6 +13,7 @@ resources:
     # - destination-rules.yaml
     - secrets.yaml
     # - virtual-service.yaml
+    - ingress.yaml
 
 commonLabels:
     app: api
