@@ -9,7 +9,7 @@ spec:
   entryPoints:
     - web
   routes:
-    - match: Host(`dev.sweetrpg.com`) && (PathPrefix(`/api/0/catalog`) || PathPrefix(`/api/1/catalog`))
+    - match: Host(`api.catalog.dev.sweetrpg.com`) && (PathPrefix(`/0/`) || PathPrefix(`/1/`))
       kind: Rule
       services:
         - kind: Service
@@ -20,3 +20,32 @@ spec:
             flushInterval: 1ms
       middlewares:
         - name: strip-prefix
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: api-v1
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-prd
+
+spec:
+  rules:
+    - host: api.catalog.dev.sweetrpg.com
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: api-v1
+                port:
+                  number: 8281
+  tls:
+    - hosts:
+        - api.catalog.dev.sweetrpg.com
+      secretName: api-v1-tls

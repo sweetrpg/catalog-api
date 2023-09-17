@@ -8,5 +8,5 @@ metadata:
 spec:
   stripPrefix:
     prefixes:
-      - /api/0/catalog
-      - /api/1/catalog
+      - /0
+      - /1
