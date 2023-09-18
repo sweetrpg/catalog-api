@@ -10,7 +10,7 @@ spec:
         app: api
         version: v1
         platform: sweetrpg
-        package: library
+        package: catalog
         component: api
     type: LoadBalancer
     ports:
