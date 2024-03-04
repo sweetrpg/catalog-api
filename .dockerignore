@@ -1,2 +1,8 @@
 .build/
 .swiftpm/
+.git/
+.github/
+kubernetes/
+docs/
+README.md
+LICENSE
