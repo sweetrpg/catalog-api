@@ -32,8 +32,6 @@ charset-normalizer==3.1.0
     # via requests
 click==8.1.3
     # via flask
-deprecated==1.2.14
-    # via limits
 dnspython==2.3.0
     # via
     #   -r requirements/app.in
@@ -61,7 +59,7 @@ flask==2.3.2
     #   prometheus-flask-exporter
     #   sentry-sdk
     #   sweetrpg-api-core
-    #   sweetrpg-library-objects
+    #   sweetrpg-catalog-objects
     #   sweetrpg-web-core
 flask-caching==2.0.2
     # via -r requirements/app.in
@@ -101,8 +99,6 @@ idna==3.4
     # via
     #   email-validator
     #   requests
-importlib-resources==5.12.0
-    # via limits
 itsdangerous==2.1.2
     # via
     #   flask
@@ -111,8 +107,6 @@ jinja2==3.1.2
     # via flask
 kanka==0.1.2
     # via -r requirements/app.in
-limits==3.5.0
-    # via python-logstash-async
 mako==1.2.4
     # via alembic
 markupsafe==2.1.3
@@ -131,13 +125,13 @@ marshmallow==3.19.0
 marshmallow-jsonapi==0.24.0
     # via
     #   flask-rest-jsonapi
-    #   sweetrpg-library-objects
-mongoengine==0.26.0
+    #   sweetrpg-catalog-objects
+mongoengine==0.28.0
     # via
     #   flask-mongoengine
     #   sweetrpg-api-core
+    #   sweetrpg-catalog-objects
     #   sweetrpg-db
-    #   sweetrpg-library-objects
 monotonic==1.6
     # via analytics-python
 oauthlib==2.1.0
@@ -145,19 +139,16 @@ oauthlib==2.1.0
     #   flask-oauthlib
     #   requests-oauthlib
 packaging==23.1
-    # via
-    #   limits
-    #   marshmallow
+    # via marshmallow
 prometheus-client==0.17.0
     # via prometheus-flask-exporter
 prometheus-flask-exporter==0.22.4
     # via -r requirements/app.in
-pylogbeat==2.0.0
-    # via python-logstash-async
 pymongo[srv]==4.0.2
     # via
     #   -r requirements/app.in
     #   mongoengine
+    #   pymongo
     #   sweetrpg-db
     #   sweetrpg-model-core
 python-dateutil==2.8.2
@@ -167,8 +158,6 @@ python-dateutil==2.8.2
 python-dotenv==0.21.1
     # via -r requirements/app.in
 python-editor==1.0.4
-    # via -r requirements/app.in
-python-logstash-async==2.5.0
     # via -r requirements/app.in
 pytz==2023.3
     # via flask-restful
@@ -183,12 +172,13 @@ requests==2.31.0
     #   -r requirements/app.in
     #   analytics-python
     #   kanka
-    #   python-logstash-async
     #   requests-oauthlib
 requests-oauthlib==1.1.0
     # via flask-oauthlib
 sentry-sdk[flask]==1.23.1
-    # via -r requirements/app.in
+    # via
+    #   -r requirements/app.in
+    #   sentry-sdk
 six==1.16.0
     # via
     #   analytics-python
@@ -204,42 +194,37 @@ sqlalchemy==2.0.16
 sweetrpg-api-core==0.0.168
     # via
     #   -r requirements/app.in
-    #   sweetrpg-library-objects
+    #   sweetrpg-catalog-objects
+sweetrpg-catalog-objects==0.0.98
+    # via -r requirements/app.in
 sweetrpg-db==0.0.129
     # via
     #   -r requirements/app.in
     #   sweetrpg-api-core
-    #   sweetrpg-library-objects
-sweetrpg-library-objects==0.0.246
-    # via -r requirements/app.in
+    #   sweetrpg-catalog-objects
 sweetrpg-model-core==0.0.127
     # via
     #   -r requirements/app.in
     #   sweetrpg-api-core
+    #   sweetrpg-catalog-objects
     #   sweetrpg-db
-    #   sweetrpg-library-objects
 sweetrpg-web-core==0.0.308
     # via -r requirements/app.in
 typing-extensions==4.6.3
     # via
     #   alembic
-    #   limits
     #   sqlalchemy
 urllib3==1.26.16
     # via
     #   -r requirements/app.in
     #   requests
     #   sentry-sdk
-uwsgi==2.0.21
+uwsgi==2.0.24
     # via -r requirements/deploy.in
 werkzeug==2.3.6
     # via flask
-wrapt==1.15.0
-    # via deprecated
 wtforms[email]==3.0.1
     # via
     #   flask-mongoengine
     #   flask-wtf
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools
+    #   wtforms
