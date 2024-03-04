@@ -13,6 +13,7 @@ on:
             - tox.ini
             - "requirements/**"
             - "docs/**"
+    workflow_dispatch:
     workflow_run:
         workflows: ["Update Requirements"]
         types: [completed]
