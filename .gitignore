@@ -13,7 +13,6 @@ __pycache__/
 .env
 .flaskenv
 .pytest_cache/
-.python-version
 .swiftpm
 .tox/
 .venv/

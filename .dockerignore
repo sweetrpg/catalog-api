@@ -6,3 +6,4 @@ kubernetes/
 docs/
 README.md
 LICENSE
+.tox/
