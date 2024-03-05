@@ -51,7 +51,7 @@ def create_app(app_name=constants.APPLICATION_NAME):
         }
         formatters["logstash"] = {
             "class": "logstash_async.formatter.FlaskLogstashFormatter",
-            "metadata": {"beat": "sweetrpg-library-api"},
+            "metadata": {"beat": "sweetrpg-catalog-api"},
         }
     logging_config = {
         "version": 1,
