@@ -90,7 +90,7 @@ flask-cors==3.0.10
     # via -r requirements/app.in
 flask-dotenv==0.1.2
     # via -r requirements/app.in
-flask-migrate==4.0.5
+flask-migrate==4.0.6
     # via -r requirements/app.in
 flask-mongoengine==1.0.0
     # via -r requirements/app.in
@@ -149,7 +149,7 @@ marshmallow-jsonapi==0.24.0
     # via
     #   flask-rest-jsonapi
     #   sweetrpg-catalog-objects
-mongoengine==0.28.1
+mongoengine==0.28.2
     # via
     #   flask-mongoengine
     #   sweetrpg-api-core
@@ -226,7 +226,7 @@ requests==2.31.0
     #   requests-oauthlib
 requests-oauthlib==1.1.0
     # via flask-oauthlib
-sentry-sdk[flask]==1.40.6
+sentry-sdk[flask]==1.41.0
     # via -r requirements/app.in
 six==1.16.0
     # via
@@ -240,11 +240,11 @@ sqlalchemy==2.0.28
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.266
+sweetrpg-api-core==0.0.267
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.99
+sweetrpg-catalog-objects==0.0.100
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -257,7 +257,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.534
+sweetrpg-web-core==0.0.536
     # via -r requirements/app.in
 tomli==2.0.1
     # via
@@ -265,7 +265,7 @@ tomli==2.0.1
     #   pyproject-api
     #   pytest
     #   tox
-tox==4.13.0
+tox==4.14.1
     # via -r requirements/tests.in
 typing-extensions==4.10.0
     # via
