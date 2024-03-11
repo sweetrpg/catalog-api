@@ -136,7 +136,7 @@ oauthlib==2.1.0
     # via
     #   flask-oauthlib
     #   requests-oauthlib
-packaging==23.2
+packaging==24.0
     # via marshmallow
 prometheus-client==0.20.0
     # via prometheus-flask-exporter
@@ -191,7 +191,7 @@ sweetrpg-api-core==0.0.268
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.100
+sweetrpg-catalog-objects==0.0.101
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -204,7 +204,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.538
+sweetrpg-web-core==0.0.539
     # via -r requirements/app.in
 typing-extensions==4.10.0
     # via

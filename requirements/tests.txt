@@ -161,7 +161,7 @@ oauthlib==2.1.0
     # via
     #   flask-oauthlib
     #   requests-oauthlib
-packaging==23.2
+packaging==24.0
     # via
     #   marshmallow
     #   pyproject-api
@@ -257,7 +257,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.538
+sweetrpg-web-core==0.0.539
     # via -r requirements/app.in
 tomli==2.0.1
     # via
