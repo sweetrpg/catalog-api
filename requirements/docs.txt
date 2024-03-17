@@ -78,7 +78,7 @@ flask==2.3.3
     #   sweetrpg-web-core
 flask-caching==2.1.0
     # via -r requirements/app.in
-flask-cors==3.0.10
+flask-cors==4.0.0
     # via -r requirements/app.in
 flask-dotenv==0.1.2
     # via -r requirements/app.in
@@ -224,7 +224,6 @@ shellingham==1.5.4
 six==1.16.0
     # via
     #   analytics-python
-    #   flask-cors
     #   flask-rest-jsonapi
     #   flask-restful
     #   python-dateutil
