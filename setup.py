@@ -27,7 +27,7 @@ setup(
         "python-dotenv~=0.21",
         "python-editor~=1.0",
         "PyYAML~=6.0",
-        "redis~=4.5",
+        "redis>=4.5,<6.0",
         "requests~=2.31",
         "sentry-sdk[flask]~=1.23",
         "sweetrpg-api-core",
