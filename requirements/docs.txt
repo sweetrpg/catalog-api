@@ -261,7 +261,7 @@ sqlalchemy==2.0.29
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.271
+sweetrpg-api-core==0.0.272
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
@@ -278,7 +278,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.544
+sweetrpg-web-core==0.0.546
     # via -r requirements/app.in
 typer[all]==0.10.0
     # via rstcheck
