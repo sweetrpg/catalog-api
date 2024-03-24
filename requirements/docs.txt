@@ -29,7 +29,6 @@ cachelib==0.9.0
     # via
     #   flask-caching
     #   flask-oauthlib
-    #   flask-session
 certifi==2024.2.2
     # via
     #   requests
@@ -94,7 +93,7 @@ flask-rest-jsonapi==0.31.2
     #   sweetrpg-api-core
 flask-restful==0.3.10
     # via -r requirements/app.in
-flask-session==0.6.0
+flask-session==0.7.0
     # via -r requirements/app.in
 flask-sqlalchemy==3.1.1
     # via flask-migrate
@@ -155,6 +154,8 @@ mongoengine==0.28.2
     #   sweetrpg-db
 monotonic==1.6
     # via analytics-python
+msgspec==0.18.6
+    # via flask-session
 oauthlib==2.1.0
     # via
     #   flask-oauthlib
@@ -213,11 +214,11 @@ requests-oauthlib==1.1.0
     # via flask-oauthlib
 rich==13.7.1
     # via typer
-rstcheck==6.2.0
+rstcheck==6.2.1
     # via -r requirements/docs.in
-rstcheck-core==1.2.0
+rstcheck-core==1.2.1
     # via rstcheck
-sentry-sdk[flask]==1.42.0
+sentry-sdk[flask]==1.43.0
     # via -r requirements/app.in
 shellingham==1.5.4
     # via typer
@@ -255,16 +256,16 @@ sphinxcontrib-qthelp==1.0.7
     # via sphinx
 sphinxcontrib-serializinghtml==1.1.10
     # via sphinx
-sqlalchemy==2.0.28
+sqlalchemy==2.0.29
     # via
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.270
+sweetrpg-api-core==0.0.271
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.103
+sweetrpg-catalog-objects==0.0.104
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -277,9 +278,9 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.543
+sweetrpg-web-core==0.0.544
     # via -r requirements/app.in
-typer[all]==0.9.0
+typer[all]==0.10.0
     # via rstcheck
 typing-extensions==4.10.0
     # via
