@@ -29,6 +29,7 @@ cachelib==0.9.0
     # via
     #   flask-caching
     #   flask-oauthlib
+    #   flask-session
 certifi==2024.2.2
     # via
     #   requests
@@ -38,9 +39,7 @@ charset-normalizer==3.3.2
 click==8.1.7
     # via
     #   flask
-    #   typer
-colorama==0.4.6
-    # via typer
+    #   typer-slim
 dnspython==2.6.1
     # via
     #   -r requirements/app.in
@@ -93,7 +92,7 @@ flask-rest-jsonapi==0.31.2
     #   sweetrpg-api-core
 flask-restful==0.3.10
     # via -r requirements/app.in
-flask-session==0.7.0
+flask-session==0.8.0
     # via -r requirements/app.in
 flask-sqlalchemy==3.1.1
     # via flask-migrate
@@ -180,7 +179,7 @@ pygments==2.17.2
     #   rich
     #   sphinx
     #   sphinx-tabs
-pymongo[srv]==4.6.2
+pymongo[srv]==4.6.3
     # via
     #   -r requirements/app.in
     #   mongoengine
@@ -213,15 +212,15 @@ requests==2.31.0
 requests-oauthlib==1.1.0
     # via flask-oauthlib
 rich==13.7.1
-    # via typer
+    # via typer-slim
 rstcheck==6.2.1
     # via -r requirements/docs.in
 rstcheck-core==1.2.1
     # via rstcheck
-sentry-sdk[flask]==1.43.0
+sentry-sdk[flask]==1.44.0
     # via -r requirements/app.in
 shellingham==1.5.4
-    # via typer
+    # via typer-slim
 six==1.16.0
     # via
     #   analytics-python
@@ -261,11 +260,11 @@ sqlalchemy==2.0.29
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.272
+sweetrpg-api-core==0.0.273
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.105
+sweetrpg-catalog-objects==0.0.106
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -278,17 +277,23 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.547
+sweetrpg-web-core==0.0.548
     # via -r requirements/app.in
-typer[all]==0.10.0
+typer[all]==0.12.0
     # via rstcheck
+typer-cli==0.12.0
+    # via typer
+typer-slim[standard]==0.12.0
+    # via
+    #   typer
+    #   typer-cli
 typing-extensions==4.10.0
     # via
     #   alembic
     #   pydantic
     #   pydantic-core
     #   sqlalchemy
-    #   typer
+    #   typer-slim
 urllib3==1.26.18
     # via
     #   -r requirements/app.in
