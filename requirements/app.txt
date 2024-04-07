@@ -175,7 +175,7 @@ requests==2.31.0
     #   requests-oauthlib
 requests-oauthlib==1.1.0
     # via flask-oauthlib
-sentry-sdk[flask]==1.44.0
+sentry-sdk[flask]==1.44.1
     # via -r requirements/app.in
 six==1.16.0
     # via
@@ -193,7 +193,7 @@ sweetrpg-api-core==0.0.274
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.107
+sweetrpg-catalog-objects==0.0.108
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -208,7 +208,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-db
 sweetrpg-web-core==0.0.551
     # via -r requirements/app.in
-typing-extensions==4.10.0
+typing-extensions==4.11.0
     # via
     #   alembic
     #   sqlalchemy
@@ -217,7 +217,7 @@ urllib3==1.26.18
     #   -r requirements/app.in
     #   requests
     #   sentry-sdk
-werkzeug==3.0.1
+werkzeug==3.0.2
     # via flask
 wtforms[email]==3.1.2
     # via

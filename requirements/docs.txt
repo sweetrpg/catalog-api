@@ -39,7 +39,7 @@ charset-normalizer==3.3.2
 click==8.1.7
     # via
     #   flask
-    #   typer-slim
+    #   typer
 dnspython==2.6.1
     # via
     #   -r requirements/app.in
@@ -212,15 +212,15 @@ requests==2.31.0
 requests-oauthlib==1.1.0
     # via flask-oauthlib
 rich==13.7.1
-    # via typer-slim
+    # via typer
 rstcheck==6.2.1
     # via -r requirements/docs.in
 rstcheck-core==1.2.1
     # via rstcheck
-sentry-sdk[flask]==1.44.0
+sentry-sdk[flask]==1.44.1
     # via -r requirements/app.in
 shellingham==1.5.4
-    # via typer-slim
+    # via typer
 six==1.16.0
     # via
     #   analytics-python
@@ -260,11 +260,11 @@ sqlalchemy==2.0.29
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.274
+sweetrpg-api-core==0.0.275
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.107
+sweetrpg-catalog-objects==0.0.108
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -277,29 +277,23 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.551
+sweetrpg-web-core==0.0.552
     # via -r requirements/app.in
-typer[all]==0.12.0
+typer[all]==0.12.1
     # via rstcheck
-typer-cli==0.12.0
-    # via typer
-typer-slim[standard]==0.12.0
-    # via
-    #   typer
-    #   typer-cli
-typing-extensions==4.10.0
+typing-extensions==4.11.0
     # via
     #   alembic
     #   pydantic
     #   pydantic-core
     #   sqlalchemy
-    #   typer-slim
+    #   typer
 urllib3==1.26.18
     # via
     #   -r requirements/app.in
     #   requests
     #   sentry-sdk
-werkzeug==3.0.1
+werkzeug==3.0.2
     # via flask
 wtforms[email]==3.1.2
     # via
