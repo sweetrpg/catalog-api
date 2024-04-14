@@ -35,7 +35,7 @@ setup(
         "sweetrpg-catalog-objects",
         "sweetrpg-model-core",
         "sweetrpg-web-core",
-        "urllib3~=1.26",
+        "urllib3>=1.26,<3.0",
     ],
     extras_require={},
 )

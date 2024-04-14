@@ -371,7 +371,7 @@ typing-extensions==4.11.0
     #   pydantic-core
     #   sqlalchemy
     #   typer
-urllib3==1.26.18
+urllib3==2.2.1
     # via
     #   -r requirements/app.in
     #   requests
