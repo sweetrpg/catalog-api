@@ -97,7 +97,7 @@ idna==3.7
     # via
     #   email-validator
     #   requests
-itsdangerous==2.1.2
+itsdangerous==2.2.0
     # via
     #   flask
     #   flask-wtf
@@ -189,11 +189,11 @@ sqlalchemy==2.0.29
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.278
+sweetrpg-api-core==0.0.279
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.111
+sweetrpg-catalog-objects==0.0.112
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
