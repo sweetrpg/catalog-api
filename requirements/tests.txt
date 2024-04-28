@@ -16,7 +16,7 @@ async-timeout==4.0.3
     # via redis
 backoff==1.10.0
     # via analytics-python
-blinker==1.7.0
+blinker==1.8.0
     # via
     #   -r requirements/app.in
     #   -r requirements/tests.in
@@ -41,11 +41,11 @@ click==8.1.7
     # via flask
 colorama==0.4.6
     # via tox
-coverage[toml]==7.4.4
+coverage[toml]==7.5.0
     # via
     #   coverage-badge
     #   pytest-cov
-coverage-badge==1.1.0
+coverage-badge==1.1.1
     # via -r requirements/tests.in
 distlib==0.3.8
     # via virtualenv
@@ -84,7 +84,7 @@ flask==2.3.3
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-web-core
-flask-caching==2.1.0
+flask-caching==2.2.0
     # via -r requirements/app.in
 flask-cors==3.0.10
     # via -r requirements/app.in
@@ -169,7 +169,7 @@ packaging==24.0
     #   pyproject-api
     #   pytest
     #   tox
-platformdirs==4.2.0
+platformdirs==4.2.1
     # via
     #   tox
     #   virtualenv
@@ -181,7 +181,7 @@ prometheus-client==0.20.0
     # via prometheus-flask-exporter
 prometheus-flask-exporter==0.23.0
     # via -r requirements/app.in
-pymongo[srv]==4.6.3
+pymongo[srv]==4.7.0
     # via
     #   -r requirements/app.in
     #   mongoengine
@@ -242,11 +242,11 @@ sqlalchemy==2.0.29
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.280
+sweetrpg-api-core==0.0.281
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.113
+sweetrpg-catalog-objects==0.0.114
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -259,7 +259,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.565
+sweetrpg-web-core==0.0.566
     # via -r requirements/app.in
 tomli==2.0.1
     # via
@@ -267,7 +267,7 @@ tomli==2.0.1
     #   pyproject-api
     #   pytest
     #   tox
-tox==4.14.2
+tox==4.15.0
     # via -r requirements/tests.in
 typing-extensions==4.11.0
     # via
@@ -279,7 +279,7 @@ urllib3==1.26.18
     #   -r requirements/app.in
     #   requests
     #   sentry-sdk
-virtualenv==20.25.3
+virtualenv==20.26.0
     # via tox
 werkzeug==3.0.2
     # via flask
