@@ -20,7 +20,7 @@ babel==2.14.0
     # via sphinx
 backoff==1.10.0
     # via analytics-python
-blinker==1.8.0
+blinker==1.8.1
     # via
     #   -r requirements/app.in
     #   flask
@@ -277,7 +277,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.568
+sweetrpg-web-core==0.0.569
     # via -r requirements/app.in
 typer[all]==0.12.3
     # via rstcheck

@@ -14,7 +14,7 @@ async-timeout==4.0.3
     # via redis
 backoff==1.10.0
     # via analytics-python
-blinker==1.8.0
+blinker==1.8.1
     # via
     #   -r requirements/app.in
     #   flask

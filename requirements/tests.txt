@@ -16,7 +16,7 @@ async-timeout==4.0.3
     # via redis
 backoff==1.10.0
     # via analytics-python
-blinker==1.8.0
+blinker==1.8.1
     # via
     #   -r requirements/app.in
     #   -r requirements/tests.in
@@ -259,7 +259,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.568
+sweetrpg-web-core==0.0.569
     # via -r requirements/app.in
 tomli==2.0.1
     # via
