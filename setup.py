@@ -8,7 +8,7 @@ setup(
         "blinker~=1.6",
         "dnspython~=2.0",
         "Flask-Caching~=2.0",
-        "Flask-CORS~=3.0",
+        "Flask-CORS>=3,<5",
         "Flask-DotEnv~=0.1",
         "Flask-Migrate~=4.0",
         "Flask-MongoEngine~=1.0",
