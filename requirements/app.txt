@@ -105,7 +105,7 @@ jinja2==3.1.4
     # via flask
 kanka==0.1.2
     # via -r requirements/app.in
-mako==1.3.3
+mako==1.3.5
     # via alembic
 markupsafe==2.1.5
     # via
@@ -193,7 +193,7 @@ sweetrpg-api-core==0.0.286
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.119
+sweetrpg-catalog-objects==0.0.120
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -206,7 +206,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.579
+sweetrpg-web-core==0.0.580
     # via -r requirements/app.in
 typing-extensions==4.11.0
     # via
