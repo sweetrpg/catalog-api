@@ -299,7 +299,7 @@ six==1.16.0
     #   python-dateutil
 snowballstemmer==2.2.0
     # via sphinx
-sphinx==6.2.1
+sphinx==7.3.7
     # via
     #   -r requirements/docs.in
     #   pallets-sphinx-themes
@@ -356,6 +356,7 @@ tomli==2.0.1
     #   pip-tools
     #   pyproject-api
     #   pytest
+    #   sphinx
     #   tox
 tox==4.15.0
     # via -r requirements/tests.in

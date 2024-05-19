@@ -230,7 +230,7 @@ six==1.16.0
     #   python-dateutil
 snowballstemmer==2.2.0
     # via sphinx
-sphinx==6.2.1
+sphinx==7.3.7
     # via
     #   -r requirements/docs.in
     #   pallets-sphinx-themes
@@ -279,6 +279,8 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-db
 sweetrpg-web-core==0.0.580
     # via -r requirements/app.in
+tomli==2.0.1
+    # via sphinx
 typer[all]==0.12.3
     # via rstcheck
 typing-extensions==4.11.0
