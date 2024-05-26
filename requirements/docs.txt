@@ -12,7 +12,7 @@ analytics-python==1.4.post1
     # via -r requirements/app.in
 aniso8601==9.0.1
     # via flask-restful
-annotated-types==0.6.0
+annotated-types==0.7.0
     # via pydantic
 async-timeout==4.0.3
     # via redis
@@ -202,7 +202,7 @@ pyyaml==6.0.1
     #   flask-swagger
 redis==4.6.0
     # via -r requirements/app.in
-requests==2.31.0
+requests==2.32.2
     # via
     #   -r requirements/app.in
     #   analytics-python
@@ -260,11 +260,11 @@ sqlalchemy==2.0.30
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.288
+sweetrpg-api-core==0.0.289
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.121
+sweetrpg-catalog-objects==0.0.122
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -277,11 +277,11 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.583
+sweetrpg-web-core==0.0.584
     # via -r requirements/app.in
 typer[all]==0.12.3
     # via rstcheck
-typing-extensions==4.11.0
+typing-extensions==4.12.0
     # via
     #   alembic
     #   pydantic
