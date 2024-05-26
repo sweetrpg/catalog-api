@@ -218,7 +218,7 @@ pyyaml==6.0.1
     # via
     #   -r requirements/app.in
     #   flask-swagger
-redis==4.6.0
+redis==5.0.4
     # via -r requirements/app.in
 requests==2.32.2
     # via
