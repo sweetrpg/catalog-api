@@ -24,7 +24,7 @@ cachelib==0.9.0
     #   flask-caching
     #   flask-oauthlib
     #   flask-session
-certifi==2024.2.2
+certifi==2024.6.2
     # via
     #   requests
     #   sentry-sdk
@@ -195,7 +195,7 @@ sweetrpg-api-core==0.0.292
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.124
+sweetrpg-catalog-objects==0.0.125
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -208,7 +208,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.591
+sweetrpg-web-core==0.0.592
     # via -r requirements/app.in
 typing-extensions==4.12.1
     # via
