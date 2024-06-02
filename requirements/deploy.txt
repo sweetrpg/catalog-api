@@ -169,7 +169,7 @@ pyyaml==6.0.1
     #   flask-swagger
 redis==4.6.0
     # via -r requirements/app.in
-requests==2.32.2
+requests==2.32.3
     # via
     #   -r requirements/app.in
     #   analytics-python
@@ -191,11 +191,11 @@ sqlalchemy==2.0.30
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.290
+sweetrpg-api-core==0.0.291
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.123
+sweetrpg-catalog-objects==0.0.124
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -208,9 +208,9 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.588
+sweetrpg-web-core==0.0.589
     # via -r requirements/app.in
-typing-extensions==4.12.0
+typing-extensions==4.12.1
     # via
     #   alembic
     #   sqlalchemy
@@ -219,7 +219,7 @@ urllib3==1.26.18
     #   -r requirements/app.in
     #   requests
     #   sentry-sdk
-uwsgi==2.0.25.1
+uwsgi==2.0.26
     # via -r requirements/deploy.in
 werkzeug==3.0.3
     # via flask
