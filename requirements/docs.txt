@@ -133,7 +133,7 @@ markupsafe==2.1.5
     #   sentry-sdk
     #   werkzeug
     #   wtforms
-marshmallow==3.21.2
+marshmallow==3.21.3
     # via
     #   flask-rest-jsonapi
     #   marshmallow-jsonapi
@@ -170,16 +170,16 @@ prometheus-client==0.20.0
     # via prometheus-flask-exporter
 prometheus-flask-exporter==0.23.0
     # via -r requirements/app.in
-pydantic==2.7.2
+pydantic==2.7.3
     # via rstcheck-core
-pydantic-core==2.18.3
+pydantic-core==2.18.4
     # via pydantic
 pygments==2.18.0
     # via
     #   rich
     #   sphinx
     #   sphinx-tabs
-pymongo[srv]==4.7.2
+pymongo[srv]==4.7.3
     # via
     #   -r requirements/app.in
     #   mongoengine
@@ -260,11 +260,11 @@ sqlalchemy==2.0.30
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.292
+sweetrpg-api-core==0.0.293
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.125
+sweetrpg-catalog-objects==0.0.126
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -277,11 +277,11 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.593
+sweetrpg-web-core==0.0.594
     # via -r requirements/app.in
 typer[all]==0.12.3
     # via rstcheck
-typing-extensions==4.12.1
+typing-extensions==4.12.2
     # via
     #   alembic
     #   pydantic
