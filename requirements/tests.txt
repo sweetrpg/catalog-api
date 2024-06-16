@@ -59,7 +59,7 @@ email-validator==2.1.1
     # via wtforms
 exceptiongroup==1.2.1
     # via pytest
-filelock==3.14.0
+filelock==3.15.1
     # via
     #   tox
     #   virtualenv
@@ -242,11 +242,11 @@ sqlalchemy==2.0.30
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.294
+sweetrpg-api-core==0.0.295
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.127
+sweetrpg-catalog-objects==0.0.128
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -259,7 +259,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.598
+sweetrpg-web-core==0.0.599
     # via -r requirements/app.in
 tomli==2.0.1
     # via
