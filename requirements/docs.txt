@@ -51,7 +51,7 @@ docutils==0.19
     #   rstcheck-core
     #   sphinx
     #   sphinx-tabs
-email-validator==2.1.1
+email-validator==2.2.0
     # via wtforms
 flask==2.3.3
     # via
@@ -255,16 +255,16 @@ sphinxcontrib-qthelp==1.0.7
     # via sphinx
 sphinxcontrib-serializinghtml==1.1.10
     # via sphinx
-sqlalchemy==2.0.30
+sqlalchemy==2.0.31
     # via
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.296
+sweetrpg-api-core==0.0.297
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.129
+sweetrpg-catalog-objects==0.0.130
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -277,7 +277,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.602
+sweetrpg-web-core==0.0.603
     # via -r requirements/app.in
 typer[all]==0.12.3
     # via rstcheck
@@ -288,7 +288,7 @@ typing-extensions==4.12.2
     #   pydantic-core
     #   sqlalchemy
     #   typer
-urllib3==1.26.18
+urllib3==1.26.19
     # via
     #   -r requirements/app.in
     #   requests

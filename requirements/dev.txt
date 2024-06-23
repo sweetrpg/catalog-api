@@ -55,7 +55,7 @@ click==8.1.7
     #   typer
 colorama==0.4.6
     # via tox
-coverage[toml]==7.5.3
+coverage[toml]==7.5.4
     # via
     #   coverage-badge
     #   pytest-cov
@@ -74,11 +74,11 @@ docutils==0.19
     #   rstcheck-core
     #   sphinx
     #   sphinx-tabs
-email-validator==2.1.1
+email-validator==2.2.0
     # via wtforms
 exceptiongroup==1.2.1
     # via pytest
-filelock==3.15.1
+filelock==3.15.4
     # via
     #   tox
     #   virtualenv
@@ -237,7 +237,7 @@ pymongo[srv]==4.7.3
     #   pymongo
     #   sweetrpg-db
     #   sweetrpg-model-core
-pyproject-api==1.6.1
+pyproject-api==1.7.1
     # via tox
 pyproject-hooks==1.1.0
     # via build
@@ -324,16 +324,16 @@ sphinxcontrib-qthelp==1.0.7
     # via sphinx
 sphinxcontrib-serializinghtml==1.1.10
     # via sphinx
-sqlalchemy==2.0.30
+sqlalchemy==2.0.31
     # via
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.296
+sweetrpg-api-core==0.0.297
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.129
+sweetrpg-catalog-objects==0.0.130
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -346,7 +346,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.602
+sweetrpg-web-core==0.0.603
     # via -r requirements/app.in
 tomli==2.0.1
     # via
@@ -370,12 +370,12 @@ typing-extensions==4.12.2
     #   pydantic-core
     #   sqlalchemy
     #   typer
-urllib3==1.26.18
+urllib3==1.26.19
     # via
     #   -r requirements/app.in
     #   requests
     #   sentry-sdk
-virtualenv==20.26.2
+virtualenv==20.26.3
     # via tox
 werkzeug==3.0.3
     # via flask
