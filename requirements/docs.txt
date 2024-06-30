@@ -6,7 +6,7 @@
 #
 alabaster==0.7.16
     # via sphinx
-alembic==1.13.1
+alembic==1.13.2
     # via flask-migrate
 analytics-python==1.4.post1
     # via -r requirements/app.in
@@ -179,7 +179,7 @@ pygments==2.18.0
     #   rich
     #   sphinx
     #   sphinx-tabs
-pymongo[srv]==4.7.3
+pymongo[srv]==4.8.0
     # via
     #   -r requirements/app.in
     #   mongoengine
@@ -260,11 +260,11 @@ sqlalchemy==2.0.31
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.298
+sweetrpg-api-core==0.0.299
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.131
+sweetrpg-catalog-objects==0.0.132
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -277,7 +277,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.607
+sweetrpg-web-core==0.0.608
     # via -r requirements/app.in
 typer[all]==0.12.3
     # via rstcheck
