@@ -213,7 +213,7 @@ requests-oauthlib==1.1.0
     # via flask-oauthlib
 rich==13.7.1
     # via typer
-rstcheck==6.2.1
+rstcheck==6.2.4
     # via -r requirements/docs.in
 rstcheck-core==1.2.1
     # via rstcheck
@@ -277,9 +277,9 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.615
+sweetrpg-web-core==0.0.616
     # via -r requirements/app.in
-typer[all]==0.12.3
+typer==0.12.3
     # via rstcheck
 typing-extensions==4.12.2
     # via
