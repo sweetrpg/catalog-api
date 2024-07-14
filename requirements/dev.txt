@@ -55,7 +55,7 @@ click==8.1.7
     #   typer
 colorama==0.4.6
     # via tox
-coverage[toml]==7.5.4
+coverage[toml]==7.6.0
     # via
     #   coverage-badge
     #   pytest-cov
@@ -76,7 +76,7 @@ docutils==0.19
     #   sphinx-tabs
 email-validator==2.2.0
     # via wtforms
-exceptiongroup==1.2.1
+exceptiongroup==1.2.2
     # via pytest
 filelock==3.15.4
     # via
@@ -219,7 +219,7 @@ pluggy==1.5.0
     #   tox
 prometheus-client==0.20.0
     # via prometheus-flask-exporter
-prometheus-flask-exporter==0.23.0
+prometheus-flask-exporter==0.23.1
     # via -r requirements/app.in
 pydantic==2.8.2
     # via rstcheck-core
@@ -329,11 +329,11 @@ sqlalchemy==2.0.31
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.302
+sweetrpg-api-core==0.0.303
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.135
+sweetrpg-catalog-objects==0.0.136
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -346,7 +346,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.616
+sweetrpg-web-core==0.0.617
     # via -r requirements/app.in
 tomli==2.0.1
     # via
