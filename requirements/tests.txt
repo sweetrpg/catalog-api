@@ -27,7 +27,7 @@ cachelib==0.9.0
     #   flask-caching
     #   flask-oauthlib
     #   flask-session
-cachetools==5.3.3
+cachetools==5.4.0
     # via tox
 certifi==2024.7.4
     # via
@@ -114,7 +114,7 @@ flask-wtf==1.2.1
     # via flask-mongoengine
 greenlet==3.0.3
     # via sqlalchemy
-hiredis==2.3.2
+hiredis==2.4.0
     # via -r requirements/app.in
 idna==3.7
     # via
@@ -242,11 +242,11 @@ sqlalchemy==2.0.31
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.304
+sweetrpg-api-core==0.0.305
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.137
+sweetrpg-catalog-objects==0.0.138
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -259,7 +259,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.621
+sweetrpg-web-core==0.0.622
     # via -r requirements/app.in
 tomli==2.0.1
     # via
