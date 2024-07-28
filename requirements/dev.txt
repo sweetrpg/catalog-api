@@ -286,7 +286,7 @@ rstcheck==6.2.4
     # via -r requirements/docs.in
 rstcheck-core==1.2.1
     # via rstcheck
-sentry-sdk[flask]==1.45.0
+sentry-sdk[flask]==1.45.1
     # via -r requirements/app.in
 shellingham==1.5.4
     # via typer
@@ -329,11 +329,11 @@ sqlalchemy==2.0.31
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.306
+sweetrpg-api-core==0.0.307
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.139
+sweetrpg-catalog-objects==0.0.140
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -346,7 +346,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.626
+sweetrpg-web-core==0.0.627
     # via -r requirements/app.in
 tomli==2.0.1
     # via
