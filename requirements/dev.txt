@@ -59,7 +59,7 @@ coverage[toml]==7.6.0
     # via
     #   coverage-badge
     #   pytest-cov
-coverage-badge==1.1.1
+coverage-badge==1.1.2
     # via -r requirements/tests.in
 distlib==0.3.8
     # via virtualenv
@@ -329,11 +329,11 @@ sqlalchemy==2.0.31
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.308
+sweetrpg-api-core==0.0.309
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.141
+sweetrpg-catalog-objects==0.0.142
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -346,7 +346,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.631
+sweetrpg-web-core==0.0.632
     # via -r requirements/app.in
 tomli==2.0.1
     # via
