@@ -163,7 +163,7 @@ python-editor==1.0.4
     # via -r requirements/app.in
 pytz==2024.1
     # via flask-restful
-pyyaml==6.0.1
+pyyaml==6.0.2
     # via
     #   -r requirements/app.in
     #   flask-swagger
@@ -186,16 +186,16 @@ six==1.16.0
     #   flask-rest-jsonapi
     #   flask-restful
     #   python-dateutil
-sqlalchemy==2.0.31
+sqlalchemy==2.0.32
     # via
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.310
+sweetrpg-api-core==0.0.311
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.143
+sweetrpg-catalog-objects==0.0.144
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -208,7 +208,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.636
+sweetrpg-web-core==0.0.637
     # via -r requirements/app.in
 typing-extensions==4.12.2
     # via

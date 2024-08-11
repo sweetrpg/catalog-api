@@ -18,7 +18,7 @@ asgiref==3.8.1
     # via -r requirements/tests.in
 async-timeout==4.0.3
     # via redis
-babel==2.15.0
+babel==2.16.0
     # via sphinx
 backoff==1.10.0
     # via analytics-python
@@ -265,7 +265,7 @@ python-editor==1.0.4
     # via -r requirements/app.in
 pytz==2024.1
     # via flask-restful
-pyyaml==6.0.1
+pyyaml==6.0.2
     # via
     #   -r requirements/app.in
     #   flask-swagger
@@ -324,16 +324,16 @@ sphinxcontrib-qthelp==2.0.0
     # via sphinx
 sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
-sqlalchemy==2.0.31
+sqlalchemy==2.0.32
     # via
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.310
+sweetrpg-api-core==0.0.311
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.143
+sweetrpg-catalog-objects==0.0.144
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -346,7 +346,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.636
+sweetrpg-web-core==0.0.637
     # via -r requirements/app.in
 tomli==2.0.1
     # via
@@ -357,7 +357,7 @@ tomli==2.0.1
     #   pyproject-api
     #   pytest
     #   tox
-tox==4.16.0
+tox==4.17.1
     # via -r requirements/tests.in
 typer==0.12.3
     # via rstcheck
