@@ -37,7 +37,7 @@ cachelib==0.9.0
     #   flask-caching
     #   flask-oauthlib
     #   flask-session
-cachetools==5.4.0
+cachetools==5.5.0
     # via tox
 certifi==2024.7.4
     # via
@@ -346,7 +346,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.643
+sweetrpg-web-core==0.0.644
     # via -r requirements/app.in
 tomli==2.0.1
     # via
