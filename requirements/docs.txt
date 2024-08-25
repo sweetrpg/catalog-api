@@ -106,7 +106,7 @@ greenlet==3.0.3
     # via sqlalchemy
 hiredis==2.4.0
     # via -r requirements/app.in
-idna==3.7
+idna==3.8
     # via
     #   email-validator
     #   requests
@@ -133,7 +133,7 @@ markupsafe==2.1.5
     #   sentry-sdk
     #   werkzeug
     #   wtforms
-marshmallow==3.21.3
+marshmallow==3.22.0
     # via
     #   flask-rest-jsonapi
     #   marshmallow-jsonapi
@@ -260,11 +260,11 @@ sqlalchemy==2.0.32
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.314
+sweetrpg-api-core==0.0.315
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.147
+sweetrpg-catalog-objects==0.0.148
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -277,9 +277,9 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.644
+sweetrpg-web-core==0.0.645
     # via -r requirements/app.in
-typer==0.12.4
+typer==0.12.5
     # via rstcheck
 typing-extensions==4.12.2
     # via
@@ -293,7 +293,7 @@ urllib3==1.26.19
     #   -r requirements/app.in
     #   requests
     #   sentry-sdk
-werkzeug==3.0.3
+werkzeug==3.0.4
     # via flask
 wtforms[email]==3.1.2
     # via
