@@ -29,7 +29,7 @@ cachelib==0.9.0
     #   flask-session
 cachetools==5.5.0
     # via tox
-certifi==2024.7.4
+certifi==2024.8.30
     # via
     #   requests
     #   sentry-sdk
@@ -149,7 +149,7 @@ marshmallow-jsonapi==0.24.0
     # via
     #   flask-rest-jsonapi
     #   sweetrpg-catalog-objects
-mongoengine==0.28.2
+mongoengine==0.29.0
     # via
     #   flask-mongoengine
     #   sweetrpg-api-core
@@ -242,11 +242,11 @@ sqlalchemy==2.0.32
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.316
+sweetrpg-api-core==0.0.317
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.149
+sweetrpg-catalog-objects==0.0.150
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -259,7 +259,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.649
+sweetrpg-web-core==0.0.650
     # via -r requirements/app.in
 tomli==2.0.1
     # via
@@ -274,7 +274,7 @@ typing-extensions==4.12.2
     #   alembic
     #   asgiref
     #   sqlalchemy
-urllib3==1.26.19
+urllib3==1.26.20
     # via
     #   -r requirements/app.in
     #   requests
