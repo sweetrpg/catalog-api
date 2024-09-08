@@ -186,16 +186,16 @@ six==1.16.0
     #   flask-rest-jsonapi
     #   flask-restful
     #   python-dateutil
-sqlalchemy==2.0.32
+sqlalchemy==2.0.34
     # via
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.318
+sweetrpg-api-core==0.0.319
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.151
+sweetrpg-catalog-objects==0.0.152
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -208,7 +208,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.654
+sweetrpg-web-core==0.0.655
     # via -r requirements/app.in
 typing-extensions==4.12.2
     # via

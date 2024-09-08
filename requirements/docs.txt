@@ -170,9 +170,9 @@ prometheus-client==0.20.0
     # via prometheus-flask-exporter
 prometheus-flask-exporter==0.23.1
     # via -r requirements/app.in
-pydantic==2.8.2
+pydantic==2.9.0
     # via rstcheck-core
-pydantic-core==2.20.1
+pydantic-core==2.23.2
     # via pydantic
 pygments==2.18.0
     # via
@@ -255,16 +255,16 @@ sphinxcontrib-qthelp==2.0.0
     # via sphinx
 sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
-sqlalchemy==2.0.32
+sqlalchemy==2.0.34
     # via
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.318
+sweetrpg-api-core==0.0.319
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.151
+sweetrpg-catalog-objects==0.0.152
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -277,7 +277,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.654
+sweetrpg-web-core==0.0.655
     # via -r requirements/app.in
 typer==0.12.5
     # via rstcheck
@@ -288,6 +288,8 @@ typing-extensions==4.12.2
     #   pydantic-core
     #   sqlalchemy
     #   typer
+tzdata==2024.1
+    # via pydantic
 urllib3==1.26.20
     # via
     #   -r requirements/app.in
