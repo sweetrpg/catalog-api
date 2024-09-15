@@ -89,13 +89,13 @@ flask-views==0.2.1
     # via -r requirements/app.in
 flask-wtf==1.2.1
     # via flask-mongoengine
-greenlet==3.0.3
+greenlet==3.1.0
     # via sqlalchemy
 hiredis==2.4.0
     # via
     #   -r requirements/app.in
     #   -r requirements/deploy.in
-idna==3.8
+idna==3.9
     # via
     #   email-validator
     #   requests
@@ -161,7 +161,7 @@ python-dotenv==1.0.1
     # via -r requirements/app.in
 python-editor==1.0.4
     # via -r requirements/app.in
-pytz==2024.1
+pytz==2024.2
     # via flask-restful
 pyyaml==6.0.2
     # via
@@ -191,11 +191,11 @@ sqlalchemy==2.0.34
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.320
+sweetrpg-api-core==0.0.321
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.153
+sweetrpg-catalog-objects==0.0.154
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -208,7 +208,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.659
+sweetrpg-web-core==0.0.660
     # via -r requirements/app.in
 typing-extensions==4.12.2
     # via

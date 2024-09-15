@@ -102,11 +102,11 @@ flask-views==0.2.1
     # via -r requirements/app.in
 flask-wtf==1.2.1
     # via flask-mongoengine
-greenlet==3.0.3
+greenlet==3.1.0
     # via sqlalchemy
 hiredis==2.4.0
     # via -r requirements/app.in
-idna==3.8
+idna==3.9
     # via
     #   email-validator
     #   requests
@@ -170,9 +170,9 @@ prometheus-client==0.20.0
     # via prometheus-flask-exporter
 prometheus-flask-exporter==0.23.1
     # via -r requirements/app.in
-pydantic==2.9.0
+pydantic==2.9.1
     # via rstcheck-core
-pydantic-core==2.23.2
+pydantic-core==2.23.3
     # via pydantic
 pygments==2.18.0
     # via
@@ -194,7 +194,7 @@ python-dotenv==1.0.1
     # via -r requirements/app.in
 python-editor==1.0.4
     # via -r requirements/app.in
-pytz==2024.1
+pytz==2024.2
     # via flask-restful
 pyyaml==6.0.2
     # via
@@ -211,7 +211,7 @@ requests==2.32.3
     #   sphinx
 requests-oauthlib==1.1.0
     # via flask-oauthlib
-rich==13.8.0
+rich==13.8.1
     # via typer
 rstcheck==6.2.4
     # via -r requirements/docs.in
@@ -260,11 +260,11 @@ sqlalchemy==2.0.34
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.320
+sweetrpg-api-core==0.0.321
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.153
+sweetrpg-catalog-objects==0.0.154
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
@@ -277,7 +277,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.659
+sweetrpg-web-core==0.0.660
     # via -r requirements/app.in
 typer==0.12.5
     # via rstcheck
@@ -288,8 +288,6 @@ typing-extensions==4.12.2
     #   pydantic-core
     #   sqlalchemy
     #   typer
-tzdata==2024.1
-    # via pydantic
 urllib3==1.26.20
     # via
     #   -r requirements/app.in
