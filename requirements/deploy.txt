@@ -95,7 +95,7 @@ hiredis==2.4.0
     # via
     #   -r requirements/app.in
     #   -r requirements/deploy.in
-idna==3.9
+idna==3.10
     # via
     #   email-validator
     #   requests
@@ -208,7 +208,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.663
+sweetrpg-web-core==0.0.667
     # via -r requirements/app.in
 typing-extensions==4.12.2
     # via

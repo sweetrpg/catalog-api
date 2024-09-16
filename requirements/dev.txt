@@ -135,7 +135,7 @@ greenlet==3.1.0
     # via sqlalchemy
 hiredis==2.4.0
     # via -r requirements/app.in
-idna==3.9
+idna==3.10
     # via
     #   email-validator
     #   requests
@@ -346,7 +346,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.663
+sweetrpg-web-core==0.0.667
     # via -r requirements/app.in
 tomli==2.0.1
     # via
