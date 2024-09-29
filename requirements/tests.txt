@@ -246,7 +246,7 @@ sweetrpg-api-core==0.0.326
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
-sweetrpg-catalog-objects==0.0.158
+sweetrpg-catalog-objects==0.0.159
     # via -r requirements/app.in
 sweetrpg-db==0.0.137
     # via
