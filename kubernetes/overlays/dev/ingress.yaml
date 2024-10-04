@@ -32,6 +32,12 @@ metadata:
     traefik.ingress.kubernetes.io/router.tls: "true"
     kubernetes.io/ingress.class: traefik
     cert-manager.io/cluster-issuer: letsencrypt-prd
+    reloader.homer/name: Catalog API
+    reloader.homer/group: sweetrpg
+    reloader.homer/subtitle: API for SweetRPG catalog service
+    reloader.homer/logo: https://avatars.githubusercontent.com/u/43730988?s=200&v=4
+    reloader.homer/tag: catalog
+    reloader.homer/prio: "1"
 
 spec:
   rules:
