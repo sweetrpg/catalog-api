@@ -41,7 +41,7 @@ metadata:
 
 spec:
   rules:
-    - host: catalog.api.dev.sweetrpg.com
+    - host: api.catalog.dev.sweetrpg.com
       http:
         paths:
           - pathType: Prefix
@@ -53,5 +53,5 @@ spec:
                   number: 8281
   tls:
     - hosts:
-        - catalog.api.dev.sweetrpg.com
-      secretName: api-v1-tls
+        - api.catalog.dev.sweetrpg.com
+      secretName: catalog-api-v1-tls
