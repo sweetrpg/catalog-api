@@ -1,15 +1,15 @@
-apiVersion: networking.istio.io/v1alpha3
-kind: ServiceEntry
+# apiVersion: networking.istio.io/v1alpha3
+# kind: ServiceEntry
 
-metadata:
-    name: mongodb-atlas
+# metadata:
+#     name: mongodb-atlas
 
-spec:
-    hosts:
-        - cluster0.z9nxg.mongodb.net
-    ports:
-        - name: mongodb
-          number: 27017
-          protocol: MONGO
-          targetPort: 27017
-    resolution: NONE
+# spec:
+#     hosts:
+#         - cluster0.z9nxg.mongodb.net
+#     ports:
+#         - name: mongodb
+#           number: 27017
+#           protocol: MONGO
+#           targetPort: 27017
+#     resolution: NONE

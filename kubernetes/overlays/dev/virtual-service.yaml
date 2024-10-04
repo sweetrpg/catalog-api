@@ -1,57 +1,57 @@
----
-# See more at https://istio.io/docs/reference/config/networking/virtual-service/
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
+# ---
+# # See more at https://istio.io/docs/reference/config/networking/virtual-service/
+# apiVersion: networking.istio.io/v1alpha3
+# kind: VirtualService
 
-metadata:
-    name: api-0
+# metadata:
+#     name: api-0
 
-spec:
-    hosts:
-        - dev.sweetrpg.com
-    gateways:
-        - sweetrpg-main/gateway
-    http:
-        - match:
-              - uri:
-                    prefix: /api/0/catalog/
-          route:
-              - destination:
-                    host: api-v1.sweetrpg-catalog.svc.cluster.local
-                    port:
-                        number: 8281
-#   tls:
-#     - match:
-#         - uri:
-#             prefix: /api/0/catalog
-#         - port: 443
-#           sniHosts:
-#             - dev.sweetrpg.com
-#       route:
-#         - destination:
-#             host: api-v1.sweetrpg-catalog.svc.cluster.local
-#             port:
-#               number: 8281
+# spec:
+#     hosts:
+#         - dev.sweetrpg.com
+#     gateways:
+#         - sweetrpg-main/gateway
+#     http:
+#         - match:
+#               - uri:
+#                     prefix: /api/0/catalog/
+#           route:
+#               - destination:
+#                     host: api-v1.sweetrpg-catalog.svc.cluster.local
+#                     port:
+#                         number: 8281
+# #   tls:
+# #     - match:
+# #         - uri:
+# #             prefix: /api/0/catalog
+# #         - port: 443
+# #           sniHosts:
+# #             - dev.sweetrpg.com
+# #       route:
+# #         - destination:
+# #             host: api-v1.sweetrpg-catalog.svc.cluster.local
+# #             port:
+# #               number: 8281
 
----
-# See more at https://istio.io/docs/reference/config/networking/virtual-service/
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
+# ---
+# # See more at https://istio.io/docs/reference/config/networking/virtual-service/
+# apiVersion: networking.istio.io/v1alpha3
+# kind: VirtualService
 
-metadata:
-    name: api-1
+# metadata:
+#     name: api-1
 
-spec:
-    hosts:
-        - dev.sweetrpg.com
-    gateways:
-        - sweetrpg-main/gateway
-    http:
-        - match:
-              - uri:
-                    prefix: /api/1/catalog/
-          route:
-              - destination:
-                    host: api-v1.sweetrpg-catalog.svc.cluster.local
-                    port:
-                        number: 8281
+# spec:
+#     hosts:
+#         - dev.sweetrpg.com
+#     gateways:
+#         - sweetrpg-main/gateway
+#     http:
+#         - match:
+#               - uri:
+#                     prefix: /api/1/catalog/
+#           route:
+#               - destination:
+#                     host: api-v1.sweetrpg-catalog.svc.cluster.local
+#                     port:
+#                         number: 8281
