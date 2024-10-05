@@ -17,7 +17,7 @@ coverage:
 	pytest --cov-config .coveragerc --verbose --cov-report term --cov-report xml --cov=sweetrpg_catalog_api tests
 
 publish:
-	pip install 'twine>=1.5.0'
+	pip install 'twine>=5.1.0'
 	python setup.py sdist bdist_wheel
 	twine upload dist/*
 	rm -fr build dist .egg sweetrpg_catalog_api.egg-info
