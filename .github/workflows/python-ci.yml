@@ -11,7 +11,7 @@ on:
             - setup.cfg
             - setup.py
             - tox.ini
-            - "requirements/**"
+            - "requirements/*.txt"
             - "docs/**"
     workflow_dispatch:
     workflow_run:
@@ -68,10 +68,10 @@ jobs:
     #        runs-on: ubuntu-latest
     #        concurrency: docs
     #        steps:
-    #            - uses: actions/checkout@v3
+    #            - uses: actions/checkout@v4
     #            - uses: actions/setup-python@v4
     #              with:
-    #                  python-version: "3.10"
+    #                  python-version: "3.11"
     #            - name: install-deps
     #              run: pip install -r requirements/docs.txt
     #            - name: make-docs
@@ -87,11 +87,11 @@ jobs:
         runs-on: ubuntu-latest
         concurrency: publish
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
             - name: publish
-              uses: relekang/python-semantic-release@master
+              uses: elekang/python-semantic-release@v7.34.6
               with:
                   additional_options: "--patch"
                   github_token: ${{ secrets.GITHUB_TOKEN }}
