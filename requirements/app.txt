@@ -86,7 +86,7 @@ flask-wtf==1.2.1
     # via flask-mongoengine
 greenlet==3.1.1
     # via sqlalchemy
-hiredis~=3.0
+hiredis==3.0.0
     # via -r requirements/app.in
 idna==3.10
     # via
@@ -143,7 +143,6 @@ pymongo[srv]==4.10.1
     # via
     #   -r requirements/app.in
     #   mongoengine
-    #   pymongo
     #   sweetrpg-db
     #   sweetrpg-model-core
 python-dateutil==2.9.0.post0
@@ -160,8 +159,6 @@ pyyaml==6.0.2
     # via
     #   -r requirements/app.in
     #   flask-swagger
-redis==5.1.1
-    # via -r requirements/app.in
 requests==2.32.3
     # via
     #   -r requirements/app.in
@@ -200,7 +197,7 @@ sweetrpg-model-core==0.0.154
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.695
+sweetrpg-web-core==0.0.697
     # via -r requirements/app.in
 typing-extensions==4.12.2
     # via
