@@ -57,7 +57,6 @@ flask==3.0.3
     #   sentry-sdk
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
-    #   sweetrpg-web-core
 flask-caching==2.3.0
     # via -r requirements/app.in
 flask-cors==5.0.0
@@ -84,6 +83,8 @@ flask-swagger==0.2.14
     # via -r requirements/app.in
 flask-wtf==1.2.1
     # via flask-mongoengine
+greenlet==3.1.1
+    # via sqlalchemy
 hiredis==3.0.0
     # via -r requirements/app.in
 idna==3.10
@@ -137,10 +138,11 @@ prometheus-client==0.21.0
     # via prometheus-flask-exporter
 prometheus-flask-exporter==0.23.1
     # via -r requirements/app.in
-pymongo[srv]==4.10.1
+pymongo[srv]==3.13.0
     # via
     #   -r requirements/app.in
     #   mongoengine
+    #   pymongo
     #   sweetrpg-db
     #   sweetrpg-model-core
 python-dateutil==2.9.0.post0
@@ -184,19 +186,17 @@ sweetrpg-api-core==0.0.334
     #   sweetrpg-catalog-objects
 sweetrpg-catalog-objects==0.0.167
     # via -r requirements/app.in
-sweetrpg-db==0.0.139
+sweetrpg-db==0.0.141
     # via
     #   -r requirements/app.in
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
-sweetrpg-model-core==0.0.154
+sweetrpg-model-core==0.0.155
     # via
     #   -r requirements/app.in
     #   sweetrpg-api-core
     #   sweetrpg-catalog-objects
     #   sweetrpg-db
-sweetrpg-web-core==0.0.697
-    # via -r requirements/app.in
 typing-extensions==4.12.2
     # via
     #   alembic
