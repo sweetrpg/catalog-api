@@ -18,7 +18,7 @@ setup(
         "Flask-Session~=0.8",
         "Flask-Swagger~=0.2",
         "Flask~=3.0",
-        "hiredis~=5.0",
+        "hiredis~=3.0",
         "kanka~=0.1",
         "prometheus-flask-exporter~=0.23",
         "PyMongo~=4.0",
