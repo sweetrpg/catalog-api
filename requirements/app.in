@@ -12,7 +12,6 @@ Flask-REST-JSONAPI~=0.31
 Flask-Restful~=0.3
 Flask-Session~=0.8
 Flask-Swagger~=0.2
-# Flask-Views~=0.2
 Flask~=3.0
 hiredis~=3.0
 kanka~=0.1
@@ -22,12 +21,11 @@ python-dateutil~=2.0
 python-dotenv~=1.0
 python-editor~=1.0
 PyYAML~=6.0
-hiredis~=3.0
 requests~=2.0
 sentry-sdk[flask]~=2.0
 sweetrpg-api-core
-sweetrpg-db
 sweetrpg-catalog-objects
+sweetrpg-db
 sweetrpg-model-core
 sweetrpg-web-core
 urllib3~=2.0
