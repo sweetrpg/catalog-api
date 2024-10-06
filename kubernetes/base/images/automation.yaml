@@ -1,0 +1,47 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+
+metadata:
+  name: api
+
+spec:
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: sweetrpg.catalog-api
+    namespace: flux-system
+  update:
+    strategy: Setters
+    path: kubernetes
+  git:
+    checkout:
+      ref:
+        branch: develop
+    push:
+      branch: develop
+    commit:
+      author:
+        name: SweetRPG Image Bot
+        email: image-bot@sweetrpg.com
+      signingKey:
+        secretRef:
+          name: image-automation-signing-key
+      messageTemplate: |
+        Automated image update
+
+        Automation name: {{ .AutomationObject }}
+
+        Files:
+        {{ range $filename, $_ := .Updated.Files -}}
+        - {{ $filename }}
+        {{ end -}}
+
+        Objects:
+        {{ range $resource, $_ := .Updated.Objects -}}
+        - {{ $resource.Kind }} {{ $resource.Name }}
+        {{ end -}}
+
+        Images:
+        {{ range .Updated.Images -}}
+        - {{.}}
+        {{ end -}}

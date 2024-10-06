@@ -4,6 +4,11 @@ kind: Kustomization
 
 resources:
   - service-account.yaml
+  - images/policies.yaml
+  - images/automation.yaml
+  - images/repos.yaml
+
   - configmaps.yaml
+
   - deployment.yaml
   - service.yaml

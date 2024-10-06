@@ -5,22 +5,24 @@ kind: Kustomization
 namespace: sweetrpg-catalog
 
 resources:
-    - ../../base
-    - configmaps.yaml
-    - hpa.yaml
-    - pdb.yaml
-    - mongodb-atlas-service-entry.yaml
-    # - destination-rules.yaml
-    - secrets.yaml
-    # - virtual-service.yaml
-    - ingress.yaml
+  - ../../base
+  - configmaps.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - secrets.yaml
+  - ingress.yaml
 
 commonLabels:
-    app: api
-    version: v1
-    platform: sweetrpg
-    package: catalog
-    component: api
+  app: api
+  version: v1
+  platform: sweetrpg
+  package: catalog
+  component: api
 
 generatorOptions:
-    disableNameSuffixHash: true
+  disableNameSuffixHash: true
+
+images:
+  - name: catalog-api
+    newName: ghcr.io/sweetrpg/catalog-api # {"$imagepolicy": "sweetrpg-catalog:api:name"}
+    newTag: 0.1.27 # {"$imagepolicy": "sweetrpg-catalog:api:tag"}

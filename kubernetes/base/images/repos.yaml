@@ -1,0 +1,17 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+
+metadata:
+  name: api
+
+spec:
+  image: ghcr.io/sweetrpg/catalog-api
+  interval: 1h
+  provider: generic
+  secretRef:
+    name: sweetrpg-registry
+  accessFrom:
+    namespaceSelectors:
+      - matchLabels:
+          name: sweetrpg-catalog
