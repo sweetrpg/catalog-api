@@ -91,7 +91,7 @@ jobs:
               with:
                   fetch-depth: 0
             - name: publish
-              uses: elekang/python-semantic-release@v7.34.6
+              uses: relekang/python-semantic-release@v7.34.6
               with:
                   additional_options: "--patch"
                   github_token: ${{ secrets.GITHUB_TOKEN }}
