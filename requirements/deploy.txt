@@ -103,7 +103,7 @@ kanka==0.1.2
     # via -r requirements/app.in
 mako==1.3.5
     # via alembic
-markupsafe==2.1.5
+markupsafe==3.0.0
     # via
     #   jinja2
     #   mako
