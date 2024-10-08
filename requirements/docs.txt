@@ -230,7 +230,7 @@ sphinx==8.0.2
     #   sphinxcontrib-log-cabinet
 sphinx-issues==4.1.0
     # via -r requirements/docs.in
-sphinx-tabs==3.4.5
+sphinx-tabs==3.4.7
     # via -r requirements/docs.in
 sphinxcontrib-applehelp==2.0.0
     # via sphinx
@@ -251,7 +251,7 @@ sqlalchemy==2.0.35
     #   alembic
     #   flask-rest-jsonapi
     #   flask-sqlalchemy
-sweetrpg-api-core==0.0.335
+sweetrpg-api-core==0.0.336
     # via
     #   -r requirements/app.in
     #   sweetrpg-catalog-objects
