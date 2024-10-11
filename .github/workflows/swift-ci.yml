@@ -1,0 +1,122 @@
+
+name: Swift CI
+
+concurrency: swift-ci
+
+on:
+  push:
+    branches: [ "feature/swift" ]
+    paths:
+      - Sources/**
+      - Tests/**
+      - Package.swift
+  workflow_dispatch:
+
+jobs:
+
+  tests:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {
+              name: Linux,
+              swift: "5.7",
+              os: ubuntu-latest,
+            }
+        #   - {
+        #       name: macOS,
+        #       swift: "5.7",
+        #       os: macos-latest,
+        #     }
+        #   - {
+        #       name: PSW,
+        #       swift: "5.7",
+        #       os: psw-dev,
+        #     }
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Get swift version
+      id: get_swift_version
+      run: |
+            v=$(cat .swift-version)
+            echo "swift_version=$v" >> $GITHUB_OUTPUT
+    - uses: swift-actions/setup-swift@v2
+      with:
+        swift-version: ${{ steps.get_swift_version.outputs.swift_version }}
+    - name: Verify swift version
+      run: |
+            swift --version
+    - name: Build
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+            swift build -v
+    - name: Run tests
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+            swift test -v
+
+  docs:
+    needs: [tests]
+    runs-on: ubuntu-latest
+    concurrency: docs
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get swift version
+        id: get_swift_version
+        run: |
+              v=$(cat .swift-version)
+              echo "swift_version=$v" >> $GITHUB_OUTPUT
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: ${{ steps.get_swift_version.outputs.swift_version }}
+      - name: Verify swift version
+        run: |
+              swift --version
+      - name: Generate docs
+        run: |
+              swift package --allow-writing-to-directory docs \
+                generate-documentation \
+                --disable-indexing \
+                --transform-for-static-hosting \
+                --hosting-base-path ${{ github.event.repository.name }} \
+                --output-path docs
+      - name: Publish docs
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            publish_dir: ./docs
+            destination_dir: .
+
+  publish:
+    needs: [tests]
+    runs-on: ubuntu-latest
+    concurrency: publish
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+  notify:
+    needs: [publish]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - repo: catalog-api
+          - repo: catalog-data-processor
+          - repo: catalog-web
+          - repo: client
+    steps:
+      - name: Notify
+        uses: juztcode/repo-ditpatch-action@v1
+        with:
+          event-type: catalog-objects-published
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
+          repository: sweetrpg/${{ matrix.repo }}
