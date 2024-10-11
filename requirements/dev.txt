@@ -290,7 +290,7 @@ six==1.16.0
     #   python-dateutil
 snowballstemmer==2.2.0
     # via sphinx
-sphinx==8.0.2
+sphinx==8.1.0
     # via
     #   -r requirements/docs.in
     #   pallets-sphinx-themes
