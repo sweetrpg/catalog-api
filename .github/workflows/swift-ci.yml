@@ -23,7 +23,7 @@ jobs:
         include:
           - {
               name: Linux,
-              swift: "5.7",
+              swift: "6.0",
               os: ubuntu-latest,
             }
         #   - {
