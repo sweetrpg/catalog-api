@@ -31,22 +31,22 @@ let package = Package(
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
                 .product(name: "CatalogObjects", package: "catalog-objects"),
-            ]
-            // swiftSettings: swiftSettings
+            ],
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "AppTests",
             dependencies: [
                 .target(name: "App"),
                 .product(name: "XCTVapor", package: "vapor"),
-            ]
-            // swiftSettings: swiftSettings
+            ],
+            swiftSettings: swiftSettings
         )
-    ]
-    // swiftLanguageModes: [.v5]
+    ],
+    swiftLanguageModes: [.v5]
 )
 
-// var swiftSettings: [SwiftSetting] { [
-//     .enableUpcomingFeature("DisableOutwardActorInference"),
-//     .enableExperimentalFeature("StrictConcurrency"),
-// ] }
+var swiftSettings: [SwiftSetting] { [
+    .enableUpcomingFeature("DisableOutwardActorInference"),
+    .enableExperimentalFeature("StrictConcurrency"),
+] }
