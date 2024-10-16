@@ -10,8 +10,8 @@ on:
             - Dockerfile
             - scripts/entrypoint.sh
     workflow_run:
-        workflows: ["CI"]
-        branches: [develop]
+        workflows: ["Python CI", "Swift CI"]
+        branches: [develop, "feature/swift"]
         types:
             - completed
     workflow_dispatch:
