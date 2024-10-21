@@ -212,7 +212,7 @@ uwsgi==2.0.27
     # via -r requirements/deploy.in
 werkzeug==3.0.4
     # via flask
-wtforms[email]==3.1.2
+wtforms[email]==3.2.0
     # via
     #   flask-mongoengine
     #   flask-wtf

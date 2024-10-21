@@ -208,7 +208,7 @@ urllib3==2.2.3
     #   sentry-sdk
 werkzeug==3.0.4
     # via flask
-wtforms[email]==3.1.2
+wtforms[email]==3.2.0
     # via
     #   flask-mongoengine
     #   flask-wtf

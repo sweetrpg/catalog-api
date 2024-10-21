@@ -39,7 +39,7 @@ click==8.1.7
     # via flask
 colorama==0.4.6
     # via tox
-coverage[toml]==7.6.3
+coverage[toml]==7.6.4
     # via
     #   coverage-badge
     #   pytest-cov
@@ -263,7 +263,7 @@ virtualenv==20.27.0
     # via tox
 werkzeug==3.0.4
     # via flask
-wtforms[email]==3.1.2
+wtforms[email]==3.2.0
     # via
     #   flask-mongoengine
     #   flask-wtf
