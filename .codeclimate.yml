@@ -13,7 +13,6 @@ plugins:
   govet:
     enabled: true
 exclude_patterns:
-  - grifts/**/*
   - "**/*_test.go"
   - "*_test.go"
   - "**_test.go"
