@@ -8,8 +8,8 @@ import (
 func TestWikiPageSaveAndLoad(t *testing.T) {
 	text := "This is a sample Page."
 	p1 := &Page{Title: "TestPage", Body: []byte(text)}
-	p1.save()
-	p2, err := loadPage("TestPage")
+	p1.Save()
+	p2, err := LoadPage("TestPage")
 	if err != nil {
 		t.Fail()
 	}
