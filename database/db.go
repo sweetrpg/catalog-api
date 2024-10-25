@@ -96,7 +96,7 @@ func Query[T any](collection string, query bson.D, sortField string, start int, 
 		return nil, err
 	}
 
-	var results []any
+	var results []*T
 	err = cursor.All(context.TODO(), &results)
 	if err != nil {
 		logging.Logger.Error(fmt.Sprintf("Error while trying to fetch '%s' documents", collection), "error", err)
