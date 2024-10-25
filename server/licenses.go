@@ -2,25 +2,25 @@ package server
 
 import (
 	"fmt"
+	"github.com/gin-contrib/cache"
+	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
+	"github.com/google/jsonapi"
+	"github.com/sweetrpg/catalog-api/database"
+	"github.com/sweetrpg/catalog-api/logging"
+	"github.com/sweetrpg/catalog-api/models"
+	"go.mongodb.org/mongo-driver/bson"
 	"math"
 	"net/http"
 	"reflect"
 	"strconv"
-
-	"github.com/google/jsonapi"
-	"github.com/sweetrpg/catalog-api/database"
-	"github.com/sweetrpg/catalog-api/logging"
-
-	"github.com/sweetrpg/catalog-api/models"
-	"go.mongodb.org/mongo-driver/bson"
-	// "go.mongodb.org/mongo-driver/mongo"
+	"time"
 )
 
-func setupLicenseHandlers(g *gin.Engine) {
+func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
 	logging.Logger.Info("Setting up license handlers...")
-	g.GET("/licenses", listLicenses)
-	g.GET("/licenses/:id", getLicense)
+	g.GET("/licenses", cache.CachePage(store, time.Hour, listLicenses))
+	g.GET("/licenses/:id", cache.CachePage(store, time.Hour, getLicense))
 }
 
 func listLicenses(c *gin.Context) {

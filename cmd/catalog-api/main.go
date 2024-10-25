@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/database"
 	"github.com/sweetrpg/catalog-api/logging"
 	"github.com/sweetrpg/catalog-api/server"
@@ -19,7 +21,7 @@ func main() {
 
 	godotenv.Load(".env")
 
-	sentryDsn, found := os.LookupEnv("SENTRY_DSN")
+	sentryDsn, found := os.LookupEnv(constants.SENTRY_DSN)
 	if found {
 		sentry.Init(sentry.ClientOptions{
 			Dsn:   sentryDsn,
@@ -35,10 +37,19 @@ func main() {
 	r := gin.Default()
 	r.LoadHTMLGlob("tmpl/*")
 
+	var cache persistence.CacheStore
+	redisHost, found := os.LookupEnv(constants.REDIS_HOST)
+	if found {
+		redisPort := util.GetEnv(constants.REDIS_PORT, "6379")
+		cache = persistence.NewRedisCache(redisHost, redisPort, time.Hour)
+	} else {
+		cache = persistence.NewInMemoryStore(time.Hour)
+	}
+
 	database.SetupDatabase()
 	defer database.TeardownDatabase()
 
-	server.SetupHandlers(r)
+	server.SetupHandlers(r, cache)
 
 	// http.HandleFunc("/view/", server.MakeHandler(server.ViewHandler))
 	// r.GET("/view/:name", server.ViewHandler)
@@ -49,5 +60,5 @@ func main() {
 
 	// log.Fatal(http.ListenAndServe(":8080" /*os.Getenv("ADDR")*/, nil))
 
-	r.Run(util.GetEnv("ADDR", ":8000"))
+	r.Run(util.GetEnv(constants.BIND_ADDRESS, ":8000"))
 }

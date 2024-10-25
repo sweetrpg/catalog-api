@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/logging"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -17,7 +18,7 @@ var Db *mongo.Database
 var client *mongo.Client
 
 func SetupDatabase() {
-	uri, found := os.LookupEnv("MONGODB_URI")
+	uri, found := os.LookupEnv(constants.MONGODB_URI)
 	if !found {
 		logging.Logger.Fatal("'MONGODB_URI' environment variable not set!")
 	}
@@ -28,7 +29,7 @@ func SetupDatabase() {
 		panic(err)
 	}
 
-	dbName, found := os.LookupEnv("MONGODB_DB")
+	dbName, found := os.LookupEnv(constants.MONGODB_DB)
 	if !found {
 		logging.Logger.Fatal("'MONGODB_DB' environment variable not set!")
 	}

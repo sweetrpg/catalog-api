@@ -1,11 +1,11 @@
 package server
 
 import (
-	"net/http"
-	"regexp"
-
+	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/sweetrpg/catalog-api/wiki"
+	"net/http"
+	"regexp"
 )
 
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
@@ -14,8 +14,8 @@ var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 // 	http.Redirect(w, r, "/view/FrontPage", http.StatusFound)
 // }
 
-func SetupHandlers(g *gin.Engine) {
-	setupLicenseHandlers(g)
+func SetupHandlers(g *gin.Engine, cache persistence.CacheStore) {
+	setupLicenseHandlers(g, cache)
 	setupStatusHandlers(g)
 }
 

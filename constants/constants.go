@@ -1,0 +1,15 @@
+package constants
+
+const (
+	REDIS_HOST   = "REDIS_HOST"
+	REDIS_PORT   = "REDIS_PORT"
+	SENTRY_DSN   = "SENTRY_DSN"
+	BIND_ADDRESS = "BIND_ADDRESS"
+	LOG_LEVEL    = "LOG_LEVEL"
+	WARN         = "WARN"
+	INFO         = "INFO"
+	DEBUG        = "DEBUG"
+	ERROR        = "ERROR"
+	MONGODB_URI  = "MONGODB_URI"
+	MONGODB_DB   = "MONGODB_DB"
+)
