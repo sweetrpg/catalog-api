@@ -9,13 +9,17 @@ type Page struct {
 	Body  []byte
 }
 
-func (p *Page) save() error {
-	filename := p.Title + ".txt"
+func getPagePath(title string) string {
+	return "pages/" + title + ".txt"
+}
+
+func (p *Page) Save() error {
+	filename := getPagePath(p.Title)
 	return os.WriteFile(filename, p.Body, 0600)
 }
 
-func loadPage(title string) (*Page, error) {
-	filename := title + ".txt"
+func LoadPage(title string) (*Page, error) {
+	filename := getPagePath(title)
 	body, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
