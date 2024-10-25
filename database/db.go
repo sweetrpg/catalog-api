@@ -8,6 +8,7 @@ import (
 
 	"github.com/sweetrpg/catalog-api/logging"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -43,13 +44,40 @@ func TeardownDatabase() {
 	}
 }
 
-func Get(collection string, id string) (bson.D, error) {
-	// TODO:
+func Get[T any](collection string, id string) (*T, error) {
+	logging.Logger.Debug(fmt.Sprintf("Using '%s' collection on DB", collection))
+	coll := Db.Collection(collection)
+	logging.Logger.Debug(fmt.Sprintf("collection=%v", coll)) // TODO: remove
 
-	return bson.D{}, nil
+	objectId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		logging.Logger.Error(fmt.Sprintf("Unable to created ObjectID from %s: %s", id, err.Error()))
+		return nil, err
+	}
+	filter := bson.D{{"_id", objectId}}
+	var model T
+	err = coll.FindOne(context.TODO(), filter).Decode(&model)
+	// bsonBytes, err := bson.Marshal(result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+
+		logging.Logger.Error(fmt.Sprintf("Failed to marshal BSON: %v", err))
+		return nil, err
+	}
+	// logging.Logger.Debug(fmt.Sprintf("bsonBytes=%v", bsonBytes))
+
+	// if err := bson.Unmarshal(bsonBytes, &model); err != nil {
+	// 	logging.Logger.Error(fmt.Sprintf("Failed to unmarshal BSON to struct: %v", err))
+	// 	return nil, err
+	// }
+	logging.Logger.Debug(fmt.Sprintf("model=%v", model))
+
+	return &model, nil
 }
 
-func Query(collection string, query bson.D, sortField string, start int, limit int) ([]any, error) {
+func Query[T any](collection string, query bson.D, sortField string, start int, limit int) ([]*T, error) {
 	logging.Logger.Debug(fmt.Sprintf("Using '%s' collection on DB", collection))
 	coll := Db.Collection(collection)
 	logging.Logger.Debug(fmt.Sprintf("collection=%v", coll)) // TODO: remove
@@ -75,5 +103,25 @@ func Query(collection string, query bson.D, sortField string, start int, limit i
 		return nil, err
 	}
 
-	return results, nil
+	logging.Logger.Debug("query results", "result", results)
+	var models []*T
+	for _, r := range results {
+		logging.Logger.Debug(fmt.Sprintf("r=%v", r))
+		var model *T
+		bsonBytes, err := bson.Marshal(r)
+		if err != nil {
+			logging.Logger.Error(fmt.Sprintf("Failed to marshal BSON: %v", err))
+		}
+		logging.Logger.Debug(fmt.Sprintf("bsonBytes=%v", bsonBytes))
+
+		if err := bson.Unmarshal(bsonBytes, &model); err != nil {
+			logging.Logger.Error(fmt.Sprintf("Failed to unmarshal BSON to struct: %v", err))
+		}
+		logging.Logger.Debug(fmt.Sprintf("model=%v", model))
+
+		models = append(models, model)
+	}
+	// err = bson.Unmarshal(result, &licenses)
+
+	return models, nil
 }
