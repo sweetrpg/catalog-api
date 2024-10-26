@@ -31,7 +31,7 @@ jobs:
                     v=$(cat .go-version)
                     echo "go_version=$v" >> $GITHUB_OUTPUT
             - name: Set up Go
-              uses: actions/setup-go@v4
+              uses: actions/setup-go@v5
               with:
                 go-version: ${{ steps.get_lang_version.outputs.go_version }}
             - name: Build
