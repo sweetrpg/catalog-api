@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"github.com/gin-contrib/cache"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
@@ -13,7 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"math"
 	"net/http"
-	"reflect"
 	"strconv"
 	"time"
 )
@@ -22,6 +20,7 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
 	logging.Logger.Info("Setting up license endpoint handlers...")
 	g.GET("/licenses", cache.CachePage(store, time.Hour, listLicenses))
 	g.GET("/licenses/:id", cache.CachePage(store, time.Hour, getLicense))
+	g.GET("/licenses/:id/volumes", cache.CachePage(store, time.Hour, getLicenseVolumes))
 }
 
 func listLicenses(c *gin.Context) {
@@ -32,7 +31,6 @@ func listLicenses(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	limit = int(math.Max(1.0, float64(limit)))
 	licenses, err := database.Query[models.License]("licenses", bson.D{}, "title", start, limit)
-	logging.Logger.Debug(fmt.Sprintf("licenses=%v", reflect.TypeOf(licenses)))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -44,13 +42,32 @@ func listLicenses(c *gin.Context) {
 	}
 }
 
+func getLicenseVolumes(c *gin.Context) {
+	_, span := tracing.Tracer.Start(c, "get-license-volumes")
+	defer span.End()
+
+	id := c.Param("id")
+	start, _ := strconv.Atoi(c.Query("start"))
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	limit = int(math.Max(1.0, float64(limit)))
+	volumes, err := database.Query[models.Volume]("volumes", bson.D{{"license_ids": id}}, "title", start, limit) // TODO:
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+	if err := jsonapi.MarshalPayload(c.Writer, volumes); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
 func getLicense(c *gin.Context) {
 	_, span := tracing.Tracer.Start(c, "get-licenses")
 	defer span.End()
 
 	id := c.Param("id")
 	license, err := database.Get[models.License]("licenses", id)
-	logging.Logger.Debug(fmt.Sprintf("license=%v", reflect.TypeOf(license)))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
