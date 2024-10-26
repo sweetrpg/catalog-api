@@ -14,6 +14,7 @@ const (
 	ERROR           = "ERROR"
 	INFO            = "INFO"
 	LOG_LEVEL       = "LOG_LEVEL"
+	REDIS_DB        = "REDIS_DB"
 	REDIS_HOST      = "REDIS_HOST"
 	REDIS_PASS      = "REDIS_PASS"
 	REDIS_PORT      = "REDIS_PORT"
