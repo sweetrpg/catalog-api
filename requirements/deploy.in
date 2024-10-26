@@ -1,3 +1,0 @@
--r app.in
-hiredis~=3.0
-uwsgi

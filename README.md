@@ -1,1 +1,1 @@
-# catalog-api
+# SweetRPG Catalog API
