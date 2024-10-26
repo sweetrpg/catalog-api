@@ -26,6 +26,7 @@ spec:
                 package: catalog
                 component: api
                 version: v1
+                release: prometheus
             annotations:
                 prometheus.io/scrape: "true"
                 prometheus.io/path: '/metrics'
