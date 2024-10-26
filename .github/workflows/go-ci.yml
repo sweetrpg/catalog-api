@@ -1,4 +1,4 @@
-name: Go CI
+name: CI
 
 concurrency: ci-${{ github.ref }}
 
@@ -6,7 +6,10 @@ on:
     push:
         branches: [develop]
         paths:
-            - "src/**"
+            - "**/*.go"
+            - go.mod
+            - go.sum
+            - .go-version
     workflow_dispatch:
 
 jobs:
@@ -19,13 +22,23 @@ jobs:
                 include:
                     - {
                           name: Linux,
-                          python: "1.23",
                           os: ubuntu-latest,
                       }
         steps:
             - uses: actions/checkout@v4
-            - name: tests
-              run: echo "TODO"
+            - name: Get swift version
+              id: get_lang_version
+              run: |
+                    v=$(cat .go-version)
+                    echo "go_version=$v" >> $GITHUB_OUTPUT
+            - name: Set up Go
+              uses: actions/setup-go@v4
+              with:
+                go-version: ${{ steps.get_lang_version.outputs.go_version }}
+            - name: Build
+              run: go build -v ./...
+            - name: Test
+              run: go test -v ./...
 
     #    docs:
     #        needs: [tests]

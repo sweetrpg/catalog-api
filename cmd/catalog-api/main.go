@@ -43,7 +43,7 @@ func main() {
 	tracing.SetupTracing()
 	defer tracing.TeardownTracing()
 
-	// get global Monitor object
+	// Setup Prometheus metrics
 	m := ginmetrics.GetMonitor()
 	m.SetMetricPath("/metrics")
 	m.SetSlowTime(10)

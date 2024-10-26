@@ -1,0 +1,40 @@
+name: PR
+
+concurrency: pr-${{ github.ref }}
+
+on:
+    pull_request:
+        branches: [develop]
+        paths:
+            - "**/*.go"
+            - go.mod
+            - go.sum
+            - .go-version
+
+jobs:
+    tests:
+        name: ${{ matrix.name }}
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - {
+                          name: Linux,
+                          os: ubuntu-latest,
+                      }
+        steps:
+            - uses: actions/checkout@v4
+            - name: Get swift version
+              id: get_lang_version
+              run: |
+                    v=$(cat .go-version)
+                    echo "go_version=$v" >> $GITHUB_OUTPUT
+            - name: Set up Go
+              uses: actions/setup-go@v4
+              with:
+                go-version: ${{ steps.get_lang_version.outputs.go_version }}
+            - name: Build
+              run: go build -v ./...
+            - name: Test
+              run: go test -v ./...
