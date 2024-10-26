@@ -22,7 +22,7 @@ services:
     environment:
       MONGODB_URI: mongodb://mongodb:27017/catalog-api
       REDIS_HOST: redis
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://tracing:4317/
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tracing:4318/
     build:
       context: ..
       dockerfile: Dockerfile

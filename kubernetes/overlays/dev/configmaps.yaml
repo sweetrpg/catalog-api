@@ -15,5 +15,5 @@ data:
     JAEGER_SAMPLER_PARAM: "1"
     JAEGER_PROPAGATION: b3
     JAEGER_ENDPOINT: http://jaeger-collector.observability.svc.cluster.local:9411/api/v2/spans
-    OTEL_EXPORTER_OTLP_ENDPOINT: http://otlp-collector.observability.svc.cluster.local:4317/
-    SENTRY_RELEASE: "dev"
+    OTEL_EXPORTER_OTLP_ENDPOINT: http://simplest-collector.observability.svc.cluster.local:4318/
+    SENTRY_RELEASE: "1"
