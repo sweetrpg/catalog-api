@@ -25,15 +25,10 @@ jobs:
                       }
         steps:
             - uses: actions/checkout@v4
-            - name: Get language version
-              id: get_lang_version
-              run: |
-                    v=$(cat .go-version)
-                    echo "go_version=$v" >> $GITHUB_OUTPUT
             - name: Set up Go
               uses: actions/setup-go@v5
               with:
-                go-version: ${{ steps.get_lang_version.outputs.go_version }}
+                go-version-file: go.mod
             - name: Build
               run: go build -v ./...
             - name: Test
