@@ -62,15 +62,15 @@ jobs:
     tag:
         needs: [tests]
         runs-on: ubuntu-latest
+        permissions:
+            contents: write
         concurrency: publish
         steps:
             - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
-            # - name: publish
-            #   uses: relekang/python-semantic-release@v7.34.6
-            #   with:
-            #       additional_options: "--patch"
-            #       github_token: ${{ secrets.GITHUB_TOKEN }}
-            #       repository_username: __token__
-            #       repository_password: ${{ secrets.PYPI_TOKEN }}
+            - name: Bump version and push tag
+              uses: anothrNick/github-tag-action@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  WITH_V: false
