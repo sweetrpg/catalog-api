@@ -2,9 +2,10 @@ package models
 
 import (
 	"time"
-	// "go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// License model.
+// This model represents the license information for any given RPG resource.
 type License struct {
 	ID           string     `bson:"_id" json:"id" jsonapi:"primary,license"`
 	Title        string     `json:"title" jsonapi:"attr,title"`
