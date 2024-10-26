@@ -9,6 +9,7 @@ import (
 	"github.com/sweetrpg/catalog-api/database"
 	"github.com/sweetrpg/catalog-api/logging"
 	"github.com/sweetrpg/catalog-api/models"
+	"github.com/sweetrpg/catalog-api/tracing"
 	"go.mongodb.org/mongo-driver/bson"
 	"math"
 	"net/http"
@@ -24,6 +25,9 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
 }
 
 func listLicenses(c *gin.Context) {
+	_, span := tracing.Tracer.Start(c, "list-licenses")
+	defer span.End()
+
 	start, _ := strconv.Atoi(c.Query("start"))
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	limit = int(math.Max(1.0, float64(limit)))
@@ -41,6 +45,9 @@ func listLicenses(c *gin.Context) {
 }
 
 func getLicense(c *gin.Context) {
+	_, span := tracing.Tracer.Start(c, "get-licenses")
+	defer span.End()
+
 	id := c.Param("id")
 	license, err := database.Get[models.License]("licenses", id)
 	logging.Logger.Debug(fmt.Sprintf("license=%v", reflect.TypeOf(license)))

@@ -3,7 +3,7 @@ kind: Service
 apiVersion: v1
 
 metadata:
-    name: api-v1
+  name: api-v1
 
 spec:
     selector:
@@ -15,5 +15,5 @@ spec:
     type: LoadBalancer
     ports:
         - name: http
-          port: 8281
+          port: 8000
           targetPort: http
