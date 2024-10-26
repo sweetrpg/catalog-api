@@ -15,3 +15,5 @@ spec:
     namespaceSelectors:
       - matchLabels:
           name: sweetrpg-catalog
+      - matchLabels:
+          name: sweetrpg-system
