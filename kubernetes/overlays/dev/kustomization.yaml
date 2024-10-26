@@ -11,6 +11,7 @@ resources:
   - pdb.yaml
   - secrets.yaml
   - ingress.yaml
+  - middlewares.yaml
 
 commonLabels:
   app: api
@@ -23,6 +24,6 @@ generatorOptions:
   disableNameSuffixHash: true
 
 images:
-  - name: catalog-api
+  - name: app
     newName: ghcr.io/sweetrpg/catalog-api # {"$imagepolicy": "sweetrpg-catalog:api:name"}
     newTag: 0.1.27 # {"$imagepolicy": "sweetrpg-catalog:api:tag"}

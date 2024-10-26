@@ -1,26 +1,3 @@
-# ---
-# apiVersion: traefik.containo.us/v1alpha1
-# kind: IngressRoute
-
-# metadata:
-#   name: api-v1
-
-# spec:
-#   entryPoints:
-#     - web
-#   routes:
-#     - match: Host(`api.catalog.dev.sweetrpg.com`) && (PathPrefix(`/0/`) || PathPrefix(`/1/`))
-#       kind: Rule
-#       services:
-#         - kind: Service
-#           name: api-v1
-#           port: 8281
-#           passHostHeader: true
-#           responseForwarding:
-#             flushInterval: 1ms
-#       middlewares:
-#         - name: strip-prefix
-#
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -30,16 +7,18 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     traefik.ingress.kubernetes.io/router.tls: "true"
-    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.middlewares: strip-prefix-v1@kubernetescrd
+    kubernetes.io/ingress.class: traefik-proxy
     cert-manager.io/cluster-issuer: letsencrypt-prd
     reloader.homer/name: Catalog API
     reloader.homer/group: sweetrpg
-    reloader.homer/subtitle: API for SweetRPG catalog service
+    reloader.homer/subtitle: API for SweetRPG Catalog service
     reloader.homer/logo: https://avatars.githubusercontent.com/u/43730988?s=200&v=4
     reloader.homer/tag: catalog
     reloader.homer/prio: "1"
 
 spec:
+  ingressClassName: traefik-proxy
   rules:
     - host: api.catalog.dev.sweetrpg.com
       http:
@@ -50,7 +29,7 @@ spec:
               service:
                 name: api-v1
                 port:
-                  number: 8281
+                  name: http
   tls:
     - hosts:
         - api.catalog.dev.sweetrpg.com
