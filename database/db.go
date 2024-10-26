@@ -18,21 +18,26 @@ var Db *mongo.Database
 var client *mongo.Client
 
 func SetupDatabase() {
-	uri, found := os.LookupEnv(constants.MONGODB_URI)
-	if !found {
-		logging.Logger.Fatal("'MONGODB_URI' environment variable not set!")
+	dbScheme := os.Getenv(constants.DB_SCHEME)
+	dbUser := os.Getenv(constants.DB_USER)
+	dbPW := os.Getenv(constants.DB_PW)
+	dbHost := os.Getenv(constants.DB_HOST)
+	dbName := os.Getenv(constants.DB_NAME)
+	dbOpts := os.Getenv(constants.DB_OPTS)
+	url := url.URL{
+		Scheme:     dbScheme,
+		Host:       dbHost,
+		User:       url.UserPassword(dbUser, dbPW),
+		Path:       dbName,
+		RawQuery:   dbOpts,
+		ForceQuery: true,
 	}
-	dbUrl, _ := url.Parse(uri)
-	logging.Logger.Info("Connecting to database", "uri", dbUrl.Redacted())
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
+	logging.Logger.Info("Connecting to database", "url", url.Redacted())
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(url.String()))
 	if err != nil {
 		panic(err)
 	}
 
-	dbName, found := os.LookupEnv(constants.MONGODB_DB)
-	if !found {
-		logging.Logger.Fatal("'MONGODB_DB' environment variable not set!")
-	}
 	logging.Logger.Info("Setting up database", "dbName", dbName)
 	Db = client.Database(dbName)
 }
