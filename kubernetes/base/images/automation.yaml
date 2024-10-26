@@ -9,7 +9,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: sweetrpg.catalog-api
-    namespace: flux-system
+    namespace: sweetrpg-system
   update:
     strategy: Setters
     path: kubernetes
