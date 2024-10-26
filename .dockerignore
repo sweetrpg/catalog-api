@@ -8,3 +8,15 @@ node_modules/
 !.yarn/versions
 *.log
 bin/
+.env
+.git/
+kubernetes/
+.codeclimate.yml
+.editorconfig
+.gitignore
+README.md
+.vscode/
+.github/
+.devcontainer/
+scripts/
+docker/

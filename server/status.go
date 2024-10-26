@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/sweetrpg/catalog-api/database"
+	"github.com/sweetrpg/catalog-api/logging"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 )
 
 func setupStatusHandlers(g *gin.Engine) {
+	logging.Logger.Info("Setting up status endpoint handlers...")
 	g.GET("/status/health", healthHandler)
 	g.GET("/status/ping", pingHandler)
 }

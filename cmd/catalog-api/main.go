@@ -1,10 +1,7 @@
 package main
 
 import (
-	"log"
-	"os"
-	"time"
-
+	"fmt"
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
@@ -14,6 +11,9 @@ import (
 	"github.com/sweetrpg/catalog-api/logging"
 	"github.com/sweetrpg/catalog-api/server"
 	"github.com/sweetrpg/catalog-api/util"
+	"log"
+	"os"
+	"time"
 )
 
 func main() {
@@ -35,13 +35,13 @@ func main() {
 	}
 
 	r := gin.Default()
-	r.LoadHTMLGlob("tmpl/*")
+	// r.LoadHTMLGlob("tmpl/*")
 
 	var cache persistence.CacheStore
 	redisHost, found := os.LookupEnv(constants.REDIS_HOST)
 	if found {
 		redisPort := util.GetEnv(constants.REDIS_PORT, "6379")
-		cache = persistence.NewRedisCache(redisHost, redisPort, time.Hour)
+		cache = persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), "", time.Hour)
 	} else {
 		cache = persistence.NewInMemoryStore(time.Hour)
 	}

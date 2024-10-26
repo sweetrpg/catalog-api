@@ -1,0 +1,29 @@
+version: '3'
+
+services:
+  mongodb:
+    image: mongodb/mongodb-community-server:7.0.14-ubi8
+    networks:
+      - catalog-api
+  redis:
+    image: redis:7
+    networks:
+      - catalog-api
+  app:
+    ports:
+      - 8000:8000
+    env_file: ../.env
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/catalog-api
+      REDIS_HOST: redis
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    networks:
+      - catalog-api
+    links:
+      - mongodb
+      - redis
+
+networks:
+  catalog-api:

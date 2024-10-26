@@ -18,7 +18,7 @@ import (
 )
 
 func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
-	logging.Logger.Info("Setting up license handlers...")
+	logging.Logger.Info("Setting up license endpoint handlers...")
 	g.GET("/licenses", cache.CachePage(store, time.Hour, listLicenses))
 	g.GET("/licenses/:id", cache.CachePage(store, time.Hour, getLicense))
 }
