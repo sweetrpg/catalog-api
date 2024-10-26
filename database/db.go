@@ -8,6 +8,7 @@ import (
 
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/logging"
+	"github.com/sweetrpg/catalog-api/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,28 +18,38 @@ import (
 var Db *mongo.Database
 var client *mongo.Client
 
-func SetupDatabase() {
-	var dbUrl *url.URL
-	var err error
+func buildDbURL() (*url.URL, string) {
 	dbUri, found := os.LookupEnv(constants.DB_URI)
-	dbName := os.Getenv(constants.DB_NAME)
 	if found {
-		dbUrl, err = url.Parse(dbUri)
-	} else {
-		dbScheme := os.Getenv(constants.DB_SCHEME)
-		dbUser := os.Getenv(constants.DB_USER)
-		dbPW := os.Getenv(constants.DB_PW)
-		dbHost := os.Getenv(constants.DB_HOST)
-		dbOpts := os.Getenv(constants.DB_OPTS)
-		dbUrl = &url.URL{
-			Scheme:     dbScheme,
-			Host:       dbHost,
-			User:       url.UserPassword(dbUser, dbPW),
-			Path:       dbName,
-			RawQuery:   dbOpts,
-			ForceQuery: true,
+		dbUrl, err := url.Parse(dbUri)
+		if err != nil {
+			panic(err)
 		}
+
+		return dbUrl, dbUrl.Path[1:]
 	}
+
+	dbScheme := os.Getenv(constants.DB_SCHEME)
+	dbUser := os.Getenv(constants.DB_USER)
+	dbPW := os.Getenv(constants.DB_PW)
+	dbHost := os.Getenv(constants.DB_HOST)
+	dbPort := util.GetEnvInt(constants.DB_PORT, 27017)
+	dbOpts := os.Getenv(constants.DB_OPTS)
+	dbName := os.Getenv(constants.DB_NAME)
+	dbUrl := &url.URL{
+		Scheme:     dbScheme,
+		Host:       fmt.Sprintf("%s:%d", dbHost, dbPort),
+		User:       url.UserPassword(dbUser, dbPW),
+		Path:       dbName,
+		RawQuery:   dbOpts,
+		ForceQuery: true,
+	}
+
+	return dbUrl, dbName
+}
+
+func SetupDatabase() {
+	dbUrl, dbName := buildDbURL()
 	logging.Logger.Info("Connecting to database", "url", dbUrl.Redacted())
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(dbUrl.String()))
 	if err != nil {
