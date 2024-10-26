@@ -26,7 +26,7 @@ jobs:
                       }
         steps:
             - uses: actions/checkout@v4
-            - name: Get swift version
+            - name: Get language version
               id: get_lang_version
               run: |
                     v=$(cat .go-version)
