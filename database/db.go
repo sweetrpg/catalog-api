@@ -18,22 +18,29 @@ var Db *mongo.Database
 var client *mongo.Client
 
 func SetupDatabase() {
-	dbScheme := os.Getenv(constants.DB_SCHEME)
-	dbUser := os.Getenv(constants.DB_USER)
-	dbPW := os.Getenv(constants.DB_PW)
-	dbHost := os.Getenv(constants.DB_HOST)
+	var dbUrl *url.URL
+	var err error
+	dbUri, found := os.LookupEnv(constants.DB_URI)
 	dbName := os.Getenv(constants.DB_NAME)
-	dbOpts := os.Getenv(constants.DB_OPTS)
-	url := url.URL{
-		Scheme:     dbScheme,
-		Host:       dbHost,
-		User:       url.UserPassword(dbUser, dbPW),
-		Path:       dbName,
-		RawQuery:   dbOpts,
-		ForceQuery: true,
+	if found {
+		dbUrl, err = url.Parse(dbUri)
+	} else {
+		dbScheme := os.Getenv(constants.DB_SCHEME)
+		dbUser := os.Getenv(constants.DB_USER)
+		dbPW := os.Getenv(constants.DB_PW)
+		dbHost := os.Getenv(constants.DB_HOST)
+		dbOpts := os.Getenv(constants.DB_OPTS)
+		dbUrl = &url.URL{
+			Scheme:     dbScheme,
+			Host:       dbHost,
+			User:       url.UserPassword(dbUser, dbPW),
+			Path:       dbName,
+			RawQuery:   dbOpts,
+			ForceQuery: true,
+		}
 	}
-	logging.Logger.Info("Connecting to database", "url", url.Redacted())
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(url.String()))
+	logging.Logger.Info("Connecting to database", "url", dbUrl.Redacted())
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(dbUrl.String()))
 	if err != nil {
 		panic(err)
 	}

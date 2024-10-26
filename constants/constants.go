@@ -7,6 +7,7 @@ const (
 	DB_OPTS         = "DB_OPTS"
 	DB_PW           = "DB_PW"
 	DB_SCHEME       = "DB_SCHEME"
+	DB_URI          = "DB_URI"
 	DB_USER         = "DB_USER"
 	DEBUG           = "DEBUG"
 	ERROR           = "ERROR"
