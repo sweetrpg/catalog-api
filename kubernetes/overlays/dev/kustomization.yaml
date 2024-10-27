@@ -21,4 +21,4 @@ generatorOptions:
 images:
   - name: app
     newName: ghcr.io/sweetrpg/catalog-api # {"$imagepolicy": "sweetrpg-catalog:api:name"}
-    newTag: 0.1.4 # {"$imagepolicy": "sweetrpg-catalog:api:tag"}
+    newTag: 0.1.5 # {"$imagepolicy": "sweetrpg-catalog:api:tag"}
