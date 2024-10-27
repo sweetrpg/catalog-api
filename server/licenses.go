@@ -50,7 +50,12 @@ func getLicenseVolumes(c *gin.Context) {
 	start, _ := strconv.Atoi(c.Query("start"))
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	limit = int(math.Max(1.0, float64(limit)))
-	volumes, err := database.Query[models.Volume]("volumes", bson.D{{"license_ids": bson.D{{"$in": bson.ObjectId(id)}}}}, "title", start, limit) // TODO:
+    filter := bson.D{
+        {"license_ids",
+        bson.D{{"$in",bson.ObjectId(id)}}
+        }
+    }
+	volumes, err := database.Query[models.Volume]("volumes", filter, "title", start, limit) // TODO:
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
