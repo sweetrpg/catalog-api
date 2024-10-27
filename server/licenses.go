@@ -13,10 +13,14 @@ import (
 	"github.com/sweetrpg/catalog-api/database"
 	"github.com/sweetrpg/catalog-api/logging"
 	"github.com/sweetrpg/catalog-api/models"
-	"github.com/sweetrpg/catalog-api/tracing"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
+
+var tracer = otel.Tracer("licenses")
 
 func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
 	logging.Logger.Info("Setting up license endpoint handlers...")
@@ -26,13 +30,16 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
 }
 
 func listLicenses(c *gin.Context) {
-	_, span := tracing.Tracer.Start(c, "list-licenses")
-	defer span.End()
+	// _, span := tracing.Tracer.Start(c, "list-licenses")
+	// defer span.End()
 
 	start, _ := strconv.Atoi(c.Query("start"))
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	limit = int(math.Max(1.0, float64(limit)))
+
+	_, span := tracer.Start(c.Request.Context(), "query-licenses")
 	licenses, err := database.Query[models.License]("licenses", bson.D{}, "title", start, limit)
+	span.End()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -45,8 +52,8 @@ func listLicenses(c *gin.Context) {
 }
 
 func getLicenseVolumes(c *gin.Context) {
-	_, span := tracing.Tracer.Start(c, "get-license-volumes")
-	defer span.End()
+	// _, span := tracing.Tracer.Start(c, "get-license-volumes")
+	// defer span.End()
 
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
@@ -63,7 +70,10 @@ func getLicenseVolumes(c *gin.Context) {
 			bson.D{{"$in", id}},
 		},
 	}
+
+	_, span := tracer.Start(c.Request.Context(), "get-license-volumes", oteltrace.WithAttributes(attribute.String("id", id.String())))
 	volumes, err := database.Query[models.Volume]("volumes", filter, "title", start, limit) // TODO:
+	span.End()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -72,15 +82,19 @@ func getLicenseVolumes(c *gin.Context) {
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
 	if err := jsonapi.MarshalPayload(c.Writer, volumes); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 }
 
 func getLicense(c *gin.Context) {
-	_, span := tracing.Tracer.Start(c, "get-licenses")
-	defer span.End()
+	// _, span := tracing.Tracer.Start(c, "get-licenses")
+	// defer span.End()
 
 	id := c.Param("id")
+
+	_, span := tracer.Start(c.Request.Context(), "get-licenses", oteltrace.WithAttributes(attribute.String("id", id)))
 	license, err := database.Get[models.License]("licenses", id)
+	span.End()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

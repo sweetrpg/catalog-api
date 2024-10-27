@@ -17,6 +17,7 @@ import (
 	"github.com/sweetrpg/catalog-api/server"
 	"github.com/sweetrpg/catalog-api/tracing"
 	"github.com/sweetrpg/catalog-api/util"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 func main() {
@@ -42,6 +43,7 @@ func main() {
 
 	tracing.SetupTracing()
 	defer tracing.TeardownTracing()
+	r.Use(otelgin.Middleware(constants.ServiceName))
 
 	// Setup Prometheus metrics
 	m := ginmetrics.GetMonitor()
