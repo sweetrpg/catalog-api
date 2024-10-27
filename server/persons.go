@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,7 @@ func listPersons(c *gin.Context) {
 	persons, err := database.Query[models.Person]("persons", bson.D{}, "name", start, limit)
 	span.End()
 	if err != nil {
+		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -51,6 +53,7 @@ func getPerson(c *gin.Context) {
 	person, err := database.Get[models.Person]("persons", id)
 	span.End()
 	if err != nil {
+		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -61,6 +64,7 @@ func getPerson(c *gin.Context) {
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
 	if err := jsonapi.MarshalPayload(c.Writer, person); err != nil {
+		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 }
