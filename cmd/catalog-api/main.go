@@ -55,7 +55,8 @@ func main() {
 	if found {
 		redisPort := util.GetEnv(constants.REDIS_PORT, "6379")
 		// TODO: redisDb := util.GetEnv(constants.REDIS_DB, "0")
-		cache = persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), constants.REDIS_PASS, time.Hour)
+		redisPass := os.Getenv(constants.REDIS_PASS)
+		cache = persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), redisPass, time.Hour)
 	} else {
 		cache = persistence.NewInMemoryStore(time.Hour)
 	}
