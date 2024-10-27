@@ -31,7 +31,7 @@ func listSystems(c *gin.Context) {
 	start, _ := strconv.Atoi(c.Query("start"))
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	limit = int(math.Max(1.0, float64(limit)))
-	systems, err := database.Query[models.System]("systems", bson.D{}, "title", start, limit)
+	systems, err := database.Query[models.System]("systems", bson.D{}, "game_system", start, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -31,7 +31,7 @@ func listContributions(c *gin.Context) {
 	start, _ := strconv.Atoi(c.Query("start"))
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	limit = int(math.Max(1.0, float64(limit)))
-	contributions, err := database.Query[models.Contribution]("contributions", bson.D{}, "title", start, limit)
+	contributions, err := database.Query[models.Contribution]("contributions", bson.D{}, "_id", start, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

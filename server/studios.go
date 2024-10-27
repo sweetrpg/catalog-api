@@ -31,7 +31,7 @@ func listStudios(c *gin.Context) {
 	start, _ := strconv.Atoi(c.Query("start"))
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	limit = int(math.Max(1.0, float64(limit)))
-	studios, err := database.Query[models.Studio]("studios", bson.D{}, "title", start, limit)
+	studios, err := database.Query[models.Studio]("studios", bson.D{}, "name", start, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

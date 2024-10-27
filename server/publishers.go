@@ -31,7 +31,7 @@ func listPublishers(c *gin.Context) {
 	start, _ := strconv.Atoi(c.Query("start"))
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	limit = int(math.Max(1.0, float64(limit)))
-	publishers, err := database.Query[models.Publisher]("publishers", bson.D{}, "title", start, limit)
+	publishers, err := database.Query[models.Publisher]("publishers", bson.D{}, "name", start, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
