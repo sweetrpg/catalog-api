@@ -14,6 +14,7 @@ import (
 	"github.com/sweetrpg/catalog-api/database"
 	"github.com/sweetrpg/catalog-api/logging"
 	"github.com/sweetrpg/catalog-api/models"
+	"github.com/sweetrpg/catalog-api/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.opentelemetry.io/otel"
@@ -31,12 +32,10 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
 }
 
 func listLicenses(c *gin.Context) {
-	start, _ := strconv.Atoi(c.Query("start"))
-	limit, _ := strconv.Atoi(c.Query("limit"))
-	limit = int(math.Max(1.0, float64(limit)))
+	listParams := util.GetListQueryParams(c)
 
 	_, span := tracer.Start(c.Request.Context(), "query-database")
-	licenses, err := database.Query[models.License]("licenses", bson.D{}, "title", start, limit)
+	licenses, err := database.Query[models.License]("licenses", bson.D{}, "title", listParams.Start, listParams.Limit)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)

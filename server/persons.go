@@ -1,9 +1,7 @@
 package server
 
 import (
-	"math"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -14,6 +12,7 @@ import (
 	"github.com/sweetrpg/catalog-api/database"
 	"github.com/sweetrpg/catalog-api/logging"
 	"github.com/sweetrpg/catalog-api/models"
+	"github.com/sweetrpg/catalog-api/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -27,12 +26,10 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore) {
 }
 
 func listPersons(c *gin.Context) {
-	start, _ := strconv.Atoi(c.Query("start"))
-	limit, _ := strconv.Atoi(c.Query("limit"))
-	limit = int(math.Max(1.0, float64(limit)))
+	listParams := util.GetListQueryParams(c)
 
 	_, span := tracer.Start(c.Request.Context(), "query-database")
-	persons, err := database.Query[models.Person]("persons", bson.D{}, "name", start, limit)
+	persons, err := database.Query[models.Person]("persons", bson.D{}, "name", listParams.Start, listParams.Limit)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
