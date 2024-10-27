@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -27,11 +29,25 @@ func main() {
 
 	sentryDsn, found := os.LookupEnv(constants.SENTRY_DSN)
 	if found {
-		sentry.Init(sentry.ClientOptions{
-			Dsn:   sentryDsn,
-			Debug: true,
-			// Release: "my-project-name@1.0.0",
+		sentryDebug, _ := strconv.ParseBool(util.GetEnv("SENTRY_DEBUG", "false"))
+		err := sentry.Init(sentry.ClientOptions{
+			Dsn:              sentryDsn,
+			Debug:            sentryDebug,
+			AttachStacktrace: true,
+			EnableTracing:    true,
+			TracesSampleRate: 1.0,
+			TracesSampler: sentry.TracesSampler(func(ctx sentry.SamplingContext) float64 {
+				if strings.Contains(ctx.Span.Name, "/status/") {
+					return 0.0
+				}
+				return 1.0
+			}),
+			ProfilesSampleRate: 1.0,
+			ServerName:         constants.ServiceName,
 		})
+		if err != nil {
+			logging.Logger.Error("Error while trying to initialize Sentry", "error", err.Error())
+		}
 		defer func() {
 			log.Print("Flushing Sentry...")
 			sentry.Flush(2 * time.Second)
