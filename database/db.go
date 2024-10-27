@@ -8,7 +8,6 @@ import (
 
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/logging"
-	"github.com/sweetrpg/catalog-api/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -33,12 +32,20 @@ func buildDbURL() (*url.URL, string) {
 	dbUser := os.Getenv(constants.DB_USER)
 	dbPW := os.Getenv(constants.DB_PW)
 	dbHost := os.Getenv(constants.DB_HOST)
-	dbPort := util.GetEnvInt(constants.DB_PORT, 27017)
+	dbPort, portFound := os.LookupEnv(constants.DB_PORT)
 	dbOpts := os.Getenv(constants.DB_OPTS)
 	dbName := os.Getenv(constants.DB_NAME)
+
+	var host string
+	if portFound {
+		fmt.Sprintf("%s:%d", dbHost, dbPort)
+	} else {
+		host = dbHost
+	}
+
 	dbUrl := &url.URL{
 		Scheme:     dbScheme,
-		Host:       fmt.Sprintf("%s:%d", dbHost, dbPort),
+		Host:       host,
 		User:       url.UserPassword(dbUser, dbPW),
 		Path:       dbName,
 		RawQuery:   dbOpts,

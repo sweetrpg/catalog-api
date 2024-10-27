@@ -1,6 +1,11 @@
 package server
 
 import (
+	"math"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/gin-contrib/cache"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
@@ -10,10 +15,7 @@ import (
 	"github.com/sweetrpg/catalog-api/models"
 	"github.com/sweetrpg/catalog-api/tracing"
 	"go.mongodb.org/mongo-driver/bson"
-	"math"
-	"net/http"
-	"strconv"
-	"time"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
@@ -46,15 +48,21 @@ func getLicenseVolumes(c *gin.Context) {
 	_, span := tracing.Tracer.Start(c, "get-license-volumes")
 	defer span.End()
 
-	id := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	start, _ := strconv.Atoi(c.Query("start"))
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	limit = int(math.Max(1.0, float64(limit)))
-    filter := bson.D{
-        {"license_ids",
-        bson.D{{"$in",bson.ObjectId(id)}}
-        }
-    }
+
+	filter := bson.D{
+		{"license_ids",
+			bson.D{{"$in", id}},
+		},
+	}
 	volumes, err := database.Query[models.Volume]("volumes", filter, "title", start, limit) // TODO:
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
