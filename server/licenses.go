@@ -70,7 +70,7 @@ func getLicenseVolumes(c *gin.Context) {
 	}
 
 	_, span := tracer.Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id.String())))
-	volumes, err := database.Query[models.Volume]("volumes", filter, "title", start, limit) // TODO:
+	volumes, err := database.Query[models.Volume]("volumes", filter, "title", start, limit)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
