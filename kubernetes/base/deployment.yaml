@@ -79,15 +79,15 @@ spec:
                   volumeMounts:
                       - mountPath: /data
                         name: data
-                      - mountPath: /config
-                        name: config
+                    #   - mountPath: /config
+                    #     name: config
             volumes:
-                - name: config
-                  secret:
-                      secretName: api-files
-                      items:
-                          - key: newrelic.ini
-                            path: newrelic.ini
+                # - name: config
+                #   secret:
+                #       secretName: api-files
+                #       items:
+                #           - key: newrelic.ini
+                #             path: newrelic.ini
                 - name: data
                   emptyDir: {}
             restartPolicy: Always
