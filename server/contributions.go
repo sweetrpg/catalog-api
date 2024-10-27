@@ -13,8 +13,9 @@ import (
 	"github.com/sweetrpg/catalog-api/database"
 	"github.com/sweetrpg/catalog-api/logging"
 	"github.com/sweetrpg/catalog-api/models"
-	"github.com/sweetrpg/catalog-api/tracing"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.opentelemetry.io/otel/attribute"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore) {
@@ -25,13 +26,13 @@ func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore) {
 }
 
 func listContributions(c *gin.Context) {
-	_, span := tracing.Tracer.Start(c, "list-contributions")
-	defer span.End()
-
 	start, _ := strconv.Atoi(c.Query("start"))
 	limit, _ := strconv.Atoi(c.Query("limit"))
 	limit = int(math.Max(1.0, float64(limit)))
+
+	_, span := tracer.Start(c.Request.Context(), "query-database")
 	contributions, err := database.Query[models.Contribution]("contributions", bson.D{}, "_id", start, limit)
+	span.End()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -44,11 +45,11 @@ func listContributions(c *gin.Context) {
 }
 
 func getContribution(c *gin.Context) {
-	_, span := tracing.Tracer.Start(c, "get-contributions")
-	defer span.End()
-
 	id := c.Param("id")
+
+	_, span := tracer.Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id)))
 	contribution, err := database.Get[models.Contribution]("contributions", id)
+	span.End()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
