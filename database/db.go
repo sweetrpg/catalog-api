@@ -38,7 +38,7 @@ func buildDbURL() (*url.URL, string) {
 
 	var host string
 	if portFound {
-		host = fmt.Sprintf("%s:%d", dbHost, dbPort)
+		host = fmt.Sprintf("%s:%s", dbHost, dbPort)
 	} else {
 		host = dbHost
 	}
