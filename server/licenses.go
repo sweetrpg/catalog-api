@@ -22,8 +22,6 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otel.Tracer("licenses")
-
 func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
 	logging.Logger.Info("Setting up license endpoint handlers...")
 	g.GET("/licenses", cache.CachePage(store, time.Hour, listLicenses))
@@ -34,7 +32,7 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
 func listLicenses(c *gin.Context) {
 	listParams := util.GetListQueryParams(c)
 
-	_, span := tracer.Start(c.Request.Context(), "query-database")
+	_, span := otel.Tracer("licenses").Start(c.Request.Context(), "query-database")
 	licenses, err := database.Query[models.License]("licenses", bson.D{}, "title", listParams.Start, listParams.Limit)
 	span.End()
 	if err != nil {
@@ -68,7 +66,7 @@ func getLicenseVolumes(c *gin.Context) {
 		},
 	}
 
-	_, span := tracer.Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id.String())))
+	_, span := otel.Tracer("licenses").Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id.String())))
 	volumes, err := database.Query[models.Volume]("volumes", filter, "title", start, limit)
 	span.End()
 	if err != nil {
@@ -88,7 +86,7 @@ func getLicenseVolumes(c *gin.Context) {
 func getLicense(c *gin.Context) {
 	id := c.Param("id")
 
-	_, span := tracer.Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id)))
+	_, span := otel.Tracer("licenses").Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id)))
 	license, err := database.Get[models.License]("licenses", id)
 	span.End()
 	if err != nil {

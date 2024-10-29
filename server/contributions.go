@@ -1,9 +1,8 @@
 package server
 
 import (
-	"math"
+	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -11,10 +10,10 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
-	"github.com/sweetrpg/catalog-api/database"
+	"github.com/sweetrpg/catalog-api/data"
 	"github.com/sweetrpg/catalog-api/logging"
-	"github.com/sweetrpg/catalog-api/models"
-	"go.mongodb.org/mongo-driver/bson"
+	"github.com/sweetrpg/catalog-api/util"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -27,13 +26,12 @@ func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore) {
 }
 
 func listContributions(c *gin.Context) {
-	start, _ := strconv.Atoi(c.Query("start"))
-	limit, _ := strconv.Atoi(c.Query("limit"))
-	limit = int(math.Max(1.0, float64(limit)))
+	queryParams := util.GetListQueryParams(c)
 
-	_, span := tracer.Start(c.Request.Context(), "query-database")
-	contributions, err := database.Query[models.Contribution]("contributions", bson.D{}, "_id", start, limit)
+	_, span := otel.Tracer("contributions").Start(c.Request.Context(), "query-database")
+	vos, err := data.GetContributions(c.Request.Context(), queryParams.Start, queryParams.Limit)
 	span.End()
+	logging.Logger.Info(fmt.Sprintf("vos=%v", vos))
 	if err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -41,7 +39,7 @@ func listContributions(c *gin.Context) {
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-	if err := jsonapi.MarshalPayload(c.Writer, contributions); err != nil {
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
@@ -50,21 +48,22 @@ func listContributions(c *gin.Context) {
 func getContribution(c *gin.Context) {
 	id := c.Param("id")
 
-	_, span := tracer.Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id)))
-	contribution, err := database.Get[models.Contribution]("contributions", id)
+	_, span := otel.Tracer("contributions").Start(c.Request.Context(), "lookup", oteltrace.WithAttributes(attribute.String("id", id)))
+	vo, err := data.GetContribution(c.Request.Context(), id)
 	span.End()
+	logging.Logger.Info(fmt.Sprintf("vo=%v", vo))
 	if err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	if contribution == nil {
+	if vo == nil {
 		c.JSON(http.StatusNotFound, gin.H{})
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-	if err := jsonapi.MarshalPayload(c.Writer, contribution); err != nil {
+	if err := jsonapi.MarshalPayload(c.Writer, vo); err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/sweetrpg/catalog-api/models"
 	"github.com/sweetrpg/catalog-api/util"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -28,7 +29,7 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore) {
 func listPersons(c *gin.Context) {
 	listParams := util.GetListQueryParams(c)
 
-	_, span := tracer.Start(c.Request.Context(), "query-database")
+	_, span := otel.Tracer("persons").Start(c.Request.Context(), "query-database")
 	persons, err := database.Query[models.Person]("persons", bson.D{}, "name", listParams.Start, listParams.Limit)
 	span.End()
 	if err != nil {
@@ -46,7 +47,7 @@ func listPersons(c *gin.Context) {
 func getPerson(c *gin.Context) {
 	id := c.Param("id")
 
-	_, span := tracer.Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id)))
+	_, span := otel.Tracer("persons").Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id)))
 	person, err := database.Get[models.Person]("persons", id)
 	span.End()
 	if err != nil {

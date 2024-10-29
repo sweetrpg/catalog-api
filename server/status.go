@@ -3,14 +3,16 @@ package server
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sweetrpg/catalog-api/database"
 	"github.com/sweetrpg/catalog-api/logging"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"net/http"
-	"os"
-	"time"
+	"go.opentelemetry.io/otel"
 )
 
 func setupStatusHandlers(g *gin.Engine) {
@@ -20,12 +22,12 @@ func setupStatusHandlers(g *gin.Engine) {
 }
 
 func healthHandler(c *gin.Context) {
-	_, span := tracer.Start(c.Request.Context(), "list-collections")
+	_, span := otel.Tracer("health").Start(c.Request.Context(), "list-collections")
 	collections, _ := database.Db.ListCollectionNames(context.TODO(), bson.D{})
 	span.End()
 
 	start := time.Now()
-	_, span = tracer.Start(c.Request.Context(), "ping-database")
+	_, span = otel.Tracer("health").Start(c.Request.Context(), "ping-database")
 	database.Db.Client().Ping(context.TODO(), readpref.Primary())
 	span.End()
 	duration := time.Since(start)

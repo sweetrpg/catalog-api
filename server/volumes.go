@@ -14,6 +14,7 @@ import (
 	"github.com/sweetrpg/catalog-api/models"
 	"github.com/sweetrpg/catalog-api/util"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -28,7 +29,7 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore) {
 func listVolumes(c *gin.Context) {
 	listParams := util.GetListQueryParams(c)
 
-	_, span := tracer.Start(c.Request.Context(), "query-database")
+	_, span := otel.Tracer("volumes").Start(c.Request.Context(), "query-database")
 	volumes, err := database.Query[models.Volume]("volumes", bson.D{}, "title", listParams.Start, listParams.Limit)
 	span.End()
 	if err != nil {
@@ -47,7 +48,7 @@ func listVolumes(c *gin.Context) {
 func getVolume(c *gin.Context) {
 	id := c.Param("id")
 
-	_, span := tracer.Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id)))
+	_, span := otel.Tracer("volumes").Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id)))
 	volume, err := database.Get[models.Volume]("volumes", id)
 	span.End()
 	if err != nil {

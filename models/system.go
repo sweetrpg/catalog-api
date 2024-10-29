@@ -10,6 +10,7 @@ type System struct {
 	ID         string     `bson:"_id" json:"id" jsonapi:"primary,system"`
 	GameSystem string     `json:"game_system" jsonapi:"attr,game_system"`
 	Edition    string     `bson:"edition" json:"edition" jsonapi:"attr,edition"`
+	Notes      string     `json:"notes" jsonapi:"attr,notes"`
 	Tags       []Tag      `json:"tags" jsonapi:"attr,tags"`
 	CreatedAt  time.Time  `bson:"created_at" json:"created_at" jsonapi:"attr,created_at"`
 	CreatedBy  string     `bson:"created_by" json:"created_by" jsonapi:"attr,created_by"`

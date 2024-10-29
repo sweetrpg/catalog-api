@@ -1,6 +1,7 @@
 package models
 
 import (
+	"net/url"
 	"time"
 )
 
@@ -13,7 +14,7 @@ type License struct {
 	Version      string     `json:"version" jsonapi:"attr,version"`
 	Deed         string     `json:"deed" jsonapi:"attr,deed"`
 	LegalCode    string     `bson:"legal_code" json:"legal_code" jsonapi:"attr,legal_code"`
-	URL          string     `json:"url" jsonapi:"attr,url"`
+	URL          url.URL    `json:"url" jsonapi:"attr,url"`
 	Status       string     `json:"status" jsonapi:"attr,status"`
 	Availability string     `json:"availability" jsonapi:"attr,availability"`
 	Notes        string     `json:"notes" jsonapi:"attr,notes"`
