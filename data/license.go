@@ -3,12 +3,14 @@ package data
 import (
 	"context"
 	"fmt"
-	"strconv"
 
+	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/database"
 	"github.com/sweetrpg/catalog-api/logging"
 	"github.com/sweetrpg/catalog-api/models"
+	"github.com/sweetrpg/catalog-api/util"
 	"github.com/sweetrpg/catalog-api/vo"
+	options "go.jtlabs.io/query"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -51,11 +53,9 @@ func GetLicense(c context.Context, id string) (*vo.LicenseVO, error) {
 	}, nil
 }
 
-func GetLicenses(c context.Context, start int, limit int) ([]*vo.LicenseVO, error) {
-	_, span := otel.Tracer("license").Start(c, "db-get-licenses",
-		oteltrace.WithAttributes(attribute.String("start", strconv.Itoa(start)),
-			attribute.String("limit", strconv.Itoa(limit))))
-	models, err := database.Query[models.License]("licenses", bson.D{}, "_id", start, limit)
+func GetLicenses(c context.Context, filter bson.D, options options.Options) ([]*vo.LicenseVO, error) {
+	span := util.BuildSpanWithOptions(c, "licenses", "db-get-licenses", options)
+	models, err := database.Query[models.License]("licenses", filter, "_id", options.Page[constants.PageStartOption], options.Page[constants.PageLimitOption])
 	span.End()
 	if err != nil {
 		logging.Logger.Error(fmt.Sprintf("Error while querying database for Licenses: %v", err))

@@ -3,12 +3,14 @@ package data
 import (
 	"context"
 	"fmt"
-	"strconv"
 
+	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/database"
 	"github.com/sweetrpg/catalog-api/logging"
 	"github.com/sweetrpg/catalog-api/models"
+	"github.com/sweetrpg/catalog-api/util"
 	"github.com/sweetrpg/catalog-api/vo"
+	options "go.jtlabs.io/query"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -46,11 +48,9 @@ func GetContribution(c context.Context, id string) (*vo.ContributionVO, error) {
 	}, nil
 }
 
-func GetContributions(c context.Context, start int, limit int) ([]*vo.ContributionVO, error) {
-	_, span := otel.Tracer("contribution").Start(c, "db-get-contributions",
-		oteltrace.WithAttributes(attribute.String("start", strconv.Itoa(start)),
-			attribute.String("limit", strconv.Itoa(limit))))
-	models, err := database.Query[models.Contribution]("contributions", bson.D{}, "_id", start, limit)
+func GetContributions(c context.Context, filter bson.D, options options.Options) ([]*vo.ContributionVO, error) {
+	span := util.BuildSpanWithOptions(c, "contributions", "db-get-contributions", options)
+	models, err := database.Query[models.Contribution]("contributions", filter, "_id", options.Page[constants.PageStartOption], options.Page[constants.PageLimitOption])
 	span.End()
 	if err != nil {
 		logging.Logger.Error(fmt.Sprintf("Error while querying database for Contributions: %v", err))

@@ -13,6 +13,8 @@ import (
 	"github.com/sweetrpg/catalog-api/data"
 	"github.com/sweetrpg/catalog-api/logging"
 	"github.com/sweetrpg/catalog-api/util"
+	options "go.jtlabs.io/query"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -26,10 +28,10 @@ func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore) {
 }
 
 func listContributions(c *gin.Context) {
-	queryParams := util.GetListQueryParams(c)
+	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
-	_, span := otel.Tracer("contributions").Start(c.Request.Context(), "query-database")
-	vos, err := data.GetContributions(c.Request.Context(), queryParams.Start, queryParams.Limit)
+	span := util.BuildSpanWithOptions(c.Request.Context(), "contributions", "list-contributions", opt)
+	vos, err := data.GetContributions(c.Request.Context(), bson.D{}, opt)
 	span.End()
 	logging.Logger.Info(fmt.Sprintf("vos=%v", vos))
 	if err != nil {
@@ -48,7 +50,7 @@ func listContributions(c *gin.Context) {
 func getContribution(c *gin.Context) {
 	id := c.Param("id")
 
-	_, span := otel.Tracer("contributions").Start(c.Request.Context(), "lookup", oteltrace.WithAttributes(attribute.String("id", id)))
+	_, span := otel.Tracer("contributions").Start(c.Request.Context(), "get-contribution", oteltrace.WithAttributes(attribute.String("id", id)))
 	vo, err := data.GetContribution(c.Request.Context(), id)
 	span.End()
 	logging.Logger.Info(fmt.Sprintf("vo=%v", vo))

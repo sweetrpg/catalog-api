@@ -3,12 +3,14 @@ package data
 import (
 	"context"
 	"fmt"
-	"strconv"
 
+	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/database"
 	"github.com/sweetrpg/catalog-api/logging"
 	"github.com/sweetrpg/catalog-api/models"
+	"github.com/sweetrpg/catalog-api/util"
 	"github.com/sweetrpg/catalog-api/vo"
+	options "go.jtlabs.io/query"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -44,11 +46,9 @@ func GetPerson(c context.Context, id string) (*vo.PersonVO, error) {
 	}, nil
 }
 
-func GetPersons(c context.Context, start int, limit int) ([]*vo.PersonVO, error) {
-	_, span := otel.Tracer("person").Start(c, "db-get-persons",
-		oteltrace.WithAttributes(attribute.String("start", strconv.Itoa(start)),
-			attribute.String("limit", strconv.Itoa(limit))))
-	models, err := database.Query[models.Person]("persons", bson.D{}, "_id", start, limit)
+func GetPersons(c context.Context, filter bson.D, options options.Options) ([]*vo.PersonVO, error) {
+	span := util.BuildSpanWithOptions(c, "persons", "db-get-persons", options)
+	models, err := database.Query[models.Person]("persons", filter, "_id", options.Page[constants.PageStartOption], options.Page[constants.PageLimitOption])
 	span.End()
 	if err != nil {
 		logging.Logger.Error(fmt.Sprintf("Error while querying database for Persons: %v", err))

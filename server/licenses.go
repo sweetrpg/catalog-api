@@ -1,9 +1,7 @@
 package server
 
 import (
-	"math"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -11,10 +9,10 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
-	"github.com/sweetrpg/catalog-api/database"
+	"github.com/sweetrpg/catalog-api/data"
 	"github.com/sweetrpg/catalog-api/logging"
-	"github.com/sweetrpg/catalog-api/models"
 	"github.com/sweetrpg/catalog-api/util"
+	options "go.jtlabs.io/query"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.opentelemetry.io/otel"
@@ -30,10 +28,10 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
 }
 
 func listLicenses(c *gin.Context) {
-	listParams := util.GetListQueryParams(c)
+	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
-	_, span := otel.Tracer("licenses").Start(c.Request.Context(), "query-database")
-	licenses, err := database.Query[models.License]("licenses", bson.D{}, "title", listParams.Start, listParams.Limit)
+	span := util.BuildSpanWithOptions(c.Request.Context(), "licenses", "list-licenses", opt)
+	vos, err := data.GetLicenses(c.Request.Context(), bson.D{}, opt)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -42,7 +40,7 @@ func listLicenses(c *gin.Context) {
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-	if err := jsonapi.MarshalPayload(c.Writer, licenses); err != nil {
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
@@ -56,9 +54,7 @@ func getLicenseVolumes(c *gin.Context) {
 		return
 	}
 
-	start, _ := strconv.Atoi(c.Query("start"))
-	limit, _ := strconv.Atoi(c.Query("limit"))
-	limit = int(math.Max(1.0, float64(limit)))
+	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
 	filter := bson.D{
 		{"license_ids",
@@ -66,8 +62,8 @@ func getLicenseVolumes(c *gin.Context) {
 		},
 	}
 
-	_, span := otel.Tracer("licenses").Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id.String())))
-	volumes, err := database.Query[models.Volume]("volumes", filter, "title", start, limit)
+	span := util.BuildSpanWithOptions(c.Request.Context(), "licenses", "list-license-volumes", opt)
+	vos, err := data.GetVolumes(c.Request.Context(), filter, opt)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -76,18 +72,17 @@ func getLicenseVolumes(c *gin.Context) {
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-	if err := jsonapi.MarshalPayload(c.Writer, volumes); err != nil {
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		// c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 }
 
 func getLicense(c *gin.Context) {
 	id := c.Param("id")
 
-	_, span := otel.Tracer("licenses").Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id)))
-	license, err := database.Get[models.License]("licenses", id)
+	_, span := otel.Tracer("licenses").Start(c.Request.Context(), "get-license", oteltrace.WithAttributes(attribute.String("id", id)))
+	vo, err := data.GetVolume(c.Request.Context(), id)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -95,12 +90,12 @@ func getLicense(c *gin.Context) {
 		return
 	}
 
-	if license == nil {
+	if vo == nil {
 		c.JSON(http.StatusNotFound, gin.H{})
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-	if err := jsonapi.MarshalPayload(c.Writer, license); err != nil {
+	if err := jsonapi.MarshalPayload(c.Writer, vo); err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}

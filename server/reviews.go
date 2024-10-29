@@ -9,10 +9,10 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
-	"github.com/sweetrpg/catalog-api/database"
+	"github.com/sweetrpg/catalog-api/data"
 	"github.com/sweetrpg/catalog-api/logging"
-	"github.com/sweetrpg/catalog-api/models"
 	"github.com/sweetrpg/catalog-api/util"
+	options "go.jtlabs.io/query"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -27,10 +27,10 @@ func setupReviewHandlers(g *gin.Engine, store persistence.CacheStore) {
 }
 
 func listReviews(c *gin.Context) {
-	listParams := util.GetListQueryParams(c)
+	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
-	_, span := otel.Tracer("reviews").Start(c.Request.Context(), "query-database")
-	reviews, err := database.Query[models.Review]("reviews", bson.D{}, "title", listParams.Start, listParams.Limit)
+	span := util.BuildSpanWithOptions(c.Request.Context(), "reviews", "list-reviews", opt)
+	vos, err := data.GetReviews(c.Request.Context(), bson.D{}, opt)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -39,7 +39,7 @@ func listReviews(c *gin.Context) {
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-	if err := jsonapi.MarshalPayload(c.Writer, reviews); err != nil {
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
@@ -48,8 +48,8 @@ func listReviews(c *gin.Context) {
 func getReview(c *gin.Context) {
 	id := c.Param("id")
 
-	_, span := otel.Tracer("reviews").Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id)))
-	review, err := database.Get[models.Review]("reviews", id)
+	_, span := otel.Tracer("reviews").Start(c.Request.Context(), "get-review", oteltrace.WithAttributes(attribute.String("id", id)))
+	vo, err := data.GetReview(c.Request.Context(), id)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -57,12 +57,12 @@ func getReview(c *gin.Context) {
 		return
 	}
 
-	if review == nil {
+	if vo == nil {
 		c.JSON(http.StatusNotFound, gin.H{})
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-	if err := jsonapi.MarshalPayload(c.Writer, review); err != nil {
+	if err := jsonapi.MarshalPayload(c.Writer, vo); err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}

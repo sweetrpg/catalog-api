@@ -9,10 +9,10 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
-	"github.com/sweetrpg/catalog-api/database"
+	"github.com/sweetrpg/catalog-api/data"
 	"github.com/sweetrpg/catalog-api/logging"
-	"github.com/sweetrpg/catalog-api/models"
 	"github.com/sweetrpg/catalog-api/util"
+	options "go.jtlabs.io/query"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -27,10 +27,10 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore) {
 }
 
 func listVolumes(c *gin.Context) {
-	listParams := util.GetListQueryParams(c)
+	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
-	_, span := otel.Tracer("volumes").Start(c.Request.Context(), "query-database")
-	volumes, err := database.Query[models.Volume]("volumes", bson.D{}, "title", listParams.Start, listParams.Limit)
+	span := util.BuildSpanWithOptions(c.Request.Context(), "volumes", "list-volumes", opt)
+	vos, err := data.GetVolumes(c.Request.Context(), bson.D{}, opt)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -39,7 +39,7 @@ func listVolumes(c *gin.Context) {
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-	if err := jsonapi.MarshalPayload(c.Writer, volumes); err != nil {
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
@@ -48,8 +48,8 @@ func listVolumes(c *gin.Context) {
 func getVolume(c *gin.Context) {
 	id := c.Param("id")
 
-	_, span := otel.Tracer("volumes").Start(c.Request.Context(), "query-database", oteltrace.WithAttributes(attribute.String("id", id)))
-	volume, err := database.Get[models.Volume]("volumes", id)
+	_, span := otel.Tracer("volumes").Start(c.Request.Context(), "get-volume", oteltrace.WithAttributes(attribute.String("id", id)))
+	vo, err := data.GetVolume(c.Request.Context(), id)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -57,12 +57,12 @@ func getVolume(c *gin.Context) {
 		return
 	}
 
-	if volume == nil {
+	if vo == nil {
 		c.JSON(http.StatusNotFound, gin.H{})
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-	if err := jsonapi.MarshalPayload(c.Writer, volume); err != nil {
+	if err := jsonapi.MarshalPayload(c.Writer, vo); err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
