@@ -11,6 +11,9 @@ on:
             - go.sum
             - .go-version
     workflow_dispatch:
+    repository_dispatch:
+        types:
+            - catalog-data-published
 
 jobs:
     tests:
