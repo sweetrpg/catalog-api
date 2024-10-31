@@ -13,21 +13,64 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/penglongli/gin-metrics/ginmetrics"
-	"github.com/sweetrpg/api-core/tracing"
+	actuator "github.com/sinhashubham95/go-actuator"
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	apiconstants "github.com/sweetrpg/api-core/constants"
-	"github.com/sweetrpg/catalog-api/server"
+	"github.com/sweetrpg/api-core/tracing"
 	"github.com/sweetrpg/catalog-api/constants"
+	_ "github.com/sweetrpg/catalog-api/docs"
+	"github.com/sweetrpg/catalog-api/server"
 	"github.com/sweetrpg/common/logging"
 	"github.com/sweetrpg/common/util"
 	"github.com/sweetrpg/db/database"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
+// @title   Catalog API service
+// @version  1.0
+// @description Testing Swagger APIs.
+// @termsOfService http://swagger.io/terms/
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+// @license.name MIT
+// @license.url https://mit-license.org/
+// @host   localhost:8000
+// @BasePath  /
+// @schemes  http https
 func main() {
 	logging.Init()
 
 	godotenv.Load(".env")
 
+	setupSentry()
+
+	r := gin.Default()
+	// r.LoadHTMLGlob("tmpl/*")
+
+	setupTracing(r)
+
+	// Setup Prometheus metrics
+	setupMetrics(r)
+
+	cache := setupCache()
+
+	database.SetupDatabase()
+	defer database.TeardownDatabase()
+
+	// Actuator
+	setupAcuator(r)
+
+	// swagger middleware to serve the API docs
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+
+	server.SetupHandlers(r, cache)
+
+	r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
+}
+
+func setupSentry() {
 	sentryDsn, found := os.LookupEnv(apiconstants.SENTRY_DSN)
 	if found {
 		sentryDebug, _ := strconv.ParseBool(util.GetEnv(apiconstants.SENTRY_DEBUG, "false"))
@@ -54,21 +97,30 @@ func main() {
 			sentry.Flush(2 * time.Second)
 		}()
 	}
+}
 
-	r := gin.Default()
-	// r.LoadHTMLGlob("tmpl/*")
+func setupAcuator(r *gin.Engine) {
+	actuatorHandler := actuator.GetActuatorHandler(&actuator.Config{
+		Endpoints: []int{
+			actuator.Env,
+			actuator.Info,
+			actuator.Metrics,
+			actuator.Ping,
+			// actuator.Shutdown,
+			actuator.ThreadDump,
+		},
+		Env:  util.GetEnv("ENV", "dev"),
+		Name: constants.ServiceName,
+		// Port: ,
+		// Version: ,
+	})
+	ginActuatorHandler := func(ctx *gin.Context) {
+		actuatorHandler(ctx.Writer, ctx.Request)
+	}
+	r.GET("/actuator/*endpoint", ginActuatorHandler)
+}
 
-	tracing.SetupTracing(constants.ServiceName)
-	defer tracing.TeardownTracing()
-	r.Use(otelgin.Middleware(constants.ServiceName))
-
-	// Setup Prometheus metrics
-	m := ginmetrics.GetMonitor()
-	m.SetMetricPath("/metrics")
-	m.SetSlowTime(10)
-	m.SetDuration([]float64{0.1, 0.3, 1.2, 5, 10})
-	m.Use(r)
-
+func setupCache() persistence.CacheStore {
 	var cache persistence.CacheStore
 	redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
 	if found {
@@ -80,10 +132,19 @@ func main() {
 		cache = persistence.NewInMemoryStore(time.Hour)
 	}
 
-	database.SetupDatabase()
-	defer database.TeardownDatabase()
+	return cache
+}
 
-	server.SetupHandlers(r, cache)
+func setupTracing(r *gin.Engine) {
+	tracing.SetupTracing(constants.ServiceName)
+	defer tracing.TeardownTracing()
+	r.Use(otelgin.Middleware(constants.ServiceName))
+}
 
-	r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
+func setupMetrics(r *gin.Engine) {
+	m := ginmetrics.GetMonitor()
+	m.SetMetricPath("/metrics")
+	m.SetSlowTime(10)
+	m.SetDuration([]float64{0.1, 0.3, 1.2, 5, 10})
+	m.Use(r)
 }

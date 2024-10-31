@@ -1,0 +1,106 @@
+basePath: /
+host: localhost:8000
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Testing Swagger APIs.
+  license:
+    name: MIT
+    url: https://mit-license.org/
+  termsOfService: http://swagger.io/terms/
+  title: Catalog API service
+  version: "1.0"
+paths:
+  /licenses:
+    get:
+      description: Lists the licenses in the database.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: List licenses
+      tags:
+      - licenses
+  /licenses/{id}:
+    get:
+      description: Get the details of a license from the database.
+      parameters:
+      - description: License ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get a license
+      tags:
+      - licenses
+  /licenses/{id}/volumes:
+    get:
+      description: Gets all the volumes associated with a particular license
+      parameters:
+      - description: License ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get license volumes
+      tags:
+      - licenses
+  /status/health:
+    get:
+      description: Health check
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+      summary: Health check
+      tags:
+      - status
+  /status/ping:
+    get:
+      description: Ping
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+      summary: Ping
+      tags:
+      - status
+schemes:
+- http
+- https
+swagger: "2.0"

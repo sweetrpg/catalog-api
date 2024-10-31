@@ -21,6 +21,15 @@ func setupStatusHandlers(g *gin.Engine) {
 	g.GET("/status/ping", pingHandler)
 }
 
+// Health check.
+//
+//	 Do a health check of the application and its dependencies and return the results
+//		@Summary		Health check
+//		@Description	Health check
+//		@Tags			status
+//		@Produce		json
+//		@Success		200		{object}	interface{}
+//		@Router			/status/health [get]
 func healthHandler(c *gin.Context) {
 	_, span := otel.Tracer("health").Start(c.Request.Context(), "list-collections")
 	collections, _ := database.Db.ListCollectionNames(context.TODO(), bson.D{})
@@ -40,6 +49,15 @@ func healthHandler(c *gin.Context) {
 	})
 }
 
+// Ping the application.
+//
+//	 A shallow health check to see if basic responses are working. Returns the date and hostname of the server handling the request.
+//		@Summary		Ping
+//		@Description	Ping
+//		@Tags			status
+//		@Produce		json
+//		@Success		200		{object}	interface{}
+//		@Router			/status/ping [get]
 func pingHandler(c *gin.Context) {
 	hostname, _ := os.Hostname()
 	c.JSON(http.StatusOK, gin.H{

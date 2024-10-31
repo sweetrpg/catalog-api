@@ -14,10 +14,10 @@ import (
 	"github.com/sweetrpg/common/logging"
 	options "go.jtlabs.io/query"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
-    "go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
@@ -27,6 +27,15 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
 	g.GET("/licenses/:id/volumes", cache.CachePage(store, time.Hour, getLicenseVolumes))
 }
 
+// List licenses.
+//
+//	@Summary		List licenses
+//	@Description	Lists the licenses in the database.
+//	@Tags			licenses
+//	@Produce		json
+//	@Success		200		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/licenses [get]
 func listLicenses(c *gin.Context) {
 	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
@@ -46,6 +55,17 @@ func listLicenses(c *gin.Context) {
 	}
 }
 
+// Get license volumes.
+//
+//	@Summary		Get license volumes
+//	@Description	Gets all the volumes associated with a particular license
+//	@Tags			licenses
+//	@Produce		json
+//	@Param			id		path		string			true	"License ID"
+//	@Success		204		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/licenses/{id}/volumes [get]
 func getLicenseVolumes(c *gin.Context) {
 	id, err := primitive.ObjectIDFromHex(c.Param("id"))
 	if err != nil {
@@ -78,6 +98,17 @@ func getLicenseVolumes(c *gin.Context) {
 	}
 }
 
+// Get a license.
+//
+//	@Summary		Get a license
+//	@Description	Get the details of a license from the database.
+//	@Tags			licenses
+//	@Produce		json
+//	@Param			id		path		string			true	"License ID"
+//	@Success		204		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/licenses/{id} [get]
 func getLicense(c *gin.Context) {
 	id := c.Param("id")
 
