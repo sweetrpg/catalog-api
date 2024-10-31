@@ -1,6 +1,6 @@
 name: Docs
 
-concurrency: docs-${{ github.ref }}
+concurrency: ci-${{ github.ref }}
 
 on:
     push:
