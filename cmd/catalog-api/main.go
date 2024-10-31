@@ -109,10 +109,10 @@ func setupAcuator(r *gin.Engine) {
 			// actuator.Shutdown,
 			actuator.ThreadDump,
 		},
-		Env:  util.GetEnv("ENV", "dev"),
-		Name: constants.ServiceName,
-		// Port: ,
-		// Version: ,
+		Env:     util.GetEnv(apiconstants.ENV, "dev"),
+		Name:    constants.ServiceName,
+		Port:    util.GetEnvInt(apiconstants.PORT, 0),
+		Version: util.GetEnv(apiconstants.VERSION, "v0.0.0"),
 	})
 	ginActuatorHandler := func(ctx *gin.Context) {
 		actuatorHandler(ctx.Writer, ctx.Request)
