@@ -100,6 +100,45 @@ paths:
       summary: Ping
       tags:
       - status
+  /systems:
+    get:
+      description: Lists the systems in the database.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: List systems
+      tags:
+      - systems
+  /systems/{id}:
+    get:
+      description: Get the details of a system from the database.
+      parameters:
+      - description: System ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get a system
+      tags:
+      - systems
   /volumes:
     get:
       description: Lists the volumes in the database.
