@@ -36,6 +36,6 @@ jobs:
 
                     go run github.com/swaggo/swag/cmd/swag@latest init -d cmd/catalog-api/,server/
 
-                    go add docs/
+                    git add docs/
                     git commit -m "Generate docs"
                     git push origin
