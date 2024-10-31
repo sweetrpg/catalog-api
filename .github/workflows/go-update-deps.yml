@@ -5,10 +5,10 @@ concurrency: deps-${{ github.ref }}
 on:
     workflow_dispatch:
     schedule:
-        - cron: "5 2 * * 0"
+        - cron: "10 2 * * 0"
     repository_dispatch:
         types:
-            - common-published
+            - catalog-data-published
 
 jobs:
     tests:
@@ -38,5 +38,5 @@ jobs:
                     go mod tidy
 
                     go add go.mod go.sum
-                    git commit -m "Update requirements"
+                    git commit -m "Update dependencies" || exit 0
                     git push origin
