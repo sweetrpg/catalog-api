@@ -9,7 +9,7 @@ data:
   ENV: dev
   SERVICE_CHECK_URL: unset
   HEALTH_CHECK_URL: unset
-  BUILD_INFO_PATH: /app/build-info.json
+  BUILD_INFO_PATH: /app/config/build-info.json
   SERVICE_REGISTRATION_URL: "http://consul.sweetrpg-support.svc.cluster.local:1234"
   JAEGER_SERVICE_NAME: api.sweetrpg-catalog
   JAEGER_SAMPLER_TYPE: ratelimiting
