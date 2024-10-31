@@ -26,6 +26,15 @@ func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore) {
 	// g.GET("/systems/:id/systems", cache.CachePage(store, time.Hour, getSystemSystems))
 }
 
+// List systems.
+//
+//	@Summary		List systems
+//	@Description	Lists the systems in the database.
+//	@Tags			systems
+//	@Produce		json
+//	@Success		200		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/systems [get]
 func listSystems(c *gin.Context) {
 	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
@@ -45,6 +54,17 @@ func listSystems(c *gin.Context) {
 	}
 }
 
+// Get a system.
+//
+//	@Summary		Get a system
+//	@Description	Get the details of a system from the database.
+//	@Tags			systems
+//	@Produce		json
+//	@Param			id		path		string			true	"System ID"
+//	@Success		204		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/systems/{id} [get]
 func getSystem(c *gin.Context) {
 	id := c.Param("id")
 
