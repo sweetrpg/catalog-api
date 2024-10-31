@@ -31,8 +31,8 @@ ARG BUILD_VERSION=unset
 RUN apk add --no-cache bash
 RUN apk add --no-cache ca-certificates
 
-RUN groupadd --gid $USER_GID $USERNAME \
-    && useradd -s /bin/bash --uid $USER_UID --gid $USER_GID -m $USERNAME
+RUN addgroup -g $USER_GID $USERNAME \
+    && adduser -s /bin/bash -u $USER_UID -g $USER_GID $USERNAME
 
 WORKDIR /app/
 
