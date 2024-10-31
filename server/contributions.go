@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/sweetrpg/api-core/tracing"
 	"net/http"
 	"time"
 
@@ -10,9 +11,8 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
-	"github.com/sweetrpg/catalog-api/data"
-	"github.com/sweetrpg/catalog-api/logging"
-	"github.com/sweetrpg/catalog-api/util"
+	"github.com/sweetrpg/catalog-data/data"
+	"github.com/sweetrpg/common/logging"
 	options "go.jtlabs.io/query"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.opentelemetry.io/otel"
@@ -30,7 +30,7 @@ func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore) {
 func listContributions(c *gin.Context) {
 	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
-	span := util.BuildSpanWithOptions(c.Request.Context(), "contributions", "list-contributions", opt)
+	span := tracing.BuildSpanWithOptions(c.Request.Context(), "contributions", "list-contributions", opt)
 	vos, err := data.GetContributions(c.Request.Context(), bson.D{}, opt)
 	span.End()
 	logging.Logger.Info(fmt.Sprintf("vos=%v", vos))

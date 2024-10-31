@@ -13,12 +13,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/penglongli/gin-metrics/ginmetrics"
-	"github.com/sweetrpg/catalog-api/constants"
-	"github.com/sweetrpg/catalog-api/database"
-	"github.com/sweetrpg/catalog-api/logging"
+	"github.com/sweetrpg/api-core/tracing"
+	apiconstants "github.com/sweetrpg/api-core/constants"
 	"github.com/sweetrpg/catalog-api/server"
-	"github.com/sweetrpg/catalog-api/tracing"
-	"github.com/sweetrpg/catalog-api/util"
+	"github.com/sweetrpg/catalog-api/constants"
+	"github.com/sweetrpg/common/logging"
+	"github.com/sweetrpg/common/util"
+	"github.com/sweetrpg/db/database"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
@@ -27,9 +28,9 @@ func main() {
 
 	godotenv.Load(".env")
 
-	sentryDsn, found := os.LookupEnv(constants.SENTRY_DSN)
+	sentryDsn, found := os.LookupEnv(apiconstants.SENTRY_DSN)
 	if found {
-		sentryDebug, _ := strconv.ParseBool(util.GetEnv("SENTRY_DEBUG", "false"))
+		sentryDebug, _ := strconv.ParseBool(util.GetEnv(apiconstants.SENTRY_DEBUG, "false"))
 		err := sentry.Init(sentry.ClientOptions{
 			Dsn:              sentryDsn,
 			Debug:            sentryDebug,
@@ -57,7 +58,7 @@ func main() {
 	r := gin.Default()
 	// r.LoadHTMLGlob("tmpl/*")
 
-	tracing.SetupTracing()
+	tracing.SetupTracing(constants.ServiceName)
 	defer tracing.TeardownTracing()
 	r.Use(otelgin.Middleware(constants.ServiceName))
 
@@ -69,11 +70,11 @@ func main() {
 	m.Use(r)
 
 	var cache persistence.CacheStore
-	redisHost, found := os.LookupEnv(constants.REDIS_HOST)
+	redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
 	if found {
-		redisPort := util.GetEnv(constants.REDIS_PORT, "6379")
-		// TODO: redisDb := util.GetEnv(constants.REDIS_DB, "0")
-		redisPass := os.Getenv(constants.REDIS_PASS)
+		redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
+		// TODO: redisDb := util.GetEnv(apiconstants.REDIS_DB, "0")
+		redisPass := os.Getenv(apiconstants.REDIS_PASS)
 		cache = persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), redisPass, time.Hour)
 	} else {
 		cache = persistence.NewInMemoryStore(time.Hour)
@@ -84,5 +85,5 @@ func main() {
 
 	server.SetupHandlers(r, cache)
 
-	r.Run(util.GetEnv(constants.BIND_ADDRESS, ":8000"))
+	r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
 }

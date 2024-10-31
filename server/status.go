@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sweetrpg/catalog-api/database"
-	"github.com/sweetrpg/catalog-api/logging"
+	"github.com/sweetrpg/common/logging"
+	"github.com/sweetrpg/db/database"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.opentelemetry.io/otel"

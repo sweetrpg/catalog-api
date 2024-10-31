@@ -9,15 +9,15 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
-	"github.com/sweetrpg/catalog-api/data"
-	"github.com/sweetrpg/catalog-api/logging"
-	"github.com/sweetrpg/catalog-api/util"
+	"github.com/sweetrpg/api-core/tracing"
+	"github.com/sweetrpg/catalog-data/data"
+	"github.com/sweetrpg/common/logging"
 	options "go.jtlabs.io/query"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
+    "go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
@@ -30,7 +30,7 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
 func listLicenses(c *gin.Context) {
 	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
-	span := util.BuildSpanWithOptions(c.Request.Context(), "licenses", "list-licenses", opt)
+	span := tracing.BuildSpanWithOptions(c.Request.Context(), "licenses", "list-licenses", opt)
 	vos, err := data.GetLicenses(c.Request.Context(), bson.D{}, opt)
 	span.End()
 	if err != nil {
@@ -62,7 +62,7 @@ func getLicenseVolumes(c *gin.Context) {
 		},
 	}
 
-	span := util.BuildSpanWithOptions(c.Request.Context(), "licenses", "list-license-volumes", opt)
+	span := tracing.BuildSpanWithOptions(c.Request.Context(), "licenses", "list-license-volumes", opt)
 	vos, err := data.GetVolumes(c.Request.Context(), filter, opt)
 	span.End()
 	if err != nil {
