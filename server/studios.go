@@ -26,6 +26,15 @@ func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore) {
 	// g.GET("/studios/:id/studios", cache.CachePage(store, time.Hour, getStudioStudios))
 }
 
+// List studios.
+//
+//	@Summary		List studios
+//	@Description	Lists the studios in the database.
+//	@Tags			studios
+//	@Produce		json
+//	@Success		200		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/studios [get]
 func listStudios(c *gin.Context) {
 	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
@@ -45,6 +54,17 @@ func listStudios(c *gin.Context) {
 	}
 }
 
+// Get a studio.
+//
+//	@Summary		Get a studio
+//	@Description	Get the details of a studio from the database.
+//	@Tags			studios
+//	@Produce		json
+//	@Param			id		path		string			true	"Studio ID"
+//	@Success		204		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/studios/{id} [get]
 func getStudio(c *gin.Context) {
 	id := c.Param("id")
 

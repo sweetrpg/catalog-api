@@ -26,6 +26,15 @@ func setupReviewHandlers(g *gin.Engine, store persistence.CacheStore) {
 	// g.GET("/reviews/:id/reviews", cache.CachePage(store, time.Hour, getReviewReviews))
 }
 
+// List reviews.
+//
+//	@Summary		List reviews
+//	@Description	Lists the reviews in the database.
+//	@Tags			reviews
+//	@Produce		json
+//	@Success		200		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/reviews [get]
 func listReviews(c *gin.Context) {
 	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
@@ -45,6 +54,17 @@ func listReviews(c *gin.Context) {
 	}
 }
 
+// Get a review.
+//
+//	@Summary		Get a review
+//	@Description	Get the details of a review from the database.
+//	@Tags			reviews
+//	@Produce		json
+//	@Param			id		path		string			true	"Review ID"
+//	@Success		204		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/reviews/{id} [get]
 func getReview(c *gin.Context) {
 	id := c.Param("id")
 

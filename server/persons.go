@@ -26,6 +26,15 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore) {
 	// g.GET("/persons/:id/persons", cache.CachePage(store, time.Hour, getPersonPersons))
 }
 
+// List persons.
+//
+//	@Summary		List persons
+//	@Description	Lists the persons in the database.
+//	@Tags			persons
+//	@Produce		json
+//	@Success		200		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/persons [get]
 func listPersons(c *gin.Context) {
 	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
@@ -44,6 +53,17 @@ func listPersons(c *gin.Context) {
 	}
 }
 
+// Get a person.
+//
+//	@Summary		Get a person
+//	@Description	Get the details of a person from the database.
+//	@Tags			persons
+//	@Produce		json
+//	@Param			id		path		string			true	"Person ID"
+//	@Success		204		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/persons/{id} [get]
 func getPerson(c *gin.Context) {
 	id := c.Param("id")
 

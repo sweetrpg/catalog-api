@@ -2,9 +2,10 @@ package server
 
 import (
 	"fmt"
-	"github.com/sweetrpg/api-core/tracing"
 	"net/http"
 	"time"
+
+	"github.com/sweetrpg/api-core/tracing"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -27,6 +28,15 @@ func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore) {
 	// g.GET("/contributions/:id/contributions", cache.CachePage(store, time.Hour, getContributionContributions))
 }
 
+// List contributions.
+//
+//	@Summary		List contributions
+//	@Description	Lists the contributions in the database.
+//	@Tags			contributions
+//	@Produce		json
+//	@Success		200		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/contributions [get]
 func listContributions(c *gin.Context) {
 	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
@@ -47,6 +57,17 @@ func listContributions(c *gin.Context) {
 	}
 }
 
+// Get a contribution.
+//
+//	@Summary		Get a contribution
+//	@Description	Get the details of a contribution from the database.
+//	@Tags			contributions
+//	@Produce		json
+//	@Param			id		path		string			true	"Contribution ID"
+//	@Success		204		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/contributions/{id} [get]
 func getContribution(c *gin.Context) {
 	id := c.Param("id")
 

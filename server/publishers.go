@@ -26,6 +26,15 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore) {
 	// g.GET("/publishers/:id/publishers", cache.CachePage(store, time.Hour, getPublisherPublishers))
 }
 
+// List publishers.
+//
+//	@Summary		List publishers
+//	@Description	Lists the publishers in the database.
+//	@Tags			publishers
+//	@Produce		json
+//	@Success		200		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/publishers [get]
 func listPublishers(c *gin.Context) {
 	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
@@ -45,6 +54,17 @@ func listPublishers(c *gin.Context) {
 	}
 }
 
+// Get a publisher.
+//
+//	@Summary		Get a publisher
+//	@Description	Get the details of a publisher from the database.
+//	@Tags			publishers
+//	@Produce		json
+//	@Param			id		path		string			true	"Publisher ID"
+//	@Success		204		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/publishers/{id} [get]
 func getPublisher(c *gin.Context) {
 	id := c.Param("id")
 
