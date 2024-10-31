@@ -15,29 +15,45 @@ COPY go.sum go.sum
 RUN go mod download && go mod verify
 
 ADD . .
-RUN CGO_ENABLED=0 GOOS=linux go build -v -o /bin/app cmd/catalog-api/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -v -o /bin/server cmd/catalog-api/main.go
 
 FROM alpine
+
+ARG USERNAME=sweetrpg
+ARG USER_UID=1001
+ARG USER_GID=$USER_UID
+ARG BUILD_NUMBER=unset
+ARG BUILD_JOB=unset
+ARG BUILD_SHA=unset
+ARG BUILD_DATE=unset
+ARG BUILD_VERSION=unset
+
 RUN apk add --no-cache bash
 RUN apk add --no-cache ca-certificates
 
-WORKDIR /bin/
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd -s /bin/bash --uid $USER_UID --gid $USER_GID -m $USERNAME
 
-COPY --from=builder /bin/app .
+WORKDIR /app/
 
-# Uncomment to run the binary in "production" mode:
-# ENV GO_ENV=production
+RUN mkdir -p /app/bin /app/config
+COPY --from=builder /bin/server /app/bin/
 
-# Bind the app to 0.0.0.0 so it can be seen from outside the container
+RUN echo "{\"number\":\"${BUILD_NUMBER}\",\"job\":\"${BUILD_JOB}\",\"sha\":\"${BUILD_SHA}\",\"date\":\"${BUILD_DATE}\",\"version\":\"${BUILD_VERSION}\"}" > /app/config/build-info.json
+RUN chown -R ${USER_UID}:${USER_GID} /app
+
+ENV GO_ENV=production
 ENV BIND_ADDRESS=0.0.0.0:8000
-ENV REDIS_HOST ""
-ENV REDIS_PORT "6379"
-ENV MONGODB_URI ""
-ENV MONGODB_DATABASE "catalog-api"
-ENV GIN_MODE "release"
+ENV PORT="8000"
+ENV REDIS_HOST=""
+ENV REDIS_PORT="6379"
+ENV MONGODB_URI=""
+ENV MONGODB_DATABASE="catalog-api"
+ENV GIN_MODE="release"
+ENV VERSION=${BUILD_VERSION}
 
 EXPOSE 8000
 
-# Uncomment to run the migrations before running the binary:
-# CMD /bin/app migrate; /bin/app
-CMD exec /bin/app
+USER ${USERNAME}
+
+CMD [ "/app/bin/server" ]
