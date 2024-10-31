@@ -26,6 +26,15 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore) {
 	// g.GET("/volumes/:id/volumes", cache.CachePage(store, time.Hour, getVolumeVolumes))
 }
 
+// List volumes.
+//
+//	@Summary		List volumes
+//	@Description	Lists the volumes in the database.
+//	@Tags			volumes
+//	@Produce		json
+//	@Success		200		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/volumes [get]
 func listVolumes(c *gin.Context) {
 	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
 
@@ -45,6 +54,17 @@ func listVolumes(c *gin.Context) {
 	}
 }
 
+// Get a volume.
+//
+//	@Summary		Get a volume
+//	@Description	Get the details of a volume from the database.
+//	@Tags			volumes
+//	@Produce		json
+//	@Param			id		path		string			true	"Volume ID"
+//	@Success		204		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/volumes/{id} [get]
 func getVolume(c *gin.Context) {
 	id := c.Param("id")
 
