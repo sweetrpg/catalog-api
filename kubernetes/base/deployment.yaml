@@ -74,6 +74,9 @@ spec:
                         httpGet:
                             path: /status/health
                             port: http
+                            httpHeaders:
+                            - name: Authorization
+                              value: $(HEALTH_TOKEN)
                         initialDelaySeconds: 30
                         timeoutSeconds: 10
                   volumeMounts:

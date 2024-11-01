@@ -1,7 +1,9 @@
 package constants
 
 // Environment variable names
-const ()
+const (
+	HEALTH_TOKEN = "HEALTH_TOKEN"
+)
 
 // Value constants
 const (

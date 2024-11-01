@@ -1,18 +1,15 @@
 package server
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	apicorec "github.com/sweetrpg/api-core/constants"
+	apicores "github.com/sweetrpg/api-core/server"
+	apicorev "github.com/sweetrpg/api-core/vo"
+	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/common/logging"
-	"github.com/sweetrpg/db/database"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"go.opentelemetry.io/otel"
 )
 
 func setupStatusHandlers(g *gin.Engine) {
@@ -31,22 +28,26 @@ func setupStatusHandlers(g *gin.Engine) {
 //		@Success		200		{object}	interface{}
 //		@Router			/status/health [get]
 func healthHandler(c *gin.Context) {
-	_, span := otel.Tracer("health").Start(c.Request.Context(), "list-collections")
-	collections, _ := database.Db.ListCollectionNames(context.TODO(), bson.D{})
-	span.End()
+	authHeader := c.Request.Header["Authorization"]
+	if authHeader == nil || len(authHeader) != 1 {
+		c.JSON(http.StatusUnauthorized, apicorev.ErrorVO{
+			Error: apicorec.ErrorUnauthorized,
+		})
+		return
+	}
+	if authHeader[0] != os.Getenv(constants.HEALTH_TOKEN) {
+		c.JSON(http.StatusForbidden, apicorev.ErrorVO{
+			Error: apicorec.ErrorForbidden,
+		})
+		return
+	}
 
-	start := time.Now()
-	_, span = otel.Tracer("health").Start(c.Request.Context(), "ping-database")
-	database.Db.Client().Ping(context.TODO(), readpref.Primary())
-	span.End()
-	duration := time.Since(start)
-
-	c.JSON(http.StatusOK, gin.H{
-		"database": database.Db.Name(),
-		"ping":     fmt.Sprintf("%dms", duration.Milliseconds()),
-		// "user": dbUser,
-		"collections": collections,
-	})
+	resp := apicores.HealthHandler(c.Request.Context())
+	status := http.StatusOK
+	if resp.Errors > 0 {
+		status = http.StatusServiceUnavailable
+	}
+	c.JSON(status, resp)
 }
 
 // Ping the application.
@@ -59,11 +60,5 @@ func healthHandler(c *gin.Context) {
 //		@Success		200		{object}	interface{}
 //		@Router			/status/ping [get]
 func pingHandler(c *gin.Context) {
-	hostname, _ := os.Hostname()
-	c.JSON(http.StatusOK, gin.H{
-		"pong": gin.H{
-			"date":     time.Now(),
-			"hostname": hostname,
-		},
-	})
+	c.JSON(http.StatusOK, apicores.PingHandler())
 }
