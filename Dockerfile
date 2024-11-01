@@ -1,6 +1,6 @@
 # This is a multi-stage Dockerfile and requires >= Docker 17.05
 # https://docs.docker.com/engine/userguide/eng-image/multistage-build/
-FROM golang:1.23.2 as builder
+FROM golang:1.23.2 AS builder
 
 ENV GOPROXY http://proxy.golang.org
 
@@ -32,7 +32,7 @@ RUN apk add --no-cache bash
 RUN apk add --no-cache ca-certificates
 
 RUN addgroup -g $USER_GID $USERNAME \
-    && adduser -s /bin/bash -u $USER_UID -g $USER_GID $USERNAME
+    && adduser -s /bin/sh -u $USER_UID -g $USER_GID $USERNAME
 
 WORKDIR /app/
 
