@@ -32,7 +32,7 @@ RUN apk add --no-cache bash
 RUN apk add --no-cache ca-certificates
 
 RUN addgroup -g $USER_GID $USERNAME \
-    && adduser -s /bin/sh -u $USER_UID -g $USER_GID $USERNAME
+    && adduser -s /bin/sh -u $USER_UID -G $USER_GID $USERNAME
 
 WORKDIR /app/
 
