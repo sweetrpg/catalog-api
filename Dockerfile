@@ -2,7 +2,7 @@
 # https://docs.docker.com/engine/userguide/eng-image/multistage-build/
 FROM golang:1.23.2 AS builder
 
-ENV GOPROXY http://proxy.golang.org
+ENV GOPROXY=http://proxy.golang.org
 
 RUN mkdir -p /src/catalog-api
 WORKDIR /src/catalog-api
