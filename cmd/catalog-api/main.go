@@ -40,9 +40,9 @@ import (
 // @BasePath  /
 // @schemes  http https
 func main() {
-	logging.Init()
+	_ = godotenv.Load(".env")
 
-	godotenv.Load(".env")
+	logging.Init()
 
 	setupSentry()
 
@@ -67,7 +67,7 @@ func main() {
 
 	server.SetupHandlers(r, cache)
 
-	r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
+	_ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
 }
 
 func setupSentry() {
