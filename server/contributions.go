@@ -5,13 +5,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sweetrpg/api-core/tracing"
-
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
+	"github.com/sweetrpg/api-core/tracing"
+	_ "github.com/sweetrpg/api-core/vo"
 	"github.com/sweetrpg/catalog-data/data"
 	"github.com/sweetrpg/common/logging"
 	options "go.jtlabs.io/query"
@@ -35,7 +35,7 @@ func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore) {
 //	@Tags			contributions
 //	@Produce		json
 //	@Success		200		{object}	interface{}
-//	@Failure		500		{object}	interface{}
+//	@Failure		500		{object}	vo.ErrorVO
 //	@Router			/contributions [get]
 func listContributions(c *gin.Context) {
 	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)

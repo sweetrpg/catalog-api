@@ -19,7 +19,7 @@ import (
 	apiconstants "github.com/sweetrpg/api-core/constants"
 	"github.com/sweetrpg/api-core/tracing"
 	"github.com/sweetrpg/catalog-api/constants"
-	_ "github.com/sweetrpg/catalog-api/docs"
+	"github.com/sweetrpg/catalog-api/docs"
 	"github.com/sweetrpg/catalog-api/server"
 	"github.com/sweetrpg/common/logging"
 	"github.com/sweetrpg/common/util"
@@ -29,16 +29,13 @@ import (
 
 // @title   Catalog API service
 // @version  1.0
-// @description Testing Swagger APIs.
-// @termsOfService http://swagger.io/terms/
+// @description Swagger APIs
+// @termsOfService https://pilgrimagesoftware.com/terms/
 // @contact.name API Support
-// @contact.url http://www.swagger.io/support
-// @contact.email support@swagger.io
+// @contact.url https://sweetrpg.com
+// @contact.email admin@sweetrpg.com
 // @license.name MIT
 // @license.url https://mit-license.org/
-// @host   localhost:8000
-// @BasePath  /
-// @schemes  http https
 func main() {
 	_ = godotenv.Load(".env")
 
@@ -62,15 +59,28 @@ func main() {
 	// Actuator
 	setupAcuator(r)
 
-	// swagger middleware to serve the API docs
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	// Swagger
+	setupSwagger(r)
 
 	server.SetupHandlers(r, cache)
 
 	_ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
 }
 
+func setupSwagger(r *gin.Engine) {
+	logging.Logger.Info("Setting up Swagger...")
+
+	docs.SwaggerInfo.Version = os.Getenv(apiconstants.VERSION)
+	docs.SwaggerInfo.Host = util.GetEnv(apiconstants.INGRESS_HOST, "localhost")
+	docs.SwaggerInfo.BasePath = util.GetEnv(apiconstants.INGRESS_BASE_PATH, "/")
+	docs.SwaggerInfo.Schemes = strings.Split(util.GetEnv(apiconstants.INGRESS_SCHEMES, "http"), ",")
+	// swagger middleware to serve the API docs
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+}
+
 func setupSentry() {
+	logging.Logger.Info("Setting up Sentry...")
+
 	sentryDsn, found := os.LookupEnv(apiconstants.SENTRY_DSN)
 	if found {
 		sentryDebug, _ := strconv.ParseBool(util.GetEnv(apiconstants.SENTRY_DEBUG, "false"))
@@ -100,6 +110,8 @@ func setupSentry() {
 }
 
 func setupAcuator(r *gin.Engine) {
+	logging.Logger.Info("Setting up actuator...")
+
 	actuatorHandler := actuator.GetActuatorHandler(&actuator.Config{
 		Endpoints: []int{
 			actuator.Env,
@@ -121,6 +133,8 @@ func setupAcuator(r *gin.Engine) {
 }
 
 func setupCache() persistence.CacheStore {
+	logging.Logger.Info("Setting up query cache...")
+
 	var cache persistence.CacheStore
 	redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
 	if found {
@@ -136,12 +150,16 @@ func setupCache() persistence.CacheStore {
 }
 
 func setupTracing(r *gin.Engine) {
+	logging.Logger.Info("Setting up tracing...")
+
 	tracing.SetupTracing(constants.ServiceName)
 	defer tracing.TeardownTracing()
 	r.Use(otelgin.Middleware(constants.ServiceName))
 }
 
 func setupMetrics(r *gin.Engine) {
+	logging.Logger.Info("Setting up metrics endpoint...")
+
 	m := ginmetrics.GetMonitor()
 	m.SetMetricPath("/metrics")
 	m.SetSlowTime(10)
