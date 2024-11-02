@@ -39,6 +39,7 @@ func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore) {
 //	@Router			/contributions [get]
 func listContributions(c *gin.Context) {
 	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
+	logging.Logger.Debug("opt", opt)
 
 	span := tracing.BuildSpanWithOptions(c.Request.Context(), "contributions", "list-contributions", opt)
 	vos, err := data.GetContributions(c.Request.Context(), bson.D{}, opt)
