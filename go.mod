@@ -15,7 +15,7 @@ require (
 	github.com/swaggo/swag v1.16.4
 	github.com/sweetrpg/api-core v0.0.350
 	github.com/sweetrpg/catalog-data v0.0.4
-	github.com/sweetrpg/common v0.0.5
+	github.com/sweetrpg/common v0.0.6
 	github.com/sweetrpg/db v0.0.148
 	go.jtlabs.io/query v1.6.1
 	go.mongodb.org/mongo-driver v1.17.1
