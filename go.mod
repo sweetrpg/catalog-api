@@ -13,10 +13,10 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.4
-	github.com/sweetrpg/api-core v0.0.349
+	github.com/sweetrpg/api-core v0.0.350
 	github.com/sweetrpg/catalog-data v0.0.4
-	github.com/sweetrpg/common v0.0.3
-	github.com/sweetrpg/db v0.0.146
+	github.com/sweetrpg/common v0.0.5
+	github.com/sweetrpg/db v0.0.148
 	go.jtlabs.io/query v1.6.1
 	go.mongodb.org/mongo-driver v1.17.1
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.56.0
