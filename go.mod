@@ -14,7 +14,7 @@ require (
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.4
 	github.com/sweetrpg/api-core v0.0.354
-	github.com/sweetrpg/catalog-data v0.0.6
+	github.com/sweetrpg/catalog-data v0.0.7
 	github.com/sweetrpg/common v0.0.7
 	github.com/sweetrpg/db v0.0.148
 	go.jtlabs.io/query v1.6.1
@@ -71,7 +71,7 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/robfig/go-cache v0.0.0-20130306151617-9fc39e0dbf62 // indirect
 	github.com/sweetrpg/catalog-objects v0.0.180 // indirect
-	github.com/sweetrpg/model-core v0.0.158 // indirect
+	github.com/sweetrpg/model-core v0.0.159 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
