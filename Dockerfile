@@ -20,8 +20,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -v -o /bin/server cmd/catalog-api/main.go
 FROM alpine
 
 ARG USERNAME=sweetrpg
-ARG USER_UID=1001
-ARG USER_GID=$USER_UID
+# ARG USER_UID=1001
+# ARG USER_GID=$USER_UID
 ARG BUILD_NUMBER=unset
 ARG BUILD_JOB=unset
 ARG BUILD_SHA=unset
@@ -31,8 +31,8 @@ ARG BUILD_VERSION=unset
 RUN apk add --no-cache bash
 RUN apk add --no-cache ca-certificates
 
-RUN addgroup -g $USER_GID $USERNAME \
-    && adduser -s /bin/sh -u $USER_UID -G $USER_GID $USERNAME
+RUN addgroup $USERNAME \
+    && adduser -G $USERNAME $USERNAME
 
 WORKDIR /app/
 
@@ -40,7 +40,7 @@ RUN mkdir -p /app/bin /app/config
 COPY --from=builder /bin/server /app/bin/
 
 RUN echo "{\"number\":\"${BUILD_NUMBER}\",\"job\":\"${BUILD_JOB}\",\"sha\":\"${BUILD_SHA}\",\"date\":\"${BUILD_DATE}\",\"version\":\"${BUILD_VERSION}\"}" > /app/config/build-info.json
-RUN chown -R ${USER_UID}:${USER_GID} /app
+RUN chown -R ${USERNAME}:${USERNAME} /app
 
 ENV GO_ENV=production
 ENV BIND_ADDRESS=0.0.0.0:8000
