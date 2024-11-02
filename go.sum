@@ -159,8 +159,8 @@ github.com/sweetrpg/common v0.0.6 h1:NbF9NSXYVpmzuZCCh5zDfnvHCUybwRrCLP84M93dgm0
 github.com/sweetrpg/common v0.0.6/go.mod h1:WYj6M7cbmXqQm2fV5e6IzZHT3eWIVWJNx79LMuBLTzw=
 github.com/sweetrpg/db v0.0.148 h1:T6bpQu/0dYpUTn1ARsN5i1KxKZr419duWBlciryc228=
 github.com/sweetrpg/db v0.0.148/go.mod h1:PxlZhbhulD2biZo2Hg7GsQM8X/G5Tusj/jNp63uibc0=
-github.com/sweetrpg/model-core v0.0.157 h1:eSQtY1YljvGHbCaNuPh79d8VxEkinTJP1n4gDoB0vmY=
-github.com/sweetrpg/model-core v0.0.157/go.mod h1:HhwVreyOB+U6DwPPLwdfr25wvzWckQlYLfC74mjoUi8=
+github.com/sweetrpg/model-core v0.0.158 h1:xtVLwcG7A3cjB1nNg7iWcMQkMixrcBGz5cynnCUoW6I=
+github.com/sweetrpg/model-core v0.0.158/go.mod h1:ttWnW/QVV3CcJwtSOefCV+NxifiJGHO+p2/a49TfpVI=
 github.com/twitchyliquid64/golang-asm v0.15.1 h1:SU5vSMR7hnwNxj24w34ZyCi/FmDZTkS4MhqMhdFk5YI=
 github.com/twitchyliquid64/golang-asm v0.15.1/go.mod h1:a1lVb/DtPvCB8fslRZhAngC2+aY1QWCk3Cedj/Gdt08=
 github.com/ugorji/go/codec v1.2.12 h1:9LC83zGrHhuUA9l16C9AHXAqEV/2wBQ4nkvumAE65EE=
