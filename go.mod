@@ -16,7 +16,7 @@ require (
 	github.com/sweetrpg/api-core v0.0.354
 	github.com/sweetrpg/catalog-data v0.0.7
 	github.com/sweetrpg/common v0.0.7
-	github.com/sweetrpg/db v0.0.148
+	github.com/sweetrpg/db v0.0.150
 	go.jtlabs.io/query v1.6.1
 	go.mongodb.org/mongo-driver v1.17.1
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.56.0
