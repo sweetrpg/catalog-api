@@ -2,19 +2,21 @@ package server
 
 import (
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
-	apicorec "github.com/sweetrpg/api-core/constants"
 	apicores "github.com/sweetrpg/api-core/server"
-	apicorev "github.com/sweetrpg/api-core/vo"
-	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/common/logging"
 )
 
 func setupStatusHandlers(g *gin.Engine) {
 	logging.Logger.Info("Setting up status endpoint handlers...")
-	g.GET("/status/health", healthHandler)
+
+	{
+		a := g.Group("/status")
+		// TODO: a.Use()
+		a.GET("/health", healthHandler)
+	}
+
 	g.GET("/status/ping", pingHandler)
 }
 
@@ -28,19 +30,19 @@ func setupStatusHandlers(g *gin.Engine) {
 //		@Success		200		{object}	interface{}
 //		@Router			/status/health [get]
 func healthHandler(c *gin.Context) {
-	authHeader := c.Request.Header["Authorization"]
-	if authHeader == nil || len(authHeader) != 1 {
-		c.JSON(http.StatusUnauthorized, apicorev.ErrorVO{
-			Error: apicorec.ErrorUnauthorized,
-		})
-		return
-	}
-	if authHeader[0] != os.Getenv(constants.HEALTH_TOKEN) {
-		c.JSON(http.StatusForbidden, apicorev.ErrorVO{
-			Error: apicorec.ErrorForbidden,
-		})
-		return
-	}
+	// authHeader := c.Request.Header["Authorization"]
+	// if authHeader == nil || len(authHeader) != 1 {
+	// 	c.JSON(http.StatusUnauthorized, apicorev.ErrorVO{
+	// 		Error: apicorec.ErrorUnauthorized,
+	// 	})
+	// 	return
+	// }
+	// if authHeader[0] != os.Getenv(constants.HEALTH_TOKEN) {
+	// 	c.JSON(http.StatusForbidden, apicorev.ErrorVO{
+	// 		Error: apicorec.ErrorForbidden,
+	// 	})
+	// 	return
+	// }
 
 	resp := apicores.HealthHandler(c.Request.Context())
 	status := http.StatusOK
