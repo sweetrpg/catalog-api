@@ -70,7 +70,7 @@ require (
 	github.com/prometheus/common v0.60.1 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/robfig/go-cache v0.0.0-20130306151617-9fc39e0dbf62 // indirect
-	github.com/sweetrpg/catalog-objects v0.0.180 // indirect
+	github.com/sweetrpg/catalog-objects v0.0.182 // indirect
 	github.com/sweetrpg/model-core v0.0.159 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
