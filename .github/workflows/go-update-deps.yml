@@ -9,6 +9,7 @@ on:
     repository_dispatch:
         types:
             - catalog-data-published
+            - api-core-published
 
 jobs:
     tests:

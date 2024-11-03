@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	apiconstants "github.com/sweetrpg/api-core/constants"
 	"github.com/sweetrpg/api-core/tracing"
+	"github.com/sweetrpg/api-core/vo"
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/docs"
 	"github.com/sweetrpg/catalog-api/server"
@@ -25,6 +27,7 @@ import (
 	"github.com/sweetrpg/common/util"
 	"github.com/sweetrpg/db/database"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"golang.org/x/time/rate"
 )
 
 // @title   Catalog API service
@@ -61,6 +64,9 @@ func main() {
 
 	// Swagger
 	setupSwagger(r)
+
+	// Add rate limiter
+	r.Use(RateLimiter())
 
 	server.SetupHandlers(r, cache)
 
@@ -165,4 +171,20 @@ func setupMetrics(r *gin.Engine) {
 	m.SetSlowTime(10)
 	m.SetDuration([]float64{0.1, 0.3, 1.2, 5, 10})
 	m.Use(r)
+}
+
+func RateLimiter() gin.HandlerFunc {
+	limiter := rate.NewLimiter(1, util.GetEnvInt(apiconstants.RATE_LIMIT, 10))
+
+	return func(c *gin.Context) {
+		if limiter.Allow() {
+			c.Next()
+		} else {
+			logging.Logger.Warn(fmt.Sprintf("Rate limit exceeded for request: %v", c.Request))
+			c.JSON(http.StatusTooManyRequests, vo.ErrorVO{
+				Error:   apiconstants.ErrorRateLimited,
+				Message: "Limit exceeded",
+			})
+		}
+	}
 }

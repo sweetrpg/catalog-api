@@ -1,7 +1,5 @@
 name: PR
 
-concurrency: pr-${{ github.ref }}
-
 on:
     pull_request:
         branches: [develop]
@@ -29,7 +27,17 @@ jobs:
               uses: actions/setup-go@v5
               with:
                 go-version-file: go.mod
+            - name: Install dependencies
+              run: |
+                    go version
+                    go get -u golang.org/x/lint/golint
+            - name: Vet and lint
+              run: |
+                    go vet .
+                    golint .
             - name: Build
-              run: go build -v ./...
+              run: |
+                    go build -v ./...
             - name: Test
-              run: go test -v ./...
+              run: |
+                    go test -v ./...
