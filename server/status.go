@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	apicores "github.com/sweetrpg/api-core/server"
+	_ "github.com/sweetrpg/api-core/vo"
 	"github.com/sweetrpg/common/logging"
 )
 
@@ -27,7 +28,7 @@ func setupStatusHandlers(g *gin.Engine) {
 //		@Description	Health check
 //		@Tags			status
 //		@Produce		json
-//		@Success		200		{object}	interface{}
+//		@Success		200		{object}	vo.HealthResponseVO
 //		@Router			/status/health [get]
 func healthHandler(c *gin.Context) {
 	// authHeader := c.Request.Header["Authorization"]
@@ -59,7 +60,7 @@ func healthHandler(c *gin.Context) {
 //		@Description	Ping
 //		@Tags			status
 //		@Produce		json
-//		@Success		200		{object}	interface{}
+//		@Success		200		{object}	vo.PingResponseVO
 //		@Router			/status/ping [get]
 func pingHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, apicores.PingHandler())
