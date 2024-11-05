@@ -6,8 +6,8 @@ github.com/bits-and-blooms/bitset v1.14.3 h1:Gd2c8lSNf9pKXom5JtD7AaKO8o7fGQ2LtFj
 github.com/bits-and-blooms/bitset v1.14.3/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
 github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874 h1:N7oVaKyGp8bttX0bfZGmcGkjz7DLQXhAn3DNd3T0ous=
 github.com/bradfitz/gomemcache v0.0.0-20230905024940-24af94b03874/go.mod h1:r5xuitiExdLAJ09PR7vBVENGvp4ZuTBeWTGtxuX3K+c=
-github.com/bytedance/sonic v1.12.3 h1:W2MGa7RCU1QTeYRTPE3+88mVC0yXmsRQRChiyVocVjU=
-github.com/bytedance/sonic v1.12.3/go.mod h1:B8Gt/XvtZ3Fqj+iSKMypzymZxw/FVwgIGKzMzT9r/rk=
+github.com/bytedance/sonic v1.12.4 h1:9Csb3c9ZJhfUWeMtpCDCq6BUoH5ogfDFLUgQ/jG+R0k=
+github.com/bytedance/sonic v1.12.4/go.mod h1:B8Gt/XvtZ3Fqj+iSKMypzymZxw/FVwgIGKzMzT9r/rk=
 github.com/bytedance/sonic/loader v0.1.1/go.mod h1:ncP89zfokxS5LZrJxl5z0UJcsk4M4yY2JpfqGeCtNLU=
 github.com/bytedance/sonic/loader v0.2.1 h1:1GgorWTqf12TA8mma4DDSbaQigE2wOgQo7iCjjJv3+E=
 github.com/bytedance/sonic/loader v0.2.1/go.mod h1:ncP89zfokxS5LZrJxl5z0UJcsk4M4yY2JpfqGeCtNLU=
@@ -149,12 +149,12 @@ github.com/swaggo/gin-swagger v1.6.0 h1:y8sxvQ3E20/RCyrXeFfg60r6H0Z+SwpTjMYsMm+z
 github.com/swaggo/gin-swagger v1.6.0/go.mod h1:BG00cCEy294xtVpyIAHG6+e2Qzj/xKlRdOqDkvq0uzo=
 github.com/swaggo/swag v1.16.4 h1:clWJtd9LStiG3VeijiCfOVODP6VpHtKdQy9ELFG3s1A=
 github.com/swaggo/swag v1.16.4/go.mod h1:VBsHJRsDvfYvqoiMKnsdwhNV9LEMHgEDZcyVYX0sxPg=
-github.com/sweetrpg/api-core v0.0.357 h1:5C5VhpCCaBzYoInOo0mHK8L8BJxQhFQiRn6CjqnqceM=
-github.com/sweetrpg/api-core v0.0.357/go.mod h1:7b7/opcLsGMSueoqwW+gxfTzDITs7cIQm/nzRVFa5hs=
+github.com/sweetrpg/api-core v0.0.358 h1:E+333XfYzZlhNuXdosrQXAYFXASk7ESzFyDLIAdk6MY=
+github.com/sweetrpg/api-core v0.0.358/go.mod h1:9CZpqJBypdiIwK+BG+iWxacbDeztRMTaQvFmn1fs71U=
 github.com/sweetrpg/catalog-data v0.0.8 h1:795Aot8VHDD9dD7/q/xO1uHvbHLkWunYsqNwpC49GMA=
 github.com/sweetrpg/catalog-data v0.0.8/go.mod h1:jA02oPdcZjqnFgWHPJ1nrtrH66vW/KedeOuUE06V+jk=
-github.com/sweetrpg/catalog-objects v0.0.182 h1:xIUVj6hycTRt0MYTO8txOKkHD/xS/QOvx3aZdb2VzCM=
-github.com/sweetrpg/catalog-objects v0.0.182/go.mod h1:5rO5ZDUxkvCOLJEMPu++IEAR8CACL1488FAxdZEjUNY=
+github.com/sweetrpg/catalog-objects v0.0.183 h1:QpJFRfn5kwsgVxSBgkc0tNe+2FErnmpEdH19IgL4OsE=
+github.com/sweetrpg/catalog-objects v0.0.183/go.mod h1:LCNkUeRvGJw0FxMS83p0WSqaj5kiOPXeK9e+9DYuEtQ=
 github.com/sweetrpg/common v0.0.7 h1:cAGLhGbfTWLVS9yV39wqr/oHvs8sM0sXsHBI+M+RiJU=
 github.com/sweetrpg/common v0.0.7/go.mod h1:4yamZns+1PmHHYPgJh+X8JuQoF4uTZNZEcnkwUEbauY=
 github.com/sweetrpg/db v0.0.152 h1:iEV321ILxeEku5s9wTXShkM+788EHkzeZYJUxa1377w=
