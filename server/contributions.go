@@ -11,11 +11,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core/tracing"
+	apiutil "github.com/sweetrpg/api-core/util"
 	_ "github.com/sweetrpg/api-core/vo"
 	"github.com/sweetrpg/catalog-data/data"
 	"github.com/sweetrpg/common/logging"
-	options "go.jtlabs.io/query"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -38,11 +37,10 @@ func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore) {
 //	@Failure		500		{object}	vo.ErrorVO
 //	@Router			/contributions [get]
 func listContributions(c *gin.Context) {
-	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
-	logging.Logger.Debug("opt", opt)
+	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
-	span := tracing.BuildSpanWithOptions(c.Request.Context(), "contributions", "list-contributions", opt)
-	vos, err := data.GetContributions(c.Request.Context(), bson.D{}, opt)
+	span := tracing.BuildSpanWithParams(c.Request.Context(), "contributions", "list-contributions", params)
+	vos, err := data.GetContributions(c.Request.Context(), params)
 	span.End()
 	logging.Logger.Info(fmt.Sprintf("vos=%v", vos))
 	if err != nil {

@@ -10,9 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core/tracing"
+	apiutil "github.com/sweetrpg/api-core/util"
 	"github.com/sweetrpg/catalog-data/data"
 	"github.com/sweetrpg/common/logging"
-	options "go.jtlabs.io/query"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -36,10 +36,10 @@ func setupReviewHandlers(g *gin.Engine, store persistence.CacheStore) {
 //	@Failure		500		{object}	interface{}
 //	@Router			/reviews [get]
 func listReviews(c *gin.Context) {
-	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
+	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
-	span := tracing.BuildSpanWithOptions(c.Request.Context(), "reviews", "list-reviews", opt)
-	vos, err := data.GetReviews(c.Request.Context(), bson.D{}, opt)
+	span := tracing.BuildSpanWithParams(c.Request.Context(), "reviews", "list-reviews", params)
+	vos, err := data.GetReviews(c.Request.Context(), bson.D{}, params)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)

@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core/tracing"
+	apiutil "github.com/sweetrpg/api-core/util"
 	"github.com/sweetrpg/catalog-data/data"
 	"github.com/sweetrpg/common/logging"
 	options "go.jtlabs.io/query"
@@ -37,10 +38,10 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
 //	@Failure		500		{object}	interface{}
 //	@Router			/licenses [get]
 func listLicenses(c *gin.Context) {
-	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
+	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
-	span := tracing.BuildSpanWithOptions(c.Request.Context(), "licenses", "list-licenses", opt)
-	vos, err := data.GetLicenses(c.Request.Context(), bson.D{}, opt)
+	span := tracing.BuildSpanWithParams(c.Request.Context(), "licenses", "list-licenses", params)
+	vos, err := data.GetLicenses(c.Request.Context(), params)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)

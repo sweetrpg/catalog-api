@@ -10,10 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core/tracing"
+	apiutil "github.com/sweetrpg/api-core/util"
 	"github.com/sweetrpg/catalog-data/data"
 	"github.com/sweetrpg/common/logging"
-	options "go.jtlabs.io/query"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -36,10 +35,10 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore) {
 //	@Failure		500		{object}	interface{}
 //	@Router			/publishers [get]
 func listPublishers(c *gin.Context) {
-	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
+	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
-	span := tracing.BuildSpanWithOptions(c.Request.Context(), "publishers", "list-publishers", opt)
-	vos, err := data.GetPublishers(c.Request.Context(), bson.D{}, opt)
+	span := tracing.BuildSpanWithParams(c.Request.Context(), "publishers", "list-publishers", params)
+	vos, err := data.GetPublishers(c.Request.Context(), params)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
