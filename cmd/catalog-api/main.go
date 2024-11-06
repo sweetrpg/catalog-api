@@ -30,8 +30,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// @title   Catalog API service
-// @version  1.0
+// @title Catalog API service
+// @version 1.0
 // @description Swagger APIs
 // @termsOfService https://pilgrimagesoftware.com/terms/
 // @contact.name API Support
@@ -41,6 +41,7 @@ import (
 // @license.url https://mit-license.org/
 func main() {
 	_ = godotenv.Load(".env")
+	log.Printf("ENV: %v", os.Environ())
 
 	logging.Init()
 
