@@ -13,7 +13,6 @@ import (
 	apiutil "github.com/sweetrpg/api-core/util"
 	"github.com/sweetrpg/catalog-data/data"
 	"github.com/sweetrpg/common/logging"
-	options "go.jtlabs.io/query"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.opentelemetry.io/otel"
@@ -75,16 +74,15 @@ func getLicenseVolumes(c *gin.Context) {
 		return
 	}
 
-	opt, _ := options.FromQuerystring(c.Request.URL.RawQuery)
+	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
-	filter := bson.D{
-		{"license_ids",
-			bson.D{{"$in", id}},
-		},
-	}
+	params.Filter = []apiutil.Filter{{
+		Field:     "license_ids",
+		Operation: bson.D{{"$in", id}},
+	}}
 
-	span := tracing.BuildSpanWithOptions(c.Request.Context(), "licenses", "list-license-volumes", opt)
-	vos, err := data.GetVolumes(c.Request.Context(), filter, opt)
+	span := tracing.BuildSpanWithParams(c.Request.Context(), "licenses", "list-license-volumes", params)
+	vos, err := data.GetVolumes(c.Request.Context(), params)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)

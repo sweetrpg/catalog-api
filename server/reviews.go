@@ -13,7 +13,6 @@ import (
 	apiutil "github.com/sweetrpg/api-core/util"
 	"github.com/sweetrpg/catalog-data/data"
 	"github.com/sweetrpg/common/logging"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -39,7 +38,7 @@ func listReviews(c *gin.Context) {
 	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "reviews", "list-reviews", params)
-	vos, err := data.GetReviews(c.Request.Context(), bson.D{}, params)
+	vos, err := data.GetReviews(c.Request.Context(), params)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
