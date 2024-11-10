@@ -14,7 +14,7 @@ require (
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.4
 	github.com/sweetrpg/api-core v0.0.361
-	github.com/sweetrpg/catalog-data v0.0.11
+	github.com/sweetrpg/catalog-data v0.0.12
 	github.com/sweetrpg/common v0.0.7
 	github.com/sweetrpg/db v0.0.157
 	go.mongodb.org/mongo-driver v1.17.1
