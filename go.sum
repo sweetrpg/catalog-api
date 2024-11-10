@@ -155,8 +155,8 @@ github.com/sweetrpg/api-core v0.0.361 h1:q3TwN1GLdHRPT0DTU5SzVE9CLvUizST356R+kBR
 github.com/sweetrpg/api-core v0.0.361/go.mod h1:L5sWxFeOOP+kGTkkplDn5rK8Ik8u8DHOzK5Y0GJ5uFg=
 github.com/sweetrpg/catalog-data v0.0.12 h1:bPpjmS6U/d93weA/GiW5XQubRJSCfu84EGz5SndXsNo=
 github.com/sweetrpg/catalog-data v0.0.12/go.mod h1:ZpO2Ig+gim33cVAB1o1Ny3h5AmsV9ylBCE6s8POYq0E=
-github.com/sweetrpg/catalog-objects v0.0.184 h1:FT4RjZd0e1ytfVpaeuLM9NEVQr45qnNHOA/FIcCsNyc=
-github.com/sweetrpg/catalog-objects v0.0.184/go.mod h1:LCNkUeRvGJw0FxMS83p0WSqaj5kiOPXeK9e+9DYuEtQ=
+github.com/sweetrpg/catalog-objects v0.0.185 h1:9LYtGcP0W38hugFVwfSjucDm+bT+BHD9wGuldDGOZ30=
+github.com/sweetrpg/catalog-objects v0.0.185/go.mod h1:LCNkUeRvGJw0FxMS83p0WSqaj5kiOPXeK9e+9DYuEtQ=
 github.com/sweetrpg/common v0.0.7 h1:cAGLhGbfTWLVS9yV39wqr/oHvs8sM0sXsHBI+M+RiJU=
 github.com/sweetrpg/common v0.0.7/go.mod h1:4yamZns+1PmHHYPgJh+X8JuQoF4uTZNZEcnkwUEbauY=
 github.com/sweetrpg/db v0.0.157 h1:LYlFepalbyKLDVNWuC621e7BAIsimiqDcMN1d0ZNdCY=
