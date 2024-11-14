@@ -13,7 +13,7 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.4
-	github.com/sweetrpg/api-core v0.0.363
+	github.com/sweetrpg/api-core v0.0.364
 	github.com/sweetrpg/catalog-data v0.0.13
 	github.com/sweetrpg/common v0.0.7
 	github.com/sweetrpg/db v0.0.157
