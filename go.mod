@@ -4,7 +4,7 @@ go 1.23.2
 
 require (
 	github.com/getsentry/sentry-go v0.30.0
-	github.com/gin-contrib/cache v1.3.0
+	github.com/gin-contrib/cache v1.3.1
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/jsonapi v1.0.0
 	github.com/joho/godotenv v1.5.1
@@ -93,9 +93,9 @@ require (
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20241219192143-6b3ec007d9bb // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241219192143-6b3ec007d9bb // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241223144023-3abc09e42ca8 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241223144023-3abc09e42ca8 // indirect
 	google.golang.org/grpc v1.69.2 // indirect
-	google.golang.org/protobuf v1.36.0 // indirect
+	google.golang.org/protobuf v1.36.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
