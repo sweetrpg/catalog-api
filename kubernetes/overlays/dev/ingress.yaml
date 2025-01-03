@@ -8,7 +8,7 @@ metadata:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     traefik.ingress.kubernetes.io/router.tls: "true"
     traefik.ingress.kubernetes.io/router.middlewares: sweetrpg-catalog-strip-prefix-v1@kubernetescrd
-    kubernetes.io/ingress.class: traefik-proxy
+    kubernetes.io/ingress.class: haproxy
     cert-manager.io/cluster-issuer: letsencrypt-prd
     reloader.homer/name: Catalog API
     reloader.homer/group: sweetrpg
@@ -18,7 +18,7 @@ metadata:
     reloader.homer/prio: "1"
 
 spec:
-  ingressClassName: traefik-proxy
+  ingressClassName: haproxy
   rules:
     - host: api.catalog.dev.sweetrpg.com
       http:
