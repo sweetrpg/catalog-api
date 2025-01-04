@@ -1,12 +1,12 @@
----
-apiVersion: traefik.io/v1alpha1
-kind: Middleware
+# ---
+# apiVersion: traefik.io/v1alpha1
+# kind: Middleware
 
-metadata:
-  name: strip-prefix-v1
+# metadata:
+#   name: strip-prefix-v1
 
-spec:
-  stripPrefix:
-    prefixes:
-      - /0
-      - /1
+# spec:
+#   stripPrefix:
+#     prefixes:
+#       - /0
+#       - /1
