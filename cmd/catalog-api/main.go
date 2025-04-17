@@ -103,8 +103,8 @@ func setupSentry() {
 				}
 				return 1.0
 			}),
-			ProfilesSampleRate: 1.0,
-			ServerName:         constants.ServiceName,
+			// ProfilesSampleRate: 1.0,
+			ServerName: constants.ServiceName,
 		})
 		if err != nil {
 			logging.Logger.Error("Error while trying to initialize Sentry", "error", err.Error())
