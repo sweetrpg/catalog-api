@@ -1,6 +1,6 @@
 module github.com/sweetrpg/catalog-api
 
-go 1.23.2
+go 1.23.6
 
 require (
 	github.com/getsentry/sentry-go v0.32.0
