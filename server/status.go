@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	apicores "github.com/sweetrpg/api-core/server"
-	_ "github.com/sweetrpg/api-core/vo"
-	"github.com/sweetrpg/common/logging"
+	apicores "github.com/sweetrpg/api-core.go/server"
+	_ "github.com/sweetrpg/api-core.go/vo"
+	"github.com/sweetrpg/common.go/logging"
 )
 
 func setupStatusHandlers(g *gin.Engine) {

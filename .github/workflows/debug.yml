@@ -44,12 +44,12 @@ jobs:
       - name: Get current date
         id: getbuilddate
         run: |
-             echo "::set-output name=date::$(date -u)"
-             echo "::set-output name=isodate::$(date -u '+%Y-%m-%dT%H:%M:%S')"
-             echo "::set-output name=tagdate::$(date -u '+%Y%m%d%H%M%S')"
-             echo "::set-output name=timestamp::$(date -u '+%s')"
-      - name: 'Get Previous tag'
-        id: previoustag
+              echo "date=$(date -u)" >> $GITHUB_OUTPUT
+              echo "isodate=$(date -u '+%Y-%m-%dT%H:%M:%S')" >> $GITHUB_OUTPUT
+              echo "tagdate=$(date -u '+%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+              echo "timestamp=$(date -u '+%s')" >> $GITHUB_OUTPUT
+      - name: Get latest tag
+        id: get_latest_tag
         uses: actions-ecosystem/action-get-latest-tag@v1
         with:
           semver_only: true
