@@ -39,7 +39,7 @@ func listVolumes(c *gin.Context) {
 	logging.Logger.Debug("Listing volumes with params", "params", params)
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "volumes", "list-volumes", params)
-	vos, err := data.GetVolumes(c.Request.Context(), params)
+	vos, err := data.QueryVolumes(c.Request.Context(), params)
 	logging.Logger.Debug("Retrieved volumes", "vos", vos)
 	span.End()
 	if err != nil {
