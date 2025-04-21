@@ -36,9 +36,11 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore) {
 //	@Router			/volumes [get]
 func listVolumes(c *gin.Context) {
 	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	logging.Logger.Debug("Listing volumes with params", "params", params)
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "volumes", "list-volumes", params)
 	vos, err := data.GetVolumes(c.Request.Context(), params)
+	logging.Logger.Debug("Retrieved volumes", "vos", vos)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
