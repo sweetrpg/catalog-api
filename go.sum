@@ -150,8 +150,8 @@ github.com/swaggo/gin-swagger v1.6.0 h1:y8sxvQ3E20/RCyrXeFfg60r6H0Z+SwpTjMYsMm+z
 github.com/swaggo/gin-swagger v1.6.0/go.mod h1:BG00cCEy294xtVpyIAHG6+e2Qzj/xKlRdOqDkvq0uzo=
 github.com/swaggo/swag v1.16.4 h1:clWJtd9LStiG3VeijiCfOVODP6VpHtKdQy9ELFG3s1A=
 github.com/swaggo/swag v1.16.4/go.mod h1:VBsHJRsDvfYvqoiMKnsdwhNV9LEMHgEDZcyVYX0sxPg=
-github.com/sweetrpg/api-core.go v0.0.367 h1:xGH41+riaBa5jIFTUhqHDdBJjaX8sD2OpoP41+SC1nA=
-github.com/sweetrpg/api-core.go v0.0.367/go.mod h1:94kJeYlKd52s6l3+uIJ+Av7r0jHkWYCq2UDoHI9APQw=
+github.com/sweetrpg/api-core.go v0.0.368 h1:1utKMYkfcnH270XMIEto20SyU//qh/dAeZos1uCoPVg=
+github.com/sweetrpg/api-core.go v0.0.368/go.mod h1:yDoqWV0vzbo7KhKRAUYjG4rqGtWbShy1ze+XspD5bCM=
 github.com/sweetrpg/catalog-data.go v0.0.20 h1:Pt6AGFIolsJG31rXSbxFY3IAylxe0c67UcqfYM9dj9s=
 github.com/sweetrpg/catalog-data.go v0.0.20/go.mod h1:PZTKe77zuRhYghQ+c0nLYqP2alojGs795Zd0bScDgn0=
 github.com/sweetrpg/catalog-objects.go v0.0.187 h1:aUKvP+01bRUydc/VwBuzegpDkGb2m9IfUasXxo1/VC0=
@@ -160,8 +160,8 @@ github.com/sweetrpg/common.go v0.0.12 h1:wrLpD5relZ2hZtHd8Uuv+v7nXbeiQD10/nCGC9a
 github.com/sweetrpg/common.go v0.0.12/go.mod h1:PVpjDIeB/bZYJZk5fc8whuqVJE8K5k/DsO3o+aZFEcE=
 github.com/sweetrpg/db.go v0.0.162 h1:07WvH7YqDVgasphkDp4JK0iYgHjloMIK1s/fzCr2gnM=
 github.com/sweetrpg/db.go v0.0.162/go.mod h1:Puk1ulObk6PlrZzrElPAnoTxs7EkeGz92wQUvEZuB/k=
-github.com/sweetrpg/model-core.go v0.0.165 h1:tpNiwSP3twfL/NlWDmwBmajJF1dMMYVf5keh64h+7BQ=
-github.com/sweetrpg/model-core.go v0.0.165/go.mod h1:EYmuwUjUo4WiveBpjw+st5YB3wKSsc28Qc16Ba0on50=
+github.com/sweetrpg/model-core.go v0.0.166 h1:kEBKwiq8ysPHENQKKfe+dwO3EZ0YA+C2lq3yT0BezIA=
+github.com/sweetrpg/model-core.go v0.0.166/go.mod h1:n7GRJ7j2oRLhcDJuds3FHcMWXkvIBk50/MTQi7RnaHk=
 github.com/twitchyliquid64/golang-asm v0.15.1 h1:SU5vSMR7hnwNxj24w34ZyCi/FmDZTkS4MhqMhdFk5YI=
 github.com/twitchyliquid64/golang-asm v0.15.1/go.mod h1:a1lVb/DtPvCB8fslRZhAngC2+aY1QWCk3Cedj/Gdt08=
 github.com/ugorji/go/codec v1.2.12 h1:9LC83zGrHhuUA9l16C9AHXAqEV/2wBQ4nkvumAE65EE=
