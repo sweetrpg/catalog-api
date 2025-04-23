@@ -158,8 +158,8 @@ github.com/sweetrpg/catalog-objects.go v0.0.187 h1:aUKvP+01bRUydc/VwBuzegpDkGb2m
 github.com/sweetrpg/catalog-objects.go v0.0.187/go.mod h1:m5yy4NNlWAlvtz2wPa9X3Sdp9oNfoIrR93bwSildqKQ=
 github.com/sweetrpg/common.go v0.0.12 h1:wrLpD5relZ2hZtHd8Uuv+v7nXbeiQD10/nCGC9apUVM=
 github.com/sweetrpg/common.go v0.0.12/go.mod h1:PVpjDIeB/bZYJZk5fc8whuqVJE8K5k/DsO3o+aZFEcE=
-github.com/sweetrpg/db.go v0.0.161 h1:lbXXe0DYqqEj7NOcbAOyzMy7w3U3LWBmrKTcea9zlc0=
-github.com/sweetrpg/db.go v0.0.161/go.mod h1:Puk1ulObk6PlrZzrElPAnoTxs7EkeGz92wQUvEZuB/k=
+github.com/sweetrpg/db.go v0.0.162 h1:07WvH7YqDVgasphkDp4JK0iYgHjloMIK1s/fzCr2gnM=
+github.com/sweetrpg/db.go v0.0.162/go.mod h1:Puk1ulObk6PlrZzrElPAnoTxs7EkeGz92wQUvEZuB/k=
 github.com/sweetrpg/model-core.go v0.0.165 h1:tpNiwSP3twfL/NlWDmwBmajJF1dMMYVf5keh64h+7BQ=
 github.com/sweetrpg/model-core.go v0.0.165/go.mod h1:EYmuwUjUo4WiveBpjw+st5YB3wKSsc28Qc16Ba0on50=
 github.com/twitchyliquid64/golang-asm v0.15.1 h1:SU5vSMR7hnwNxj24w34ZyCi/FmDZTkS4MhqMhdFk5YI=
@@ -249,10 +249,10 @@ golang.org/x/tools v0.1.12/go.mod h1:hNGJHUnrk76NpqgfD5Aqm5Crs+Hm0VOH/i9J2+nxYbc
 golang.org/x/tools v0.32.0 h1:Q7N1vhpkQv7ybVzLFtTjvQya2ewbwNDZzUgfXGqtMWU=
 golang.org/x/tools v0.32.0/go.mod h1:ZxrU41P/wAbZD8EDa6dDCa6XfpkhJ7HFMjHJXfBDu8s=
 golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
-google.golang.org/genproto/googleapis/api v0.0.0-20250421163800-61c742ae3ef0 h1:bphwUhSYYbcKacmc2crgiMvwARwqeNCtAI5g1PohT34=
-google.golang.org/genproto/googleapis/api v0.0.0-20250421163800-61c742ae3ef0/go.mod h1:Cd8IzgPo5Akum2c9R6FsXNaZbH3Jpa2gpHlW89FqlyQ=
-google.golang.org/genproto/googleapis/rpc v0.0.0-20250421163800-61c742ae3ef0 h1:l7lvb5BMqtbmd7fibSq7fi956Fv9/sqiwI9qOw8ltCo=
-google.golang.org/genproto/googleapis/rpc v0.0.0-20250421163800-61c742ae3ef0/go.mod h1:qQ0YXyHHx3XkvlzUtpXDkS29lDSafHMZBAZDc03LQ3A=
+google.golang.org/genproto/googleapis/api v0.0.0-20250422160041-2d3770c4ea7f h1:tjZsroqekhC63+WMqzmWyW5Twj/ZfR5HAlpd5YQ1Vs0=
+google.golang.org/genproto/googleapis/api v0.0.0-20250422160041-2d3770c4ea7f/go.mod h1:Cd8IzgPo5Akum2c9R6FsXNaZbH3Jpa2gpHlW89FqlyQ=
+google.golang.org/genproto/googleapis/rpc v0.0.0-20250422160041-2d3770c4ea7f h1:N/PrbTw4kdkqNRzVfWPrBekzLuarFREcbFOiOLkXon4=
+google.golang.org/genproto/googleapis/rpc v0.0.0-20250422160041-2d3770c4ea7f/go.mod h1:qQ0YXyHHx3XkvlzUtpXDkS29lDSafHMZBAZDc03LQ3A=
 google.golang.org/grpc v1.72.0 h1:S7UkcVa60b5AAQTaO6ZKamFp1zMZSU0fGDK2WZLbBnM=
 google.golang.org/grpc v1.72.0/go.mod h1:wH5Aktxcg25y1I3w7H69nHfXdOG3UiadoBtjh3izSDM=
 google.golang.org/protobuf v1.36.6 h1:z1NpPI8ku2WgiWnf+t9wTPsn6eP1L7ksHUlkfLvd9xY=
