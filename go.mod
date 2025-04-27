@@ -13,10 +13,10 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.4
-	github.com/sweetrpg/api-core.go v0.0.373
+	github.com/sweetrpg/api-core.go v0.0.375
 	github.com/sweetrpg/catalog-data.go v0.0.20
 	github.com/sweetrpg/common.go v0.0.13
-	github.com/sweetrpg/db.go v0.0.164
+	github.com/sweetrpg/db.go v0.0.165
 	go.mongodb.org/mongo-driver v1.17.3
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.60.0
 	go.opentelemetry.io/otel v1.35.0
@@ -69,7 +69,7 @@ require (
 	github.com/prometheus/common v0.63.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/robfig/go-cache v0.0.0-20130306151617-9fc39e0dbf62 // indirect
-	github.com/sweetrpg/catalog-objects.go v0.0.190 // indirect
+	github.com/sweetrpg/catalog-objects.go v0.0.191 // indirect
 	github.com/sweetrpg/model-core.go v0.0.168 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
