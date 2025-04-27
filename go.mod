@@ -15,7 +15,7 @@ require (
 	github.com/swaggo/swag v1.16.4
 	github.com/sweetrpg/api-core.go v0.0.373
 	github.com/sweetrpg/catalog-data.go v0.0.20
-	github.com/sweetrpg/common.go v0.0.12
+	github.com/sweetrpg/common.go v0.0.13
 	github.com/sweetrpg/db.go v0.0.164
 	go.mongodb.org/mongo-driver v1.17.3
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.60.0
