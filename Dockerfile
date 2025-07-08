@@ -1,6 +1,6 @@
 # This is a multi-stage Dockerfile and requires >= Docker 17.05
 # https://docs.docker.com/engine/userguide/eng-image/multistage-build/
-FROM golang:1.24.2 AS builder
+FROM golang:1.24.5 AS builder
 
 ENV GOPROXY=http://proxy.golang.org
 
