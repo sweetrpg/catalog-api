@@ -208,8 +208,8 @@ github.com/swaggo/gin-swagger v1.6.0 h1:y8sxvQ3E20/RCyrXeFfg60r6H0Z+SwpTjMYsMm+z
 github.com/swaggo/gin-swagger v1.6.0/go.mod h1:BG00cCEy294xtVpyIAHG6+e2Qzj/xKlRdOqDkvq0uzo=
 github.com/swaggo/swag v1.16.4 h1:clWJtd9LStiG3VeijiCfOVODP6VpHtKdQy9ELFG3s1A=
 github.com/swaggo/swag v1.16.4/go.mod h1:VBsHJRsDvfYvqoiMKnsdwhNV9LEMHgEDZcyVYX0sxPg=
-github.com/sweetrpg/api-core.go v0.0.390 h1:AN1cT8Vg8xfwi0aKz4hOySBA047L0nhmvnG3TPoGiQc=
-github.com/sweetrpg/api-core.go v0.0.390/go.mod h1:WfwMgnyUMZZwfXPd5Cv9yJBWoa/IBv0DqWaSfAtmz3U=
+github.com/sweetrpg/api-core.go v0.0.391 h1:BiAeSqcQcXXYlhb/2OjmZuSHaAZOpIaolgzr1QBtsoI=
+github.com/sweetrpg/api-core.go v0.0.391/go.mod h1:SZdA7N04eIxNuKbT+r2MvJifBfOgBEHr4jCUWsgObks=
 github.com/sweetrpg/catalog-data.go v0.0.20 h1:Pt6AGFIolsJG31rXSbxFY3IAylxe0c67UcqfYM9dj9s=
 github.com/sweetrpg/catalog-data.go v0.0.20/go.mod h1:PZTKe77zuRhYghQ+c0nLYqP2alojGs795Zd0bScDgn0=
 github.com/sweetrpg/catalog-objects.go v0.0.191 h1:ukRn4Ui4Q+uvGddAZ3v+ToJBYQk+3LwWjhVWzpDmOqQ=
@@ -220,8 +220,8 @@ github.com/sweetrpg/db.go v0.0.167 h1:qarBH8OaRuy7YVVVcqUduwTSLxerUJQ1BYJma/P8M8
 github.com/sweetrpg/db.go v0.0.167/go.mod h1:IyksRHJmzwwjQwjQplroMDkn+IIrPLn+00CdoUqeU/8=
 github.com/sweetrpg/model-core.go v0.0.168 h1:yRWK3x0xeYhKlm0T1RQxBJEWDd/cdOhI/Q5x9+g8gi4=
 github.com/sweetrpg/model-core.go v0.0.168/go.mod h1:LhkwR8e0+6Uq2p+EPg/FYVh3O+hpID0P1r/S+3/xZFc=
-github.com/sweetrpg/mongodb.go v0.0.171 h1:ol0aoYwEC19QiMvtAl1JZA5/3NiRl6QuY/NapKl2lww=
-github.com/sweetrpg/mongodb.go v0.0.171/go.mod h1:Uqv5Lf7Q7/joRroSKXeTqKZJMOdhRFMqyaeTxFVlUNo=
+github.com/sweetrpg/mongodb.go v0.0.172 h1:jXzDWYYQcSoacG9sH4AvOeA6xMEwPTC7LGFWLzNeHsI=
+github.com/sweetrpg/mongodb.go v0.0.172/go.mod h1:ZuyAiKeCInbMeFOIka9YKVdrWSapAIf445e32KthU1A=
 github.com/testcontainers/testcontainers-go v0.37.0 h1:L2Qc0vkTw2EHWQ08djon0D2uw7Z/PtHS/QzZZ5Ra/hg=
 github.com/testcontainers/testcontainers-go v0.37.0/go.mod h1:QPzbxZhQ6Bclip9igjLFj6z0hs01bU8lrl2dHQmgFGM=
 github.com/tklauser/go-sysconf v0.3.12 h1:0QaGUFOdQaIVdPgfITYzaTegZvdCjmYO52cSFAEVmqU=
