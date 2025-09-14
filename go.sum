@@ -234,8 +234,8 @@ github.com/swaggo/gin-swagger v1.6.1 h1:Ri06G4gc9N4t4k8hekMigJ9zKTFSlqj/9paAQCQs
 github.com/swaggo/gin-swagger v1.6.1/go.mod h1:LQ+hJStHakCWRiK/YNYtJOu4mR2FP+pxLnILT/qNiTw=
 github.com/swaggo/swag v1.16.6 h1:qBNcx53ZaX+M5dxVyTrgQ0PJ/ACK+NzhwcbieTt+9yI=
 github.com/swaggo/swag v1.16.6/go.mod h1:ngP2etMK5a0P3QBizic5MEwpRmluJZPHjXcMoj4Xesg=
-github.com/sweetrpg/api-core.go v0.0.403 h1:XRetKmy8kORIgOW4a+4pIREpNIgGi/qaKnkQySzxmsE=
-github.com/sweetrpg/api-core.go v0.0.403/go.mod h1:2d7Jeq89CnFdb8BaYay0P4apE30GO49sPw7i06XTt/E=
+github.com/sweetrpg/api-core.go v0.0.404 h1:r0mIwlbNJ9W1URAo77GPgbOrtN2BxVs889jIWQmiSzE=
+github.com/sweetrpg/api-core.go v0.0.404/go.mod h1:vfexOpbbrnsFfG1SVV2HRPgdRw5AEMK8Hf0pYdmYaig=
 github.com/sweetrpg/catalog-data.go v0.0.20 h1:Pt6AGFIolsJG31rXSbxFY3IAylxe0c67UcqfYM9dj9s=
 github.com/sweetrpg/catalog-data.go v0.0.20/go.mod h1:PZTKe77zuRhYghQ+c0nLYqP2alojGs795Zd0bScDgn0=
 github.com/sweetrpg/catalog-objects.go v0.0.192 h1:saainqDhHD3IY8+ixkhQGCpgvCgVxPieu8CXvNR4UT0=
@@ -244,10 +244,10 @@ github.com/sweetrpg/common.go v0.0.14 h1:0XcJb7dlj6gw0NFiMxr/3d7eHU0vxdqQ/tCCQ0M
 github.com/sweetrpg/common.go v0.0.14/go.mod h1:PVpjDIeB/bZYJZk5fc8whuqVJE8K5k/DsO3o+aZFEcE=
 github.com/sweetrpg/db.go v0.0.167 h1:qarBH8OaRuy7YVVVcqUduwTSLxerUJQ1BYJma/P8M8A=
 github.com/sweetrpg/db.go v0.0.167/go.mod h1:IyksRHJmzwwjQwjQplroMDkn+IIrPLn+00CdoUqeU/8=
-github.com/sweetrpg/model-core.go v0.0.169 h1:7koiKsfUulF1ip8X7acAAV8br3xCcFdEZDu0buuuTSU=
-github.com/sweetrpg/model-core.go v0.0.169/go.mod h1:SB2Sbzbh7JSbpArUCb1ULuVNkS9Pr1xrRt1U2VFwWTY=
-github.com/sweetrpg/mongodb.go v0.0.175 h1:wnqjXB7E2gGF9ugN6SUBMUv30tiN+ZwAK5QiVQHGmn0=
-github.com/sweetrpg/mongodb.go v0.0.175/go.mod h1:51hEwKYjsULZe1aXjctxFhpB9w5ap6feXx6kHZhh0GI=
+github.com/sweetrpg/model-core.go v0.0.170 h1:4GoSGfXWqzhMdIsBclCgQwle5MP0fKdf4j2Buu6Sr+c=
+github.com/sweetrpg/model-core.go v0.0.170/go.mod h1:FA8KkFgsX9QMZjypuIp3l9XRdpnwLbTdeO+u/fIovlY=
+github.com/sweetrpg/mongodb.go v0.0.176 h1:9o882UiTuOJp06+zg+QiJ52TENhpN3zsKumK4TBnVI0=
+github.com/sweetrpg/mongodb.go v0.0.176/go.mod h1:SIy/4nKXrD1jbcecIT3XEPWcwAaQP5a21QGn8/Ydtyk=
 github.com/testcontainers/testcontainers-go v0.38.0 h1:d7uEapLcv2P8AvH8ahLqDMMxda2W9gQN1nRbHS28HBw=
 github.com/testcontainers/testcontainers-go v0.38.0/go.mod h1:C52c9MoHpWO+C4aqmgSU+hxlR5jlEayWtgYrb8Pzz1w=
 github.com/tklauser/go-sysconf v0.3.12 h1:0QaGUFOdQaIVdPgfITYzaTegZvdCjmYO52cSFAEVmqU=
