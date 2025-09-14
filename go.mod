@@ -13,7 +13,7 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
-	github.com/sweetrpg/api-core.go v0.0.404
+	github.com/sweetrpg/api-core.go v0.0.405
 	github.com/sweetrpg/catalog-data.go v0.0.20
 	github.com/sweetrpg/common.go v0.0.14
 	github.com/sweetrpg/db.go v0.0.167
@@ -81,7 +81,7 @@ require (
 	github.com/prometheus/common v0.66.1 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
 	github.com/robfig/go-cache v0.0.0-20130306151617-9fc39e0dbf62 // indirect
-	github.com/sweetrpg/catalog-objects.go v0.0.192 // indirect
+	github.com/sweetrpg/catalog-objects.go v0.0.193 // indirect
 	github.com/sweetrpg/model-core.go v0.0.170 // indirect
 	github.com/sweetrpg/mongodb.go v0.0.176 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
