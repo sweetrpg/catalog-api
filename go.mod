@@ -3,7 +3,7 @@ module github.com/sweetrpg/catalog-api
 go 1.24.2
 
 require (
-	github.com/getsentry/sentry-go v0.35.2
+	github.com/getsentry/sentry-go v0.35.3
 	github.com/gin-contrib/cache v1.4.1
 	github.com/gin-gonic/gin v1.10.1
 	github.com/google/jsonapi v1.0.0
