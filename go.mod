@@ -3,7 +3,7 @@ module github.com/sweetrpg/catalog-api
 go 1.24.2
 
 require (
-	github.com/getsentry/sentry-go v0.41.0
+	github.com/getsentry/sentry-go v0.42.0
 	github.com/gin-contrib/cache v1.4.1
 	github.com/gin-gonic/gin v1.11.0
 	github.com/google/jsonapi v1.0.0
@@ -17,7 +17,7 @@ require (
 	github.com/sweetrpg/catalog-data.go v0.0.20
 	github.com/sweetrpg/common.go v0.0.14
 	github.com/sweetrpg/db.go v0.0.167
-	go.mongodb.org/mongo-driver v1.17.7
+	go.mongodb.org/mongo-driver v1.17.8
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.64.0
 	go.opentelemetry.io/otel v1.39.0
 	go.opentelemetry.io/otel/trace v1.39.0
@@ -57,7 +57,7 @@ require (
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/gomodule/redigo v1.9.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.5 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.7 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
@@ -104,8 +104,8 @@ require (
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260122232226-8e98ce8d340d // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260122232226-8e98ce8d340d // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/grpc v1.78.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
