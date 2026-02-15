@@ -232,8 +232,8 @@ github.com/swaggo/gin-swagger v1.6.1 h1:Ri06G4gc9N4t4k8hekMigJ9zKTFSlqj/9paAQCQs
 github.com/swaggo/gin-swagger v1.6.1/go.mod h1:LQ+hJStHakCWRiK/YNYtJOu4mR2FP+pxLnILT/qNiTw=
 github.com/swaggo/swag v1.16.6 h1:qBNcx53ZaX+M5dxVyTrgQ0PJ/ACK+NzhwcbieTt+9yI=
 github.com/swaggo/swag v1.16.6/go.mod h1:ngP2etMK5a0P3QBizic5MEwpRmluJZPHjXcMoj4Xesg=
-github.com/sweetrpg/api-core.go v0.0.433 h1:/P6WqywdXtT56DyS/iA2Olsi8WkgArTSWXV34jOr0KU=
-github.com/sweetrpg/api-core.go v0.0.433/go.mod h1:Mh44YAM+jGEOi6KRJn0q+zzzfpimKaX2BZLVCVMKKeE=
+github.com/sweetrpg/api-core.go v0.0.434 h1:zrE/r4QoXzJOpa/RZeJIuwKZHypTBhlj3P6J9lQ9PAg=
+github.com/sweetrpg/api-core.go v0.0.434/go.mod h1:cdoWcNS6V2Mvj1wQNX3/ZJdhNFoLr4gN7q0WwdXar0g=
 github.com/sweetrpg/catalog-data.go v0.0.20 h1:Pt6AGFIolsJG31rXSbxFY3IAylxe0c67UcqfYM9dj9s=
 github.com/sweetrpg/catalog-data.go v0.0.20/go.mod h1:PZTKe77zuRhYghQ+c0nLYqP2alojGs795Zd0bScDgn0=
 github.com/sweetrpg/catalog-objects.go v0.0.193 h1:bMNy8B24QPcYWIgc6jzmeqmc0weqVgQHveXeP/Pf+z8=
