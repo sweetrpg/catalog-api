@@ -38,7 +38,7 @@ func listStudios(c *gin.Context) {
 	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "studios", "list-studios", params)
-	vos, err := data.GetStudios(c.Request.Context(), params)
+	vos, err := data.QueryStudios(c.Request.Context(), params)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -78,6 +78,7 @@ func getStudio(c *gin.Context) {
 
 	if vo == nil {
 		c.JSON(http.StatusNotFound, gin.H{})
+		return
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)

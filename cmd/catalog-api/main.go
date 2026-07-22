@@ -25,7 +25,7 @@ import (
 	"github.com/sweetrpg/catalog-api/server"
 	"github.com/sweetrpg/common.go/logging"
 	"github.com/sweetrpg/common.go/util"
-	"github.com/sweetrpg/db.go/database"
+	"github.com/sweetrpg/mongodb.go/database"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"golang.org/x/time/rate"
 )

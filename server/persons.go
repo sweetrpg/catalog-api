@@ -38,7 +38,7 @@ func listPersons(c *gin.Context) {
 	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "persons", "list-persons", params)
-	vos, err := data.GetPersons(c.Request.Context(), params)
+	vos, err := data.QueryPersons(c.Request.Context(), params)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -67,7 +67,7 @@ func getPerson(c *gin.Context) {
 	id := c.Param("id")
 
 	_, span := otel.Tracer("persons").Start(c.Request.Context(), "get-person", oteltrace.WithAttributes(attribute.String("id", id)))
-	vo, err := data.GetLicense(c.Request.Context(), id)
+	vo, err := data.GetPerson(c.Request.Context(), id)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -77,6 +77,7 @@ func getPerson(c *gin.Context) {
 
 	if vo == nil {
 		c.JSON(http.StatusNotFound, gin.H{})
+		return
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
