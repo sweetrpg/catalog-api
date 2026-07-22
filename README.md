@@ -1,11 +1,37 @@
 # SweetRPG Catalog API
 
-[![CI](https://github.com/sweetrpg/catalog-api/actions/workflows/go-ci.yml/badge.svg)](https://github.com/sweetrpg/catalog-api/actions/workflows/go-ci.yml)
+[![CI](https://github.com/sweetrpg/catalog-api/actions/workflows/ci.yaml/badge.svg)](https://github.com/sweetrpg/catalog-api/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/github/license/sweetrpg/catalog-api.svg)](https://img.shields.io/github/license/sweetrpg/catalog-api.svg)
 [![Issues](https://img.shields.io/github/issues/sweetrpg/catalog-api.svg)](https://img.shields.io/github/issues/sweetrpg/catalog-api.svg)
 [![PRs](https://img.shields.io/github/issues-pr/sweetrpg/catalog-api.svg)](https://img.shields.io/github/issues-pr/sweetrpg/catalog-api.svg)
 [![Dependabot](https://badgen.net/github/dependabot/sweetrpg/catalog-api)](https://badgen.net/github/dependabot/sweetrpg/catalog-api)
 
+HTTP microservice for the SweetRPG Catalog domain (licenses, volumes, contributions, persons,
+publishers, reviews, studios, systems). A thin Gin-based layer: `server/*.go` wires JSON:API
+routes to [catalog-data.go](https://github.com/sweetrpg/catalog-data.go)'s data-access functions.
+
+## Run locally
+
+```bash
+scripts/run-docker-local.sh
+```
+
+Brings up the service plus its MongoDB and Redis dependencies via `docker/docker-compose.yml`.
+Swagger UI is served at `/swagger/index.html` once running.
+
+## Known gaps
+
+- `catalog-data.go`'s Volume entity is the only one with a write path, and `Update`/`Delete`
+  are still `// TODO` stubs there. Every other entity is read-only.
+- No test coverage in `server/` or `cmd/` yet.
+
 ## Documentation
 
-Documentation for this package can be found [here](https://sweetrpg.github.io/catalog-api).
+Package documentation: [pkg.go.dev/github.com/sweetrpg/catalog-api](https://pkg.go.dev/github.com/sweetrpg/catalog-api).
+Test coverage reports are published to [sweetrpg.github.io/catalog-api](https://sweetrpg.github.io/catalog-api)
+on every merge to `develop`.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and
+[RELEASE.md](RELEASE.md) for how versions get cut.
