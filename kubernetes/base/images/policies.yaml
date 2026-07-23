@@ -1,0 +1,14 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+
+metadata:
+  name: api
+
+spec:
+  imageRepositoryRef:
+    name: api
+    namespace: sweetrpg-catalog
+  policy:
+    semver:
+      range: "*"

@@ -1,0 +1,36 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: api-v1
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: sweetrpg-catalog-strip-prefix-v1@kubernetescrd
+    kubernetes.io/ingress.class: haproxy
+    cert-manager.io/cluster-issuer: letsencrypt-prd
+    reloader.homer/name: Catalog API
+    reloader.homer/group: sweetrpg
+    reloader.homer/subtitle: API for SweetRPG Catalog service
+    reloader.homer/logo: https://avatars.githubusercontent.com/u/43730988?s=200&v=4
+    reloader.homer/tag: catalog
+    reloader.homer/prio: "1"
+
+spec:
+  ingressClassName: haproxy
+  rules:
+    - host: api.catalog.dev.sweetrpg.com
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: api-v1
+                port:
+                  name: http
+  tls:
+    - hosts:
+        - api.catalog.dev.sweetrpg.com
+      secretName: catalog-api-v1-tls

@@ -1,0 +1,24 @@
+---
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: api-env
+
+data:
+  ENV: dev
+  SERVICE_CHECK_URL: unset
+  HEALTH_CHECK_URL: unset
+  BUILD_INFO_PATH: /app/config/build-info.json
+  SERVICE_REGISTRATION_URL: "http://consul.sweetrpg-support.svc.cluster.local:1234"
+  JAEGER_SERVICE_NAME: api.sweetrpg-catalog
+  JAEGER_SAMPLER_TYPE: ratelimiting
+  JAEGER_SAMPLER_PARAM: "1"
+  JAEGER_PROPAGATION: b3
+  JAEGER_ENDPOINT: http://jaeger-collector.observability.svc.cluster.local:9411/api/v2/spans
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger-collector.observability.svc.cluster.local:4318/
+  SENTRY_RELEASE: "1"
+  REDIS_HOST: redis-master.sweetrpg-catalog.svc.cluster.local
+  INGRESS_BASE_PATH: /0
+  INGRESS_HOST: api.catalog.dev.sweetrpg.com
+  INGRESS_SCHEMES: http,https
