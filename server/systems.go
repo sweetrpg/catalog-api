@@ -38,7 +38,7 @@ func listSystems(c *gin.Context) {
 	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "systems", "list-systems", params)
-	vos, err := data.GetSystems(c.Request.Context(), params)
+	vos, err := data.QuerySystems(c.Request.Context(), params)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -78,6 +78,7 @@ func getSystem(c *gin.Context) {
 
 	if vo == nil {
 		c.JSON(http.StatusNotFound, gin.H{})
+		return
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)

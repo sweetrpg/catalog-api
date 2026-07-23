@@ -13,7 +13,6 @@ import (
 	apiutil "github.com/sweetrpg/api-core.go/util"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -40,7 +39,7 @@ func listLicenses(c *gin.Context) {
 	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "licenses", "list-licenses", params)
-	vos, err := data.GetLicenses(c.Request.Context(), params)
+	vos, err := data.QueryLicenses(c.Request.Context(), params)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -76,13 +75,15 @@ func getLicenseVolumes(c *gin.Context) {
 
 	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
+	inOp := "$in"
 	params.Filter = []apiutil.Filter{{
 		Field:     "license_ids",
-		Operation: bson.D{{"$in", id}},
+		Operation: &inOp,
+		Value:     []string{id.Hex()},
 	}}
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "licenses", "list-license-volumes", params)
-	vos, err := data.GetVolumes(c.Request.Context(), params)
+	vos, err := data.QueryVolumes(c.Request.Context(), params)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -112,7 +113,7 @@ func getLicense(c *gin.Context) {
 	id := c.Param("id")
 
 	_, span := otel.Tracer("licenses").Start(c.Request.Context(), "get-license", oteltrace.WithAttributes(attribute.String("id", id)))
-	vo, err := data.GetVolume(c.Request.Context(), id)
+	vo, err := data.GetLicense(c.Request.Context(), id)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -122,6 +123,7 @@ func getLicense(c *gin.Context) {
 
 	if vo == nil {
 		c.JSON(http.StatusNotFound, gin.H{})
+		return
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)

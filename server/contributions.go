@@ -40,7 +40,7 @@ func listContributions(c *gin.Context) {
 	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "contributions", "list-contributions", params)
-	vos, err := data.GetContributions(c.Request.Context(), params)
+	vos, err := data.QueryContributions(c.Request.Context(), params)
 	span.End()
 	logging.Logger.Info(fmt.Sprintf("vos=%v", vos))
 	if err != nil {
@@ -82,6 +82,7 @@ func getContribution(c *gin.Context) {
 
 	if vo == nil {
 		c.JSON(http.StatusNotFound, gin.H{})
+		return
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)

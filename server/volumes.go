@@ -80,6 +80,7 @@ func getVolume(c *gin.Context) {
 
 	if vo == nil {
 		c.JSON(http.StatusNotFound, gin.H{})
+		return
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
