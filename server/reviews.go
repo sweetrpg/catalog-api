@@ -38,7 +38,7 @@ func listReviews(c *gin.Context) {
 	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "reviews", "list-reviews", params)
-	vos, err := data.GetReviews(c.Request.Context(), params)
+	vos, err := data.QueryReviews(c.Request.Context(), params)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
@@ -78,6 +78,7 @@ func getReview(c *gin.Context) {
 
 	if vo == nil {
 		c.JSON(http.StatusNotFound, gin.H{})
+		return
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)

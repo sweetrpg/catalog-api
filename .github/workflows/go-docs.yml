@@ -27,14 +27,16 @@ jobs:
               with:
                 fetch-depth: 0
             - name: Set up Go
-              uses: actions/setup-go@v6
+              uses: actions/setup-go@v7
               with:
                 go-version-file: go.mod
             - name: Generate docs
+              env:
+                CHECKOUT_REF: ${{ github.head_ref || github.ref_name }}
               run: |
                     git config --global user.email "ci@sweetrpg.com"
                     git config --global user.name "SweetRPG Depedency Updater"
-                    git checkout ${{ github.head_ref || github.ref_name }}
+                    git checkout "$CHECKOUT_REF"
 
                     go run github.com/swaggo/swag/cmd/swag@latest init -d cmd/catalog-api/,server/
 

@@ -1,0 +1,44 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## 0.1.36 - 2026-07-23
+
+### Documentation
+- Update README
+
+### Fixed
+- Repair handler wiring bugs that prevented this service from ever compiling (#93)
+
+## [Unreleased]
+
+### Added
+
+- CONTRIBUTING.md, CODE_OF_CONDUCT.md, AGENTS.md/CLAUDE.md repo scaffolding.
+
+### Fixed
+
+- Every list handler (`listContributions`, `listReviews`, `listLicenses`, `listPersons`,
+  `listPublishers`, `listStudios`, `listSystems`) called a nonexistent `data.Get<Plural>`
+  function - this repo could never actually compile once its dependency chain was otherwise
+  working, since these are compile errors, not runtime bugs. Corrected to `data.Query<Plural>`
+  (the functions that actually exist in `catalog-data.go`).
+- `getLicense` called `data.GetVolume` instead of `data.GetLicense`; `getPerson` called
+  `data.GetLicense` instead of `data.GetPerson`. Both cross-entity mix-ups, presumably from
+  copy-pasting `volumes.go` as a template without updating every call site.
+- `getLicenseVolumes` built its filter with `apiutil.Filter{Operation: bson.D{...}}`, a type
+  mismatch (`Operation` is `*string`) that would not compile either. Corrected to set
+  `Operation`/`Value` per the actual `Filter` struct shape.
+- Every single-item getter (`getContribution`, `getReview`, `getLicense`, `getPerson`,
+  `getPublisher`, `getStudio`, `getSystem`, `getVolume`) was missing a `return` after writing
+  the 404 response, so a not-found lookup would fall through and also write a (likely broken)
+  200-with-nil-body response after the 404 headers were already sent.
+- `main.go` imported `github.com/sweetrpg/db.go/database` - that GitHub repo was renamed to
+  `mongodb.go`; updated the import path and `go.mod` require accordingly.
+- Drops the PR workflow's `golint` step (unconditionally broken - pulls a transitive dep
+  requiring Go >=1.25).
+- Bumped dependencies to real tagged releases: common.go v0.0.16, mongodb.go v0.0.193,
+  api-core.go v0.0.436, model-core.go v0.0.173, catalog-objects.go v0.0.196, catalog-data.go
+  v0.0.21. This resolves the previously-known blocker (this service could not build against
+  published versions of its dependency chain) - the full chain has now been released and this
+  repo builds and tests green against real tags, not local `replace` directives.

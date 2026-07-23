@@ -6,9 +6,8 @@ on:
     push:
         branches:
             - develop
-        paths:
-            - Dockerfile
-            - scripts/entrypoint.sh
+        tags:
+            - "v*"
     workflow_run:
         workflows: ["CI"]
         branches: [develop]
@@ -21,7 +20,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
-              uses: actions/checkout@v6
+              uses: actions/checkout@v7
               with:
                 fetch-depth: 0
             - name: "Get Previous tag"
