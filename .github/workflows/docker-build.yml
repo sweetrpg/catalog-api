@@ -6,9 +6,8 @@ on:
     push:
         branches:
             - develop
-        paths:
-            - Dockerfile
-            - scripts/entrypoint.sh
+        tags:
+            - "v*"
     workflow_run:
         workflows: ["CI"]
         branches: [develop]
