@@ -1,3 +1,14 @@
+
+## 0.1.36 - 2026-07-23
+
+### Documentation
+- Update README
+
+
+### Fixed
+- Repair handler wiring bugs that prevented this service from ever compiling (#93)
+
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
