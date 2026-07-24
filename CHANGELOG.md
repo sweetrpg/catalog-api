@@ -1,3 +1,21 @@
+
+## 0.2.0 - 2026-07-24
+
+### Added
+- Migrate from Flux to ArgoCD for deployment (#98)
+
+
+### Documentation
+- Update README
+
+
+### Fixed
+- Repair handler wiring bugs that prevented this service from ever compiling (#93)
+- Bump ExternalSecret apiVersion to v1 (#104)
+
+
+## 0.1.0 - 2024-10-26
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
