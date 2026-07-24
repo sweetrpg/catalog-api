@@ -4,15 +4,15 @@ concurrency: docker
 
 on:
     push:
-        branches:
-            - develop
+        # branches:
+        #     - develop
         tags:
             - "v*"
-    workflow_run:
-        workflows: ["CI"]
-        branches: [develop]
-        types:
-            - completed
+    # workflow_run:
+    #     workflows: ["CI"]
+    #     branches: [develop]
+    #     types:
+    #         - completed
     workflow_dispatch:
 
 jobs:
