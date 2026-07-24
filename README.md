@@ -5,6 +5,7 @@
 [![Issues](https://img.shields.io/github/issues/sweetrpg/catalog-api.svg)](https://img.shields.io/github/issues/sweetrpg/catalog-api.svg)
 [![PRs](https://img.shields.io/github/issues-pr/sweetrpg/catalog-api.svg)](https://img.shields.io/github/issues-pr/sweetrpg/catalog-api.svg)
 [![Dependabot](https://badgen.net/github/dependabot/sweetrpg/catalog-api)](https://badgen.net/github/dependabot/sweetrpg/catalog-api)
+[![Deployment](https://argocd.dev.pilgrimagesoftware.com/api/badge?name=sweetrpg-catalog-api&revision=true&showAppName=true&namespace=sweetrpg-system)](https://argocd.dev.pilgrimagesoftware.com/applications/sweetrpg-catalog-api)
 
 HTTP microservice for the SweetRPG Catalog domain (licenses, volumes, contributions, persons,
 publishers, reviews, studios, systems). A thin Gin-based layer: `server/*.go` wires JSON:API
