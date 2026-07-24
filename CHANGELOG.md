@@ -1,5 +1,9 @@
 
-## 0.1.36 - 2026-07-23
+## 0.2.0 - 2026-07-24
+
+### Added
+- Migrate from Flux to ArgoCD for deployment (#98)
+
 
 ### Documentation
 - Update README
@@ -7,11 +11,22 @@
 
 ### Fixed
 - Repair handler wiring bugs that prevented this service from ever compiling (#93)
+- Bump ExternalSecret apiVersion to v1 (#104)
 
+
+## 0.1.0 - 2024-10-26
 
 # Changelog
 
 All notable changes to this project will be documented in this file.
+
+## 0.1.36 - 2026-07-23
+
+### Documentation
+- Update README
+
+### Fixed
+- Repair handler wiring bugs that prevented this service from ever compiling (#93)
 
 ## [Unreleased]
 
@@ -40,14 +55,8 @@ All notable changes to this project will be documented in this file.
   `mongodb.go`; updated the import path and `go.mod` require accordingly.
 - Drops the PR workflow's `golint` step (unconditionally broken - pulls a transitive dep
   requiring Go >=1.25).
-
-### Known blocker
-
-This repo still cannot build against the currently *published* versions of its dependencies:
-`catalog-data.go@v0.0.20` has a bug (calls `modelcorevo.FromPropertyModels`/`FromTagModels`,
-which live in `model-core.go`'s `util` package, not `vo`) that's already fixed on
-`catalog-data.go`'s `develop` branch but not yet tagged/released. Verified the full fix chain
-(common.go -> mongodb.go -> api-core.go -> model-core.go -> catalog-objects.go ->
-catalog-data.go -> this repo) builds cleanly end-to-end using local `replace` directives; once
-those repos' PRs are merged and released, bump this repo's `go.mod` to the new versions and the
-build should go green.
+- Bumped dependencies to real tagged releases: common.go v0.0.16, mongodb.go v0.0.193,
+  api-core.go v0.0.436, model-core.go v0.0.173, catalog-objects.go v0.0.196, catalog-data.go
+  v0.0.21. This resolves the previously-known blocker (this service could not build against
+  published versions of its dependency chain) - the full chain has now been released and this
+  repo builds and tests green against real tags, not local `replace` directives.

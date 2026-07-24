@@ -20,5 +20,5 @@ generatorOptions:
   disableNameSuffixHash: true
 images:
   - name: catalog-api
-    newName: ghcr.io/sweetrpg/catalog-api # {"$imagepolicy": "sweetrpg-catalog:api:name"}
-    newTag: v0.1.29 # {"$imagepolicy": "sweetrpg-catalog:api:tag"}
+    newName: ghcr.io/sweetrpg/catalog-api
+    newTag: v0.1.36
