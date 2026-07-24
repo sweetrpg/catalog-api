@@ -5,7 +5,7 @@ go 1.26.5
 require (
 	github.com/getsentry/sentry-go v0.43.0
 	github.com/gin-contrib/cache v1.4.1
-	github.com/gin-gonic/gin v1.11.0
+	github.com/gin-gonic/gin v1.12.0
 	github.com/google/jsonapi v1.0.0
 	github.com/joho/godotenv v1.5.1
 	github.com/penglongli/gin-metrics v0.1.13
@@ -87,6 +87,7 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/zerodha/logf v0.5.5 // indirect
 	go.jtlabs.io/query v1.6.1 // indirect
+	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.44.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.44.0 // indirect
