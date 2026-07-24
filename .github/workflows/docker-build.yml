@@ -95,44 +95,8 @@ jobs:
     update-deployment:
         needs: docker
         if: startsWith(github.ref, 'refs/tags/v')
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
-        steps:
-            - name: Generate GitHub App token
-              id: app-token
-              uses: actions/create-github-app-token@v3
-              with:
-                  app-id: ${{ secrets.SRPG_CI_APP_ID }}
-                  private-key: ${{ secrets.SRPG_CI_PRIVATE_KEY }}
-                  owner: sweetrpg
-                  repositories: argocd
-
-            - name: Checkout argocd
-              uses: actions/checkout@v7
-              with:
-                  repository: sweetrpg/argocd
-                  token: ${{ steps.app-token.outputs.token }}
-
-            - name: Bump deployed image tag
-              env:
-                  TAG: ${{ github.ref_name }}
-              run: |
-                  yq -i '.spec.source.kustomize.images[0] = "catalog-api=ghcr.io/sweetrpg/catalog-api:" + strenv(TAG)' \
-                    clusters/dev/catalog/api-application.yaml
-
-            - name: Commit and push
-              env:
-                  TAG: ${{ github.ref_name }}
-                  GIT_AUTHOR_NAME: SweetRPG CI
-                  GIT_AUTHOR_EMAIL: ci@sweetrpg.com
-                  GIT_COMMITTER_NAME: SweetRPG CI
-                  GIT_COMMITTER_EMAIL: ci@sweetrpg.com
-              run: |
-                  git add clusters/dev/catalog/api-application.yaml
-                  if git diff --cached --quiet; then
-                    echo "No change to deploy"
-                    exit 0
-                  fi
-                  git commit -m "chore(catalog-api): deploy ${TAG}"
-                  git push origin master
+        uses: sweetrpg/github-actions/.github/workflows/argocd-update-deployment.yaml@master
+        with:
+            image-name: catalog-api
+            manifest-path: clusters/dev/catalog/api-application.yaml
+        secrets: inherit
