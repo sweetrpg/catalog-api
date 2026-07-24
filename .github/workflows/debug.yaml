@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-tags: true
           fetch-depth: 0
@@ -97,7 +97,7 @@ jobs:
 
       - name: Read git info
         id: git_info
-        uses: YunaBraska/git-info-action@3.0.3
+        uses: YunaBraska/git-info-action@3.0.4
         with:
           work-dir: "."
           branch-fallback: "master"
