@@ -29,7 +29,13 @@ Swagger UI is served at `/swagger/index.html` once running.
 ## Documentation
 
 Package documentation: [pkg.go.dev/github.com/sweetrpg/catalog-api](https://pkg.go.dev/github.com/sweetrpg/catalog-api).
-Test coverage reports are published to [sweetrpg.github.io/catalog-api](https://sweetrpg.github.io/catalog-api)
+
+Swagger UI (`swaggo/swag` + `gin-swagger`, generated from handler annotations, not
+hand-written): [api.catalog.dev.sweetrpg.com/swagger/index.html](https://api.catalog.dev.sweetrpg.com/swagger/index.html)
+in dev, or `/swagger/index.html` against whatever host you're running locally.
+
+Test coverage reports are published to
+[sweetrpg.github.io/catalog-api/coverage.html](https://sweetrpg.github.io/catalog-api/coverage.html)
 on every merge to `develop`.
 
 ## Contributing
