@@ -10,4 +10,6 @@ on:
 jobs:
   prepare:
     uses: sweetrpg/github-actions/.github/workflows/go-prepare-release.yaml@master
+    with:
+      project-number: 8
     secrets: inherit
