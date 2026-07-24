@@ -1,4 +1,12 @@
 
+## 0.2.2 - 2026-07-24
+
+### Fixed
+- Bump api-core.go to v0.0.438 (#113)
+- Ingress class name
+
+
+
 ## 0.2.1 - 2026-07-24
 
 ### Fixed
