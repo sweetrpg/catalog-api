@@ -1,6 +1,9 @@
 
 ## 0.2.0 - 2026-07-24
 
+
+## 0.2.0 - 2026-07-24
+
 ### Added
 - Migrate from Flux to ArgoCD for deployment (#98)
 
