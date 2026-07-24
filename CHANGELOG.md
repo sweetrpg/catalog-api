@@ -1,4 +1,13 @@
 
+## 0.2.3 - 2026-07-24
+
+### Fixed
+- Bump api-core.go to v0.0.438 (#113)
+- Ingress class name
+- Recognize prefix-strip middleware as release-worthy
+
+
+
 ## 0.2.2 - 2026-07-24
 
 ### Fixed
