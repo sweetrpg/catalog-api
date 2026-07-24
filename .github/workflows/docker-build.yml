@@ -102,5 +102,5 @@ jobs:
         uses: sweetrpg/github-actions/.github/workflows/argocd-update-deployment.yaml@master
         with:
             image-name: catalog-api
-            manifest-path: clusters/dev/catalog/api-application.yaml
+            manifest-path: clusters/dev/catalog/services/api.yaml
         secrets: inherit
