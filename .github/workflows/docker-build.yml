@@ -119,7 +119,7 @@ jobs:
                   TAG: ${{ github.ref_name }}
               run: |
                   yq -i '.spec.source.kustomize.images[0] = "catalog-api=ghcr.io/sweetrpg/catalog-api:" + strenv(TAG)' \
-                    clusters/dev/sweetrpg-catalog/api-application.yaml
+                    clusters/dev/catalog/api-application.yaml
 
             - name: Commit and push
               env:
@@ -129,7 +129,7 @@ jobs:
                   GIT_COMMITTER_NAME: SweetRPG CI
                   GIT_COMMITTER_EMAIL: ci@sweetrpg.com
               run: |
-                  git add clusters/dev/sweetrpg-catalog/api-application.yaml
+                  git add clusters/dev/catalog/api-application.yaml
                   if git diff --cached --quiet; then
                     echo "No change to deploy"
                     exit 0
