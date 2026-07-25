@@ -11,6 +11,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache/persistence"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/penglongli/gin-metrics/ginmetrics"
@@ -52,6 +53,9 @@ func main() {
 
 	setupTracing(r)
 
+	// CORS
+	setupCORS(r)
+
 	// Setup Prometheus metrics
 	setupMetrics(r)
 
@@ -83,6 +87,24 @@ func setupSwagger(r *gin.Engine) {
 	docs.SwaggerInfo.Schemes = strings.Split(util.GetEnv(apiconstants.INGRESS_SCHEMES, "http"), ",")
 	// swagger middleware to serve the API docs
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+}
+
+func setupCORS(r *gin.Engine) {
+	logging.Logger.Info("Setting up CORS...")
+
+	origins := util.GetEnv(constants.ALLOWED_ORIGINS, "")
+	if origins == "" {
+		logging.Logger.Warn("ALLOWED_ORIGINS not set, no cross-origin requests will be allowed")
+		return
+	}
+
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     strings.Split(origins, ","),
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 }
 
 func setupSentry() {
