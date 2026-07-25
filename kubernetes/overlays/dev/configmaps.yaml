@@ -18,7 +18,8 @@ data:
   JAEGER_ENDPOINT: http://jaeger-collector.observability.svc.cluster.local:9411/api/v2/spans
   OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger-collector.observability.svc.cluster.local:4318/
   SENTRY_RELEASE: "1"
-  REDIS_HOST: redis-master.sweetrpg-catalog.svc.cluster.local
+  REDIS_HOST: redis.sweetrpg-catalog.svc.cluster.local
+  REDIS_PORT: "6379"
   INGRESS_BASE_PATH: /0
   INGRESS_HOST: api.catalog.dev.sweetrpg.com
   INGRESS_SCHEMES: http,https

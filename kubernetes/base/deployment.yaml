@@ -33,6 +33,7 @@ spec:
                 prometheus.io/port: '8000'
         spec:
             serviceAccountName: api
+            enableServiceLinks: false
             imagePullSecrets:
                 - name: sweetrpg-registry
             containers:
