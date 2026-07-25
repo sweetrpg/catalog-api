@@ -1,4 +1,23 @@
 
+## 0.3.0 - 2026-07-25
+
+### Added
+- Add CORS middleware, configurable via ALLOWED_ORIGINS (#122)
+
+
+### Documentation
+- Link deployed Swagger UI and fix coverage report URL (#119)
+
+
+### Fixed
+- Bump api-core.go to v0.0.438 (#113)
+- Ingress class name
+- Recognize prefix-strip middleware as release-worthy
+- Use ClusterIP instead of LoadBalancer for api Service (#120)
+- Fix Redis connection - wrong host, port env var collision (#121)
+
+
+
 ## 0.2.3 - 2026-07-24
 
 ### Fixed
