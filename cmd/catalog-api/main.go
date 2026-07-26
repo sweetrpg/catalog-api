@@ -52,6 +52,7 @@ func main() {
 	// r.LoadHTMLGlob("tmpl/*")
 
 	setupTracing(r)
+	defer tracing.TeardownTracing()
 
 	// CORS
 	setupCORS(r)
@@ -181,8 +182,10 @@ func setupCache() persistence.CacheStore {
 func setupTracing(r *gin.Engine) {
 	logging.Logger.Info("Setting up tracing...")
 
+	// Teardown is deferred by the caller (main), not here - deferring it in this function
+	// would run it as soon as this function returns, shutting down the tracer provider
+	// before the server ever serves a request, silently dropping every span.
 	tracing.SetupTracing(constants.ServiceName)
-	defer tracing.TeardownTracing()
 	r.Use(otelgin.Middleware(constants.ServiceName))
 }
 
