@@ -1,4 +1,26 @@
 
+## 0.3.1 - 2026-07-26
+
+### Added
+- Add CORS middleware, configurable via ALLOWED_ORIGINS (#122)
+
+
+### Documentation
+- Link deployed Swagger UI and fix coverage report URL (#119)
+
+
+### Fixed
+- Bump api-core.go to v0.0.438 (#113)
+- Ingress class name
+- Recognize prefix-strip middleware as release-worthy
+- Use ClusterIP instead of LoadBalancer for api Service (#120)
+- Fix Redis connection - wrong host, port env var collision (#121)
+- Update secret path for cache auth
+- Tracer provider shuts down before the server ever serves a request
+- Point OTLP tracing endpoint at Tempo (missed on develop)
+
+
+
 ## 0.3.0 - 2026-07-25
 
 ### Added
