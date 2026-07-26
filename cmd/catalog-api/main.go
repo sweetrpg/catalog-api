@@ -13,6 +13,7 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/grafana/pyroscope-go"
 	"github.com/joho/godotenv"
 	"github.com/penglongli/gin-metrics/ginmetrics"
 	actuator "github.com/sinhashubham95/go-actuator"
@@ -47,6 +48,10 @@ func main() {
 	logging.Init()
 
 	setupSentry()
+
+	if stopProfiling := setupProfiling(); stopProfiling != nil {
+		defer stopProfiling()
+	}
 
 	r := gin.Default()
 	// r.LoadHTMLGlob("tmpl/*")
@@ -136,6 +141,33 @@ func setupSentry() {
 			log.Print("Flushing Sentry...")
 			sentry.Flush(2 * time.Second)
 		}()
+	}
+}
+
+func setupProfiling() func() {
+	logging.Logger.Info("Setting up continuous profiling...")
+
+	serverAddress, found := os.LookupEnv(constants.PYROSCOPE_SERVER_ADDRESS)
+	if !found {
+		logging.Logger.Warn("PYROSCOPE_SERVER_ADDRESS not set, continuous profiling disabled")
+		return nil
+	}
+
+	profiler, err := pyroscope.Start(pyroscope.Config{
+		ApplicationName: constants.ServiceName,
+		ServerAddress:   serverAddress,
+		TenantID:        util.GetEnv(constants.PYROSCOPE_TENANT_ID, ""),
+		Tags: map[string]string{
+			"env": util.GetEnv(apiconstants.ENV, "dev"),
+		},
+	})
+	if err != nil {
+		logging.Logger.Error("Error while trying to initialize continuous profiling", "error", err.Error())
+		return nil
+	}
+
+	return func() {
+		_ = profiler.Stop()
 	}
 }
 

@@ -17,6 +17,8 @@ data:
   JAEGER_PROPAGATION: b3
   JAEGER_ENDPOINT: http://jaeger-collector.observability.svc.cluster.local:9411/api/v2/spans
   OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo-distributor.observability.svc.cluster.local:4318/
+  PYROSCOPE_SERVER_ADDRESS: http://pyroscope.observability.svc.cluster.local:4040
+  PYROSCOPE_TENANT_ID: psw
   SENTRY_RELEASE: "1"
   REDIS_HOST: redis.sweetrpg-catalog.svc.cluster.local
   REDIS_PORT: "6379"
