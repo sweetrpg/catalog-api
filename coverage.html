@@ -115,6 +115,7 @@ import (
         "github.com/gin-contrib/cache/persistence"
         "github.com/gin-contrib/cors"
         "github.com/gin-gonic/gin"
+        "github.com/grafana/pyroscope-go"
         "github.com/joho/godotenv"
         "github.com/penglongli/gin-metrics/ginmetrics"
         actuator "github.com/sinhashubham95/go-actuator"
@@ -150,7 +151,11 @@ func main() <span class="cov0" title="0">{
 
         setupSentry()
 
-        r := gin.Default()
+        if stopProfiling := setupProfiling(); stopProfiling != nil </span><span class="cov0" title="0">{
+                defer stopProfiling()
+        }</span>
+
+        <span class="cov0" title="0">r := gin.Default()
         // r.LoadHTMLGlob("tmpl/*")
 
         setupTracing(r)
@@ -178,8 +183,8 @@ func main() <span class="cov0" title="0">{
 
         server.SetupHandlers(r, cache)
 
-        _ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
-}</span>
+        _ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))</span>
+}
 
 func setupSwagger(r *gin.Engine) <span class="cov0" title="0">{
         logging.Logger.Info("Setting up Swagger...")
@@ -239,6 +244,33 @@ func setupSentry() <span class="cov0" title="0">{
                         sentry.Flush(2 * time.Second)
                 }</span>()
         }
+}
+
+func setupProfiling() func() <span class="cov0" title="0">{
+        logging.Logger.Info("Setting up continuous profiling...")
+
+        serverAddress, found := os.LookupEnv(constants.PYROSCOPE_SERVER_ADDRESS)
+        if !found </span><span class="cov0" title="0">{
+                logging.Logger.Warn("PYROSCOPE_SERVER_ADDRESS not set, continuous profiling disabled")
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">profiler, err := pyroscope.Start(pyroscope.Config{
+                ApplicationName: constants.ServiceName,
+                ServerAddress:   serverAddress,
+                TenantID:        util.GetEnv(constants.PYROSCOPE_TENANT_ID, ""),
+                Tags: map[string]string{
+                        "env": util.GetEnv(apiconstants.ENV, "dev"),
+                },
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("Error while trying to initialize continuous profiling", "error", err.Error())
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">return func() </span><span class="cov0" title="0">{
+                _ = profiler.Stop()
+        }</span>
 }
 
 func setupAcuator(r *gin.Engine) <span class="cov0" title="0">{
