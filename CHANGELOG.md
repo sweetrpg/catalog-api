@@ -1,4 +1,11 @@
 
+## 0.4.0 - 2026-07-26
+
+### Added
+- Wire up continuous profiling via Pyroscope
+
+
+
 ## 0.3.1 - 2026-07-26
 
 ### Added
