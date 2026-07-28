@@ -2,12 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [develop]
+    branches: [develop, test/badge-pr]
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   ci:
-    uses: sweetrpg/github-actions/.github/workflows/go-ci.yaml@master
+    uses: sweetrpg/github-actions/.github/workflows/go-ci.yaml@3-badge-pr
     secrets: inherit
