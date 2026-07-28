@@ -3,11 +3,12 @@ name: CI
 on:
   push:
     branches: [develop]
+  workflow_dispatch: {}
 
 permissions:
   contents: write
 
 jobs:
   ci:
-    uses: sweetrpg/github-actions/.github/workflows/go-ci.yaml@master
+    uses: sweetrpg/github-actions/.github/workflows/go-ci.yaml@3-add-code-coverage
     secrets: inherit
