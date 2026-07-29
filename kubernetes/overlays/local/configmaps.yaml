@@ -1,0 +1,31 @@
+---
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: api-env
+
+data:
+  ENV: local
+  SERVICE_CHECK_URL: unset
+  HEALTH_CHECK_URL: unset
+  BUILD_INFO_PATH: /app/config/build-info.json
+  SERVICE_REGISTRATION_URL: "http://consul.sweetrpg-support.svc.cluster.local:1234"
+  JAEGER_SERVICE_NAME: api.sweetrpg-catalog
+  JAEGER_SAMPLER_TYPE: ratelimiting
+  JAEGER_SAMPLER_PARAM: "1"
+  JAEGER_PROPAGATION: b3
+  JAEGER_ENDPOINT: http://jaeger-collector.observability.svc.cluster.local:9411/api/v2/spans
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo-distributor.observability.svc.cluster.local:4318/
+  PYROSCOPE_SERVER_ADDRESS: http://pyroscope.observability.svc.cluster.local:4040
+  PYROSCOPE_TENANT_ID: psw
+  SENTRY_RELEASE: "1"
+  REDIS_HOST: redis.sweetrpg-catalog.svc.cluster.local
+  REDIS_PORT: "6379"
+  # Traefik strips /api/catalog/0 (or /1) before the request reaches this app (see
+  # middlewares.yaml) - every self-referencing link this app generates needs the full prefix
+  # added back, not just the /0 dev overlay uses (this overlay shares one host with every other
+  # app, unlike dev's dedicated api.catalog.dev.sweetrpg.com).
+  INGRESS_BASE_PATH: /api/catalog/0
+  INGRESS_HOST: sweetrpg-local.curlew-smoot.ts.net
+  INGRESS_SCHEMES: https

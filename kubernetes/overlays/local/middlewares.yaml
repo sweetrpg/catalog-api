@@ -1,0 +1,16 @@
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+
+metadata:
+  name: strip-prefix-v1
+
+spec:
+  # Unlike the dev overlay's strip-prefix-v1 (which only strips the bare /0 or /1 version
+  # segment, since dev gives this service its own host with no other path prefix), this overlay
+  # shares one host across every app - strip the full /api/catalog/0 or /api/catalog/1 prefix so
+  # the app still sees its normal unprefixed routes.
+  stripPrefix:
+    prefixes:
+      - /api/catalog/0
+      - /api/catalog/1
