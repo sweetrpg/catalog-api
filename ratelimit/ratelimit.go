@@ -42,7 +42,7 @@ func (l *Limiter) Allow(ctx context.Context, clientKey, tierName string) (bool, 
 	if err != nil {
 		return false, fmt.Errorf("ratelimit: get redis connection: %w", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	key := fmt.Sprintf("ratelimit:%s:%s", tierName, clientKey)
 	count, err := redis.Int(conn.Do("INCR", key))
@@ -64,7 +64,7 @@ func Ping(ctx context.Context, pool *redis.Pool) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	_, err = conn.Do("PING")
 	return err

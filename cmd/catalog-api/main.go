@@ -77,7 +77,7 @@ func main() {
 
 	redisPool := setupRedisPool()
 	if redisPool != nil {
-		defer redisPool.Close()
+		defer func() { _ = redisPool.Close() }()
 	}
 	cache := setupCache(redisPool)
 	ttls := cachettl.Load()
