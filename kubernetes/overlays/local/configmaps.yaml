@@ -27,5 +27,5 @@ data:
   # added back, not just the /0 dev overlay uses (this overlay shares one host with every other
   # app, unlike dev's dedicated api.catalog.dev.sweetrpg.com).
   INGRESS_BASE_PATH: /api/catalog/0
-  INGRESS_HOST: sweetrpg-local.curlew-smoot.ts.net
+  INGRESS_HOST: sweetrpg.local
   INGRESS_SCHEMES: https
