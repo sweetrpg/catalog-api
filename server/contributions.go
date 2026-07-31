@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -13,6 +12,7 @@ import (
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
 	_ "github.com/sweetrpg/api-core.go/vo"
+	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -20,11 +20,12 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore) {
+func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
 	logging.Logger.Info("Setting up contribution endpoint handlers...")
-	g.GET("/contributions", cache.CachePage(store, time.Hour, listContributions))
-	g.GET("/contributions/:id", cache.CachePage(store, time.Hour, getContribution))
-	// g.GET("/contributions/:id/contributions", cache.CachePage(store, time.Hour, getContributionContributions))
+	ttl := ttls.TTL("contributions")
+	g.GET("/contributions", cache.CachePage(store, ttl, listContributions))
+	g.GET("/contributions/:id", cache.CachePage(store, ttl, getContribution))
+	// g.GET("/contributions/:id/contributions", cache.CachePage(store, ttl, getContributionContributions))
 }
 
 // List contributions.

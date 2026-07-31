@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -11,6 +10,7 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -18,11 +18,12 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupReviewHandlers(g *gin.Engine, store persistence.CacheStore) {
+func setupReviewHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
 	logging.Logger.Info("Setting up review endpoint handlers...")
-	g.GET("/reviews", cache.CachePage(store, time.Hour, listReviews))
-	g.GET("/reviews/:id", cache.CachePage(store, time.Hour, getReview))
-	// g.GET("/reviews/:id/reviews", cache.CachePage(store, time.Hour, getReviewReviews))
+	ttl := ttls.TTL("reviews")
+	g.GET("/reviews", cache.CachePage(store, ttl, listReviews))
+	g.GET("/reviews/:id", cache.CachePage(store, ttl, getReview))
+	// g.GET("/reviews/:id/reviews", cache.CachePage(store, ttl, getReviewReviews))
 }
 
 // List reviews.

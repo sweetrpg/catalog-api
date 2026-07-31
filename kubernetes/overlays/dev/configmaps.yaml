@@ -20,8 +20,18 @@ data:
   PYROSCOPE_SERVER_ADDRESS: http://pyroscope.observability.svc.cluster.local:4040
   PYROSCOPE_TENANT_ID: psw
   SENTRY_RELEASE: "1"
-  REDIS_HOST: redis.sweetrpg-catalog.svc.cluster.local
+  # redis-master is the service name the infrastructure/catalog Helm chart actually creates
+  # (bitnami/redis convention) - "redis" alone has never resolved, which is part of why this
+  # was never exercised end-to-end. See openspec/changes/catalog-api-caching-rate-limiting.
+  REDIS_HOST: redis-master.sweetrpg-catalog.svc.cluster.local
   REDIS_PORT: "6379"
+  CACHE_TTLS: "licenses=30m,volumes=30m,systems=2h,publishers=2h,studios=2h,persons=1h,contributions=1h,reviews=15m"
+  CACHE_DEFAULT_TTL: 1h
+  DISTRIBUTED_RATE_LIMIT_ENABLED: "false"
+  RATE_LIMIT_CHEAP: "120"
+  RATE_LIMIT_CHEAP_WINDOW_SECONDS: "60"
+  RATE_LIMIT_STANDARD: "30"
+  RATE_LIMIT_STANDARD_WINDOW_SECONDS: "60"
   INGRESS_BASE_PATH: /0
   INGRESS_HOST: api.catalog.dev.sweetrpg.com
   INGRESS_SCHEMES: http,https

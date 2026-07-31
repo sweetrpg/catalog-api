@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/gomodule/redigo/redis"
 	"github.com/grafana/pyroscope-go"
 	"github.com/joho/godotenv"
 	"github.com/penglongli/gin-metrics/ginmetrics"
@@ -22,15 +24,23 @@ import (
 	apiconstants "github.com/sweetrpg/api-core.go/constants"
 	"github.com/sweetrpg/api-core.go/tracing"
 	"github.com/sweetrpg/api-core.go/vo"
+	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/docs"
+	"github.com/sweetrpg/catalog-api/ratelimit"
+	"github.com/sweetrpg/catalog-api/readiness"
 	"github.com/sweetrpg/catalog-api/server"
 	"github.com/sweetrpg/common.go/logging"
 	"github.com/sweetrpg/common.go/util"
 	"github.com/sweetrpg/mongodb.go/database"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
-	"golang.org/x/time/rate"
+	xrate "golang.org/x/time/rate"
 )
+
+// redisConnectTimeout bounds startup/readiness pings to Redis so a stalled connection fails
+// fast instead of hanging past the caller's own timeout (same rationale as api-core.go's
+// healthCheckTimeout for Mongo).
+const redisConnectTimeout = 5 * time.Second
 
 // @title Catalog API service
 // @version 1.0
@@ -65,7 +75,12 @@ func main() {
 	// Setup Prometheus metrics
 	setupMetrics(r)
 
-	cache := setupCache()
+	redisPool := setupRedisPool()
+	if redisPool != nil {
+		defer redisPool.Close()
+	}
+	cache := setupCache(redisPool)
+	ttls := cachettl.Load()
 
 	database.SetupDatabase()
 	defer database.TeardownDatabase()
@@ -77,9 +92,9 @@ func main() {
 	setupSwagger(r)
 
 	// Add rate limiter
-	r.Use(RateLimiter())
+	r.Use(RateLimiter(redisPool))
 
-	server.SetupHandlers(r, cache)
+	server.SetupHandlers(r, cache, ttls)
 
 	_ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
 }
@@ -194,18 +209,63 @@ func setupAcuator(r *gin.Engine) {
 	r.GET("/actuator/*endpoint", ginActuatorHandler)
 }
 
-func setupCache() persistence.CacheStore {
+// setupRedisPool builds a shared redigo connection pool for both the rate limiter's counters
+// and the cache's startup connectivity check, when REDIS_HOST is configured. Returns nil when
+// no Redis is configured, so the service runs entirely without an external dependency.
+func setupRedisPool() *redis.Pool {
+	redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
+	if !found {
+		return nil
+	}
+
+	redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
+	redisPass := os.Getenv(apiconstants.REDIS_PASS)
+	addr := fmt.Sprintf("%s:%s", redisHost, redisPort)
+
+	return &redis.Pool{
+		MaxIdle:     5,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", addr, redis.DialConnectTimeout(redisConnectTimeout))
+			if err != nil {
+				return nil, err
+			}
+			if redisPass != "" {
+				if _, err := c.Do("AUTH", redisPass); err != nil {
+					_ = c.Close()
+					return nil, err
+				}
+			}
+			return c, nil
+		},
+	}
+}
+
+// setupCache builds the response cache store and, when REDIS_HOST is configured, verifies
+// connectivity before the service reports ready. A configured-but-unreachable Redis fails the
+// readiness probe (see readiness.CacheReady, consumed by /status/health) instead of silently
+// falling back to uncached behavior.
+func setupCache(redisPool *redis.Pool) persistence.CacheStore {
 	logging.Logger.Info("Setting up query cache...")
 
-	var cache persistence.CacheStore
 	redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
-	if found {
-		redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
-		// TODO: redisDb := util.GetEnv(apiconstants.REDIS_DB, "0")
-		redisPass := os.Getenv(apiconstants.REDIS_PASS)
-		cache = persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), redisPass, time.Hour)
+	if !found {
+		readiness.SetCacheReady(true)
+		return persistence.NewInMemoryStore(time.Hour)
+	}
+
+	redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
+	redisPass := os.Getenv(apiconstants.REDIS_PASS)
+	cache := persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), redisPass, time.Hour)
+
+	ctx, cancel := context.WithTimeout(context.Background(), redisConnectTimeout)
+	defer cancel()
+	if err := ratelimit.Ping(ctx, redisPool); err != nil {
+		logging.Logger.Error("REDIS_HOST is configured but unreachable; failing readiness instead of silently serving uncached responses",
+			"redis_host", redisHost, "error", err.Error())
+		readiness.SetCacheReady(false)
 	} else {
-		cache = persistence.NewInMemoryStore(time.Hour)
+		readiness.SetCacheReady(true)
 	}
 
 	return cache
@@ -231,15 +291,95 @@ func setupMetrics(r *gin.Engine) {
 	m.Use(r)
 }
 
-func RateLimiter() gin.HandlerFunc {
-	limiter := rate.NewLimiter(1, util.GetEnvInt(apiconstants.RATE_LIMIT, 10))
+// rateLimitTierFor groups routes into a looser "cheap" tier (shallow status endpoints) and a
+// stricter "standard" tier (everything else), per design.md's decision to start with two tiers
+// keyed by route cost rather than one entry per resource.
+func rateLimitTierFor(path string) string {
+	if strings.HasPrefix(path, "/status/") {
+		return "cheap"
+	}
+	return "standard"
+}
+
+// rateLimitClientKey identifies the caller for per-client limiting: API key if the client sent
+// one, otherwise client IP. This doesn't introduce a new auth mechanism - it keys off whatever
+// identity already exists on the request (see design.md's open question on API-key issuance).
+func rateLimitClientKey(c *gin.Context) string {
+	if apiKey := c.GetHeader("X-API-Key"); apiKey != "" {
+		return "key:" + apiKey
+	}
+	return "ip:" + c.ClientIP()
+}
+
+// RateLimiter selects between the new Redis-backed per-client limiter and the legacy
+// process-wide token bucket, gated by DISTRIBUTED_RATE_LIMIT_ENABLED so the new limiter can be
+// validated in dev before the old one is removed (tasks 4.5-4.6).
+func RateLimiter(redisPool *redis.Pool) gin.HandlerFunc {
+	distributedEnabled, _ := strconv.ParseBool(util.GetEnv(constants.DISTRIBUTED_RATE_LIMIT_ENABLED, "false"))
+	if distributedEnabled && redisPool != nil {
+		return distributedRateLimiter(redisPool)
+	}
+
+	if distributedEnabled && redisPool == nil {
+		logging.Logger.Warn("DISTRIBUTED_RATE_LIMIT_ENABLED is set but REDIS_HOST is not; falling back to the process-wide limiter")
+	}
+
+	return globalRateLimiter()
+}
+
+// distributedRateLimiter enforces per-client, per-tier limits backed by Redis, consistent
+// across replicas. Fails closed (503) if the Redis backend is unreachable, rather than letting
+// requests through unlimited during an outage.
+func distributedRateLimiter(redisPool *redis.Pool) gin.HandlerFunc {
+	limiter := ratelimit.New(redisPool, map[string]ratelimit.Tier{
+		"cheap": {
+			Limit:  util.GetEnvInt(constants.RATE_LIMIT_CHEAP, 120),
+			Window: util.GetEnvInt(constants.RATE_LIMIT_CHEAP_WINDOW, 60),
+		},
+		"standard": {
+			Limit:  util.GetEnvInt(constants.RATE_LIMIT_STANDARD, 30),
+			Window: util.GetEnvInt(constants.RATE_LIMIT_STANDARD_WINDOW, 60),
+		},
+	})
+
+	return func(c *gin.Context) {
+		tier := rateLimitTierFor(c.Request.URL.Path)
+		clientKey := rateLimitClientKey(c)
+
+		allowed, err := limiter.Allow(c.Request.Context(), clientKey, tier)
+		if err != nil {
+			logging.Logger.Error("Rate-limit backend unreachable; rejecting request (fail closed)", "error", err.Error())
+			c.AbortWithStatusJSON(http.StatusServiceUnavailable, vo.ErrorVO{
+				Error:   constants.ErrorRateLimitUnavailable,
+				Message: "Rate limiting is temporarily unavailable",
+			})
+			return
+		}
+		if !allowed {
+			logging.Logger.Warn("Rate limit exceeded", "client", clientKey, "tier", tier, "path", c.Request.URL.Path)
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, vo.ErrorVO{
+				Error:   apiconstants.ErrorRateLimited,
+				Message: "Limit exceeded",
+			})
+			return
+		}
+		c.Next()
+	}
+}
+
+// globalRateLimiter is the legacy process-wide token bucket: one shared limit across every
+// client and route, effectively N times looser with N replicas since each pod holds its own
+// bucket. Kept behind the DISTRIBUTED_RATE_LIMIT_ENABLED toggle until the new limiter is
+// validated in dev (task 4.6 removes this once that happens).
+func globalRateLimiter() gin.HandlerFunc {
+	limiter := xrate.NewLimiter(1, util.GetEnvInt(apiconstants.RATE_LIMIT, 10))
 
 	return func(c *gin.Context) {
 		if limiter.Allow() {
 			c.Next()
 		} else {
 			logging.Logger.Warn(fmt.Sprintf("Rate limit exceeded for request: %v", c.Request))
-			c.JSON(http.StatusTooManyRequests, vo.ErrorVO{
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, vo.ErrorVO{
 				Error:   apiconstants.ErrorRateLimited,
 				Message: "Limit exceeded",
 			})
