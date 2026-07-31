@@ -3,7 +3,7 @@
 <html>
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>catalog-api: Go Coverage Report</title>
+		<title>cachettl: Go Coverage Report</title>
 		<style>
 			body {
 				background: black;
@@ -55,29 +55,35 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (0.0%)</option>
+				<option value="file0">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
-				<option value="file1">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
+				<option value="file1">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (19.1%)</option>
 				
-				<option value="file2">github.com/sweetrpg/catalog-api/server/contributions.go (0.0%)</option>
+				<option value="file2">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
-				<option value="file3">github.com/sweetrpg/catalog-api/server/handlers.go (0.0%)</option>
+				<option value="file3">github.com/sweetrpg/catalog-api/ratelimit/ratelimit.go (91.7%)</option>
 				
-				<option value="file4">github.com/sweetrpg/catalog-api/server/licenses.go (0.0%)</option>
+				<option value="file4">github.com/sweetrpg/catalog-api/readiness/readiness.go (100.0%)</option>
 				
-				<option value="file5">github.com/sweetrpg/catalog-api/server/persons.go (0.0%)</option>
+				<option value="file5">github.com/sweetrpg/catalog-api/server/contributions.go (0.0%)</option>
 				
-				<option value="file6">github.com/sweetrpg/catalog-api/server/publishers.go (0.0%)</option>
+				<option value="file6">github.com/sweetrpg/catalog-api/server/handlers.go (0.0%)</option>
 				
-				<option value="file7">github.com/sweetrpg/catalog-api/server/reviews.go (0.0%)</option>
+				<option value="file7">github.com/sweetrpg/catalog-api/server/licenses.go (0.0%)</option>
 				
-				<option value="file8">github.com/sweetrpg/catalog-api/server/status.go (0.0%)</option>
+				<option value="file8">github.com/sweetrpg/catalog-api/server/persons.go (0.0%)</option>
 				
-				<option value="file9">github.com/sweetrpg/catalog-api/server/studios.go (0.0%)</option>
+				<option value="file9">github.com/sweetrpg/catalog-api/server/publishers.go (0.0%)</option>
 				
-				<option value="file10">github.com/sweetrpg/catalog-api/server/systems.go (0.0%)</option>
+				<option value="file10">github.com/sweetrpg/catalog-api/server/reviews.go (0.0%)</option>
 				
-				<option value="file11">github.com/sweetrpg/catalog-api/server/volumes.go (0.0%)</option>
+				<option value="file11">github.com/sweetrpg/catalog-api/server/status.go (0.0%)</option>
+				
+				<option value="file12">github.com/sweetrpg/catalog-api/server/studios.go (0.0%)</option>
+				
+				<option value="file13">github.com/sweetrpg/catalog-api/server/systems.go (0.0%)</option>
+				
+				<option value="file14">github.com/sweetrpg/catalog-api/server/volumes.go (0.0%)</option>
 				
 				</select>
 			</div>
@@ -100,9 +106,81 @@
 		</div>
 		<div id="content">
 		
-		<pre class="file" id="file0" style="display: none">package main
+		<pre class="file" id="file0" style="display: none">// Package cachettl resolves the cache TTL for a given route group, loaded once at startup
+// from the CACHE_TTLS env var so slower-changing entities and faster-changing ones aren't
+// forced onto the same cache policy.
+package cachettl
 
 import (
+        "strings"
+        "time"
+
+        "github.com/sweetrpg/catalog-api/constants"
+        "github.com/sweetrpg/common.go/logging"
+        "github.com/sweetrpg/common.go/util"
+)
+
+const defaultTTLFallback = time.Hour
+
+// Config resolves a per-route-group TTL, falling back to a configured default for any route
+// group without an explicit entry.
+type Config struct {
+        ttls       map[string]time.Duration
+        defaultTTL time.Duration
+}
+
+// Load parses CACHE_TTLS ("route=duration,route=duration", e.g. "licenses=30m,volumes=15m")
+// and CACHE_DEFAULT_TTL (a single duration string) from the environment. Malformed entries are
+// logged and skipped rather than failing startup.
+func Load() Config <span class="cov7" title="5">{
+        defaultTTL := defaultTTLFallback
+        if raw := util.GetEnv(constants.CACHE_DEFAULT_TTL, ""); raw != "" </span><span class="cov3" title="2">{
+                if d, err := time.ParseDuration(raw); err == nil </span><span class="cov1" title="1">{
+                        defaultTTL = d
+                }</span> else<span class="cov1" title="1"> {
+                        logging.Logger.Warn("Invalid CACHE_DEFAULT_TTL, using fallback default",
+                                "value", raw, "fallback", defaultTTLFallback.String(), "error", err.Error())
+                }</span>
+        }
+
+        <span class="cov7" title="5">ttls := map[string]time.Duration{}
+        raw := util.GetEnv(constants.CACHE_TTLS, "")
+        for _, entry := range strings.Split(raw, ",") </span><span class="cov10" title="9">{
+                entry = strings.TrimSpace(entry)
+                if entry == "" </span><span class="cov3" title="2">{
+                        continue</span>
+                }
+                <span class="cov8" title="7">route, value, found := strings.Cut(entry, "=")
+                if !found </span><span class="cov1" title="1">{
+                        logging.Logger.Warn("Invalid CACHE_TTLS entry, expected route=duration", "entry", entry)
+                        continue</span>
+                }
+                <span class="cov8" title="6">d, err := time.ParseDuration(strings.TrimSpace(value))
+                if err != nil </span><span class="cov1" title="1">{
+                        logging.Logger.Warn("Invalid CACHE_TTLS duration, skipping entry",
+                                "entry", entry, "error", err.Error())
+                        continue</span>
+                }
+                <span class="cov7" title="5">ttls[strings.TrimSpace(route)] = d</span>
+        }
+
+        <span class="cov7" title="5">return Config{ttls: ttls, defaultTTL: defaultTTL}</span>
+}
+
+// TTL returns the configured TTL for the given route group, or the configured default if the
+// route group has no explicit entry.
+func (c Config) TTL(route string) time.Duration <span class="cov9" title="8">{
+        if d, ok := c.ttls[route]; ok </span><span class="cov6" title="4">{
+                return d
+        }</span>
+        <span class="cov6" title="4">return c.defaultTTL</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package main
+
+import (
+        "context"
         "fmt"
         "log"
         "net/http"
@@ -115,6 +193,7 @@ import (
         "github.com/gin-contrib/cache/persistence"
         "github.com/gin-contrib/cors"
         "github.com/gin-gonic/gin"
+        "github.com/gomodule/redigo/redis"
         "github.com/grafana/pyroscope-go"
         "github.com/joho/godotenv"
         "github.com/penglongli/gin-metrics/ginmetrics"
@@ -124,15 +203,23 @@ import (
         apiconstants "github.com/sweetrpg/api-core.go/constants"
         "github.com/sweetrpg/api-core.go/tracing"
         "github.com/sweetrpg/api-core.go/vo"
+        "github.com/sweetrpg/catalog-api/cachettl"
         "github.com/sweetrpg/catalog-api/constants"
         "github.com/sweetrpg/catalog-api/docs"
+        "github.com/sweetrpg/catalog-api/ratelimit"
+        "github.com/sweetrpg/catalog-api/readiness"
         "github.com/sweetrpg/catalog-api/server"
         "github.com/sweetrpg/common.go/logging"
         "github.com/sweetrpg/common.go/util"
         "github.com/sweetrpg/mongodb.go/database"
         "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
-        "golang.org/x/time/rate"
+        xrate "golang.org/x/time/rate"
 )
+
+// redisConnectTimeout bounds startup/readiness pings to Redis so a stalled connection fails
+// fast instead of hanging past the caller's own timeout (same rationale as api-core.go's
+// healthCheckTimeout for Mongo).
+const redisConnectTimeout = 5 * time.Second
 
 // @title Catalog API service
 // @version 1.0
@@ -167,7 +254,12 @@ func main() <span class="cov0" title="0">{
         // Setup Prometheus metrics
         setupMetrics(r)
 
-        cache := setupCache()
+        redisPool := setupRedisPool()
+        if redisPool != nil </span><span class="cov0" title="0">{
+                defer func() </span><span class="cov0" title="0">{ _ = redisPool.Close() }</span>()
+        }
+        <span class="cov0" title="0">cache := setupCache(redisPool)
+        ttls := cachettl.Load()
 
         database.SetupDatabase()
         defer database.TeardownDatabase()
@@ -179,9 +271,9 @@ func main() <span class="cov0" title="0">{
         setupSwagger(r)
 
         // Add rate limiter
-        r.Use(RateLimiter())
+        r.Use(RateLimiter(redisPool))
 
-        server.SetupHandlers(r, cache)
+        server.SetupHandlers(r, cache, ttls)
 
         _ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))</span>
 }
@@ -296,21 +388,66 @@ func setupAcuator(r *gin.Engine) <span class="cov0" title="0">{
         <span class="cov0" title="0">r.GET("/actuator/*endpoint", ginActuatorHandler)</span>
 }
 
-func setupCache() persistence.CacheStore <span class="cov0" title="0">{
-        logging.Logger.Info("Setting up query cache...")
-
-        var cache persistence.CacheStore
+// setupRedisPool builds a shared redigo connection pool for both the rate limiter's counters
+// and the cache's startup connectivity check, when REDIS_HOST is configured. Returns nil when
+// no Redis is configured, so the service runs entirely without an external dependency.
+func setupRedisPool() *redis.Pool <span class="cov6" title="2">{
         redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
-        if found </span><span class="cov0" title="0">{
-                redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
-                // TODO: redisDb := util.GetEnv(apiconstants.REDIS_DB, "0")
-                redisPass := os.Getenv(apiconstants.REDIS_PASS)
-                cache = persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), redisPass, time.Hour)
-        }</span> else<span class="cov0" title="0"> {
-                cache = persistence.NewInMemoryStore(time.Hour)
+        if !found </span><span class="cov0" title="0">{
+                return nil
         }</span>
 
-        <span class="cov0" title="0">return cache</span>
+        <span class="cov6" title="2">redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
+        redisPass := os.Getenv(apiconstants.REDIS_PASS)
+        addr := fmt.Sprintf("%s:%s", redisHost, redisPort)
+
+        return &amp;redis.Pool{
+                MaxIdle:     5,
+                IdleTimeout: 240 * time.Second,
+                Dial: func() (redis.Conn, error) </span><span class="cov6" title="2">{
+                        c, err := redis.Dial("tcp", addr, redis.DialConnectTimeout(redisConnectTimeout))
+                        if err != nil </span><span class="cov1" title="1">{
+                                return nil, err
+                        }</span>
+                        <span class="cov1" title="1">if redisPass != "" </span><span class="cov0" title="0">{
+                                if _, err := c.Do("AUTH", redisPass); err != nil </span><span class="cov0" title="0">{
+                                        _ = c.Close()
+                                        return nil, err
+                                }</span>
+                        }
+                        <span class="cov1" title="1">return c, nil</span>
+                },
+        }
+}
+
+// setupCache builds the response cache store and, when REDIS_HOST is configured, verifies
+// connectivity before the service reports ready. A configured-but-unreachable Redis fails the
+// readiness probe (see readiness.CacheReady, consumed by /status/health) instead of silently
+// falling back to uncached behavior.
+func setupCache(redisPool *redis.Pool) persistence.CacheStore <span class="cov10" title="3">{
+        logging.Logger.Info("Setting up query cache...")
+
+        redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
+        if !found </span><span class="cov1" title="1">{
+                readiness.SetCacheReady(true)
+                return persistence.NewInMemoryStore(time.Hour)
+        }</span>
+
+        <span class="cov6" title="2">redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
+        redisPass := os.Getenv(apiconstants.REDIS_PASS)
+        cache := persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), redisPass, time.Hour)
+
+        ctx, cancel := context.WithTimeout(context.Background(), redisConnectTimeout)
+        defer cancel()
+        if err := ratelimit.Ping(ctx, redisPool); err != nil </span><span class="cov1" title="1">{
+                logging.Logger.Error("REDIS_HOST is configured but unreachable; failing readiness instead of silently serving uncached responses",
+                        "redis_host", redisHost, "error", err.Error())
+                readiness.SetCacheReady(false)
+        }</span> else<span class="cov1" title="1"> {
+                readiness.SetCacheReady(true)
+        }</span>
+
+        <span class="cov6" title="2">return cache</span>
 }
 
 func setupTracing(r *gin.Engine) <span class="cov0" title="0">{
@@ -333,15 +470,95 @@ func setupMetrics(r *gin.Engine) <span class="cov0" title="0">{
         m.Use(r)
 }</span>
 
-func RateLimiter() gin.HandlerFunc <span class="cov0" title="0">{
-        limiter := rate.NewLimiter(1, util.GetEnvInt(apiconstants.RATE_LIMIT, 10))
+// rateLimitTierFor groups routes into a looser "cheap" tier (shallow status endpoints) and a
+// stricter "standard" tier (everything else), per design.md's decision to start with two tiers
+// keyed by route cost rather than one entry per resource.
+func rateLimitTierFor(path string) string <span class="cov0" title="0">{
+        if strings.HasPrefix(path, "/status/") </span><span class="cov0" title="0">{
+                return "cheap"
+        }</span>
+        <span class="cov0" title="0">return "standard"</span>
+}
+
+// rateLimitClientKey identifies the caller for per-client limiting: API key if the client sent
+// one, otherwise client IP. This doesn't introduce a new auth mechanism - it keys off whatever
+// identity already exists on the request (see design.md's open question on API-key issuance).
+func rateLimitClientKey(c *gin.Context) string <span class="cov0" title="0">{
+        if apiKey := c.GetHeader("X-API-Key"); apiKey != "" </span><span class="cov0" title="0">{
+                return "key:" + apiKey
+        }</span>
+        <span class="cov0" title="0">return "ip:" + c.ClientIP()</span>
+}
+
+// RateLimiter selects between the new Redis-backed per-client limiter and the legacy
+// process-wide token bucket, gated by DISTRIBUTED_RATE_LIMIT_ENABLED so the new limiter can be
+// validated in dev before the old one is removed (tasks 4.5-4.6).
+func RateLimiter(redisPool *redis.Pool) gin.HandlerFunc <span class="cov0" title="0">{
+        distributedEnabled, _ := strconv.ParseBool(util.GetEnv(constants.DISTRIBUTED_RATE_LIMIT_ENABLED, "false"))
+        if distributedEnabled &amp;&amp; redisPool != nil </span><span class="cov0" title="0">{
+                return distributedRateLimiter(redisPool)
+        }</span>
+
+        <span class="cov0" title="0">if distributedEnabled &amp;&amp; redisPool == nil </span><span class="cov0" title="0">{
+                logging.Logger.Warn("DISTRIBUTED_RATE_LIMIT_ENABLED is set but REDIS_HOST is not; falling back to the process-wide limiter")
+        }</span>
+
+        <span class="cov0" title="0">return globalRateLimiter()</span>
+}
+
+// distributedRateLimiter enforces per-client, per-tier limits backed by Redis, consistent
+// across replicas. Fails closed (503) if the Redis backend is unreachable, rather than letting
+// requests through unlimited during an outage.
+func distributedRateLimiter(redisPool *redis.Pool) gin.HandlerFunc <span class="cov0" title="0">{
+        limiter := ratelimit.New(redisPool, map[string]ratelimit.Tier{
+                "cheap": {
+                        Limit:  util.GetEnvInt(constants.RATE_LIMIT_CHEAP, 120),
+                        Window: util.GetEnvInt(constants.RATE_LIMIT_CHEAP_WINDOW, 60),
+                },
+                "standard": {
+                        Limit:  util.GetEnvInt(constants.RATE_LIMIT_STANDARD, 30),
+                        Window: util.GetEnvInt(constants.RATE_LIMIT_STANDARD_WINDOW, 60),
+                },
+        })
+
+        return func(c *gin.Context) </span><span class="cov0" title="0">{
+                tier := rateLimitTierFor(c.Request.URL.Path)
+                clientKey := rateLimitClientKey(c)
+
+                allowed, err := limiter.Allow(c.Request.Context(), clientKey, tier)
+                if err != nil </span><span class="cov0" title="0">{
+                        logging.Logger.Error("Rate-limit backend unreachable; rejecting request (fail closed)", "error", err.Error())
+                        c.AbortWithStatusJSON(http.StatusServiceUnavailable, vo.ErrorVO{
+                                Error:   constants.ErrorRateLimitUnavailable,
+                                Message: "Rate limiting is temporarily unavailable",
+                        })
+                        return
+                }</span>
+                <span class="cov0" title="0">if !allowed </span><span class="cov0" title="0">{
+                        logging.Logger.Warn("Rate limit exceeded", "client", clientKey, "tier", tier, "path", c.Request.URL.Path)
+                        c.AbortWithStatusJSON(http.StatusTooManyRequests, vo.ErrorVO{
+                                Error:   apiconstants.ErrorRateLimited,
+                                Message: "Limit exceeded",
+                        })
+                        return
+                }</span>
+                <span class="cov0" title="0">c.Next()</span>
+        }
+}
+
+// globalRateLimiter is the legacy process-wide token bucket: one shared limit across every
+// client and route, effectively N times looser with N replicas since each pod holds its own
+// bucket. Kept behind the DISTRIBUTED_RATE_LIMIT_ENABLED toggle until the new limiter is
+// validated in dev (task 4.6 removes this once that happens).
+func globalRateLimiter() gin.HandlerFunc <span class="cov0" title="0">{
+        limiter := xrate.NewLimiter(1, util.GetEnvInt(apiconstants.RATE_LIMIT, 10))
 
         return func(c *gin.Context) </span><span class="cov0" title="0">{
                 if limiter.Allow() </span><span class="cov0" title="0">{
                         c.Next()
                 }</span> else<span class="cov0" title="0"> {
                         logging.Logger.Warn(fmt.Sprintf("Rate limit exceeded for request: %v", c.Request))
-                        c.JSON(http.StatusTooManyRequests, vo.ErrorVO{
+                        c.AbortWithStatusJSON(http.StatusTooManyRequests, vo.ErrorVO{
                                 Error:   apiconstants.ErrorRateLimited,
                                 Message: "Limit exceeded",
                         })
@@ -350,7 +567,7 @@ func RateLimiter() gin.HandlerFunc <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file1" style="display: none">// Package docs Code generated by swaggo/swag. DO NOT EDIT
+		<pre class="file" id="file2" style="display: none">// Package docs Code generated by swaggo/swag. DO NOT EDIT
 package docs
 
 import "github.com/swaggo/swag"
@@ -925,12 +1142,106 @@ func init() <span class="cov0" title="0">{
 }</span>
 </pre>
 		
-		<pre class="file" id="file2" style="display: none">package server
+		<pre class="file" id="file3" style="display: none">// Package ratelimit implements a Redis-backed, per-client, per-route-tier request rate
+// limiter. Counters live in Redis (INCR + EXPIRE) rather than per-pod memory, so the limit is
+// consistent across catalog-api's replicas instead of being N times looser depending on how
+// many pods happen to be up.
+package ratelimit
+
+import (
+        "context"
+        "fmt"
+
+        "github.com/gomodule/redigo/redis"
+)
+
+// Tier describes a rate-limit budget: at most Limit requests per Window.
+type Tier struct {
+        Limit  int
+        Window int // seconds
+}
+
+// Limiter enforces per-client request limits per tier, backed by a Redis connection pool.
+type Limiter struct {
+        pool  *redis.Pool
+        tiers map[string]Tier
+}
+
+// New builds a Limiter using the given Redis pool and tier definitions. Callers should pass at
+// least a "standard" and "cheap" tier; Allow falls back to "standard" for an unknown tier name.
+func New(pool *redis.Pool, tiers map[string]Tier) *Limiter <span class="cov6" title="6">{
+        return &amp;Limiter{pool: pool, tiers: tiers}
+}</span>
+
+// Allow increments the request counter for clientKey within the named tier and reports whether
+// the request is within that tier's limit. A non-nil error means the Redis backend was
+// unreachable - callers must treat that as fail-closed (reject the request), not fail-open.
+func (l *Limiter) Allow(ctx context.Context, clientKey, tierName string) (bool, error) <span class="cov10" title="15">{
+        tier, ok := l.tiers[tierName]
+        if !ok </span><span class="cov3" title="2">{
+                tier = l.tiers["standard"]
+        }</span>
+
+        <span class="cov10" title="15">conn, err := l.pool.GetContext(ctx)
+        if err != nil </span><span class="cov1" title="1">{
+                return false, fmt.Errorf("ratelimit: get redis connection: %w", err)
+        }</span>
+        <span class="cov9" title="14">defer func() </span><span class="cov9" title="14">{ _ = conn.Close() }</span>()
+
+        <span class="cov9" title="14">key := fmt.Sprintf("ratelimit:%s:%s", tierName, clientKey)
+        count, err := redis.Int(conn.Do("INCR", key))
+        if err != nil </span><span class="cov0" title="0">{
+                return false, fmt.Errorf("ratelimit: incr: %w", err)
+        }</span>
+        <span class="cov9" title="14">if count == 1 </span><span class="cov7" title="7">{
+                if _, err := conn.Do("EXPIRE", key, tier.Window); err != nil </span><span class="cov0" title="0">{
+                        return false, fmt.Errorf("ratelimit: expire: %w", err)
+                }</span>
+        }
+
+        <span class="cov9" title="14">return count &lt;= tier.Limit, nil</span>
+}
+
+// Ping verifies the Redis backend is reachable, for use in startup/readiness checks.
+func Ping(ctx context.Context, pool *redis.Pool) error <span class="cov3" title="2">{
+        conn, err := pool.GetContext(ctx)
+        if err != nil </span><span class="cov1" title="1">{
+                return err
+        }</span>
+        <span class="cov1" title="1">defer func() </span><span class="cov1" title="1">{ _ = conn.Close() }</span>()
+
+        <span class="cov1" title="1">_, err = conn.Do("PING")
+        return err</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">// Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
+// api-core.go's HealthHandler already covers) so /status/health can fail loud instead of the
+// service silently degrading to an uncached or unlimited mode.
+package readiness
+
+import "sync/atomic"
+
+var cacheReady atomic.Bool
+
+// SetCacheReady records whether the configured cache backend (Redis, when REDIS_HOST is set)
+// is currently reachable. Services without REDIS_HOST configured should call this with true,
+// since the in-memory fallback store has no external dependency to fail.
+func SetCacheReady(ready bool) <span class="cov10" title="2">{
+        cacheReady.Store(ready)
+}</span>
+
+// CacheReady reports the last-known reachability of the configured cache backend.
+func CacheReady() bool <span class="cov10" title="2">{
+        return cacheReady.Load()
+}</span>
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package server
 
 import (
         "fmt"
         "net/http"
-        "time"
 
         "github.com/getsentry/sentry-go"
         "github.com/gin-contrib/cache"
@@ -940,6 +1251,7 @@ import (
         "github.com/sweetrpg/api-core.go/tracing"
         apiutil "github.com/sweetrpg/api-core.go/util"
         _ "github.com/sweetrpg/api-core.go/vo"
+        "github.com/sweetrpg/catalog-api/cachettl"
         "github.com/sweetrpg/catalog-data.go/data"
         "github.com/sweetrpg/common.go/logging"
         "go.opentelemetry.io/otel"
@@ -947,11 +1259,12 @@ import (
         oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore) <span class="cov0" title="0">{
+func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
         logging.Logger.Info("Setting up contribution endpoint handlers...")
-        g.GET("/contributions", cache.CachePage(store, time.Hour, listContributions))
-        g.GET("/contributions/:id", cache.CachePage(store, time.Hour, getContribution))
-        // g.GET("/contributions/:id/contributions", cache.CachePage(store, time.Hour, getContributionContributions))
+        ttl := ttls.TTL("contributions")
+        g.GET("/contributions", cache.CachePage(store, ttl, listContributions))
+        g.GET("/contributions/:id", cache.CachePage(store, ttl, getContribution))
+        // g.GET("/contributions/:id/contributions", cache.CachePage(store, ttl, getContributionContributions))
 }</span>
 
 // List contributions.
@@ -1020,31 +1333,31 @@ func getContribution(c *gin.Context) <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file3" style="display: none">package server
+		<pre class="file" id="file6" style="display: none">package server
 
 import (
         "github.com/gin-contrib/cache/persistence"
         "github.com/gin-gonic/gin"
+        "github.com/sweetrpg/catalog-api/cachettl"
 )
 
-func SetupHandlers(g *gin.Engine, cache persistence.CacheStore) <span class="cov0" title="0">{
-        setupContributionHandlers(g, cache)
-        setupLicenseHandlers(g, cache)
-        setupPersonHandlers(g, cache)
-        setupPublisherHandlers(g, cache)
-        setupReviewHandlers(g, cache)
-        setupStudioHandlers(g, cache)
-        setupSystemHandlers(g, cache)
-        setupVolumeHandlers(g, cache)
+func SetupHandlers(g *gin.Engine, cache persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
+        setupContributionHandlers(g, cache, ttls)
+        setupLicenseHandlers(g, cache, ttls)
+        setupPersonHandlers(g, cache, ttls)
+        setupPublisherHandlers(g, cache, ttls)
+        setupReviewHandlers(g, cache, ttls)
+        setupStudioHandlers(g, cache, ttls)
+        setupSystemHandlers(g, cache, ttls)
+        setupVolumeHandlers(g, cache, ttls)
         setupStatusHandlers(g)
 }</span>
 </pre>
 		
-		<pre class="file" id="file4" style="display: none">package server
+		<pre class="file" id="file7" style="display: none">package server
 
 import (
         "net/http"
-        "time"
 
         "github.com/getsentry/sentry-go"
         "github.com/gin-contrib/cache"
@@ -1053,6 +1366,7 @@ import (
         "github.com/google/jsonapi"
         "github.com/sweetrpg/api-core.go/tracing"
         apiutil "github.com/sweetrpg/api-core.go/util"
+        "github.com/sweetrpg/catalog-api/cachettl"
         "github.com/sweetrpg/catalog-data.go/data"
         "github.com/sweetrpg/common.go/logging"
         "go.mongodb.org/mongo-driver/bson/primitive"
@@ -1061,11 +1375,12 @@ import (
         oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) <span class="cov0" title="0">{
+func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
         logging.Logger.Info("Setting up license endpoint handlers...")
-        g.GET("/licenses", cache.CachePage(store, time.Hour, listLicenses))
-        g.GET("/licenses/:id", cache.CachePage(store, time.Hour, getLicense))
-        g.GET("/licenses/:id/volumes", cache.CachePage(store, time.Hour, getLicenseVolumes))
+        ttl := ttls.TTL("licenses")
+        g.GET("/licenses", cache.CachePage(store, ttl, listLicenses))
+        g.GET("/licenses/:id", cache.CachePage(store, ttl, getLicense))
+        g.GET("/licenses/:id/volumes", cache.CachePage(store, ttl, getLicenseVolumes))
 }</span>
 
 // List licenses.
@@ -1176,11 +1491,10 @@ func getLicense(c *gin.Context) <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file5" style="display: none">package server
+		<pre class="file" id="file8" style="display: none">package server
 
 import (
         "net/http"
-        "time"
 
         "github.com/getsentry/sentry-go"
         "github.com/gin-contrib/cache"
@@ -1189,6 +1503,7 @@ import (
         "github.com/google/jsonapi"
         "github.com/sweetrpg/api-core.go/tracing"
         apiutil "github.com/sweetrpg/api-core.go/util"
+        "github.com/sweetrpg/catalog-api/cachettl"
         "github.com/sweetrpg/catalog-data.go/data"
         "github.com/sweetrpg/common.go/logging"
         "go.opentelemetry.io/otel"
@@ -1196,11 +1511,12 @@ import (
         oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore) <span class="cov0" title="0">{
+func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
         logging.Logger.Info("Setting up person endpoint handlers...")
-        g.GET("/persons", cache.CachePage(store, time.Hour, listPersons))
-        g.GET("/persons/:id", cache.CachePage(store, time.Hour, getPerson))
-        // g.GET("/persons/:id/persons", cache.CachePage(store, time.Hour, getPersonPersons))
+        ttl := ttls.TTL("persons")
+        g.GET("/persons", cache.CachePage(store, ttl, listPersons))
+        g.GET("/persons/:id", cache.CachePage(store, ttl, getPerson))
+        // g.GET("/persons/:id/persons", cache.CachePage(store, ttl, getPersonPersons))
 }</span>
 
 // List persons.
@@ -1266,11 +1582,10 @@ func getPerson(c *gin.Context) <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file6" style="display: none">package server
+		<pre class="file" id="file9" style="display: none">package server
 
 import (
         "net/http"
-        "time"
 
         "github.com/getsentry/sentry-go"
         "github.com/gin-contrib/cache"
@@ -1279,6 +1594,7 @@ import (
         "github.com/google/jsonapi"
         "github.com/sweetrpg/api-core.go/tracing"
         apiutil "github.com/sweetrpg/api-core.go/util"
+        "github.com/sweetrpg/catalog-api/cachettl"
         "github.com/sweetrpg/catalog-data.go/data"
         "github.com/sweetrpg/common.go/logging"
         "go.opentelemetry.io/otel"
@@ -1286,11 +1602,12 @@ import (
         oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore) <span class="cov0" title="0">{
+func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
         logging.Logger.Info("Setting up publisher endpoint handlers...")
-        g.GET("/publishers", cache.CachePage(store, time.Hour, listPublishers))
-        g.GET("/publishers/:id", cache.CachePage(store, time.Hour, getPublisher))
-        // g.GET("/publishers/:id/publishers", cache.CachePage(store, time.Hour, getPublisherPublishers))
+        ttl := ttls.TTL("publishers")
+        g.GET("/publishers", cache.CachePage(store, ttl, listPublishers))
+        g.GET("/publishers/:id", cache.CachePage(store, ttl, getPublisher))
+        // g.GET("/publishers/:id/publishers", cache.CachePage(store, ttl, getPublisherPublishers))
 }</span>
 
 // List publishers.
@@ -1357,11 +1674,10 @@ func getPublisher(c *gin.Context) <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file7" style="display: none">package server
+		<pre class="file" id="file10" style="display: none">package server
 
 import (
         "net/http"
-        "time"
 
         "github.com/getsentry/sentry-go"
         "github.com/gin-contrib/cache"
@@ -1370,6 +1686,7 @@ import (
         "github.com/google/jsonapi"
         "github.com/sweetrpg/api-core.go/tracing"
         apiutil "github.com/sweetrpg/api-core.go/util"
+        "github.com/sweetrpg/catalog-api/cachettl"
         "github.com/sweetrpg/catalog-data.go/data"
         "github.com/sweetrpg/common.go/logging"
         "go.opentelemetry.io/otel"
@@ -1377,11 +1694,12 @@ import (
         oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupReviewHandlers(g *gin.Engine, store persistence.CacheStore) <span class="cov0" title="0">{
+func setupReviewHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
         logging.Logger.Info("Setting up review endpoint handlers...")
-        g.GET("/reviews", cache.CachePage(store, time.Hour, listReviews))
-        g.GET("/reviews/:id", cache.CachePage(store, time.Hour, getReview))
-        // g.GET("/reviews/:id/reviews", cache.CachePage(store, time.Hour, getReviewReviews))
+        ttl := ttls.TTL("reviews")
+        g.GET("/reviews", cache.CachePage(store, ttl, listReviews))
+        g.GET("/reviews/:id", cache.CachePage(store, ttl, getReview))
+        // g.GET("/reviews/:id/reviews", cache.CachePage(store, ttl, getReviewReviews))
 }</span>
 
 // List reviews.
@@ -1448,7 +1766,7 @@ func getReview(c *gin.Context) <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file8" style="display: none">package server
+		<pre class="file" id="file11" style="display: none">package server
 
 import (
         "net/http"
@@ -1456,6 +1774,7 @@ import (
         "github.com/gin-gonic/gin"
         apicores "github.com/sweetrpg/api-core.go/server"
         _ "github.com/sweetrpg/api-core.go/vo"
+        "github.com/sweetrpg/catalog-api/readiness"
         "github.com/sweetrpg/common.go/logging"
 )
 
@@ -1496,7 +1815,16 @@ func healthHandler(c *gin.Context) <span class="cov0" title="0">{
         // }
 
         resp := apicores.HealthHandler(c.Request.Context())
-        status := http.StatusOK
+
+        // Fold the cache backend's reachability into the same readiness signal Mongo already
+        // reports, so a configured-but-unreachable Redis surfaces as a failing readiness probe
+        // (Degraded in ArgoCD) instead of a silent cache-miss-only degradation.
+        if !readiness.CacheReady() </span><span class="cov0" title="0">{
+                resp.Messages = append(resp.Messages, "cache backend unreachable")
+                resp.Errors++
+        }</span>
+
+        <span class="cov0" title="0">status := http.StatusOK
         if resp.Errors &gt; 0 </span><span class="cov0" title="0">{
                 status = http.StatusServiceUnavailable
         }</span>
@@ -1517,11 +1845,10 @@ func pingHandler(c *gin.Context) <span class="cov0" title="0">{
 }</span>
 </pre>
 		
-		<pre class="file" id="file9" style="display: none">package server
+		<pre class="file" id="file12" style="display: none">package server
 
 import (
         "net/http"
-        "time"
 
         "github.com/getsentry/sentry-go"
         "github.com/gin-contrib/cache"
@@ -1530,6 +1857,7 @@ import (
         "github.com/google/jsonapi"
         "github.com/sweetrpg/api-core.go/tracing"
         apiutil "github.com/sweetrpg/api-core.go/util"
+        "github.com/sweetrpg/catalog-api/cachettl"
         "github.com/sweetrpg/catalog-data.go/data"
         "github.com/sweetrpg/common.go/logging"
         "go.opentelemetry.io/otel"
@@ -1537,11 +1865,12 @@ import (
         oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore) <span class="cov0" title="0">{
+func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
         logging.Logger.Info("Setting up studio endpoint handlers...")
-        g.GET("/studios", cache.CachePage(store, time.Hour, listStudios))
-        g.GET("/studios/:id", cache.CachePage(store, time.Hour, getStudio))
-        // g.GET("/studios/:id/studios", cache.CachePage(store, time.Hour, getStudioStudios))
+        ttl := ttls.TTL("studios")
+        g.GET("/studios", cache.CachePage(store, ttl, listStudios))
+        g.GET("/studios/:id", cache.CachePage(store, ttl, getStudio))
+        // g.GET("/studios/:id/studios", cache.CachePage(store, ttl, getStudioStudios))
 }</span>
 
 // List studios.
@@ -1608,11 +1937,10 @@ func getStudio(c *gin.Context) <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file10" style="display: none">package server
+		<pre class="file" id="file13" style="display: none">package server
 
 import (
         "net/http"
-        "time"
 
         "github.com/getsentry/sentry-go"
         "github.com/gin-contrib/cache"
@@ -1621,6 +1949,7 @@ import (
         "github.com/google/jsonapi"
         "github.com/sweetrpg/api-core.go/tracing"
         apiutil "github.com/sweetrpg/api-core.go/util"
+        "github.com/sweetrpg/catalog-api/cachettl"
         "github.com/sweetrpg/catalog-data.go/data"
         "github.com/sweetrpg/common.go/logging"
         "go.opentelemetry.io/otel"
@@ -1628,11 +1957,12 @@ import (
         oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore) <span class="cov0" title="0">{
+func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
         logging.Logger.Info("Setting up system endpoint handlers...")
-        g.GET("/systems", cache.CachePage(store, time.Hour, listSystems))
-        g.GET("/systems/:id", cache.CachePage(store, time.Hour, getSystem))
-        // g.GET("/systems/:id/systems", cache.CachePage(store, time.Hour, getSystemSystems))
+        ttl := ttls.TTL("systems")
+        g.GET("/systems", cache.CachePage(store, ttl, listSystems))
+        g.GET("/systems/:id", cache.CachePage(store, ttl, getSystem))
+        // g.GET("/systems/:id/systems", cache.CachePage(store, ttl, getSystemSystems))
 }</span>
 
 // List systems.
@@ -1699,11 +2029,10 @@ func getSystem(c *gin.Context) <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file11" style="display: none">package server
+		<pre class="file" id="file14" style="display: none">package server
 
 import (
         "net/http"
-        "time"
 
         "github.com/getsentry/sentry-go"
         "github.com/gin-contrib/cache"
@@ -1712,6 +2041,7 @@ import (
         "github.com/google/jsonapi"
         "github.com/sweetrpg/api-core.go/tracing"
         apiutil "github.com/sweetrpg/api-core.go/util"
+        "github.com/sweetrpg/catalog-api/cachettl"
         "github.com/sweetrpg/catalog-data.go/data"
         "github.com/sweetrpg/common.go/logging"
         "go.opentelemetry.io/otel"
@@ -1719,11 +2049,12 @@ import (
         oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore) <span class="cov0" title="0">{
+func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
         logging.Logger.Info("Setting up volume endpoint handlers...")
-        g.GET("/volumes", cache.CachePage(store, time.Hour, listVolumes))
-        g.GET("/volumes/:id", cache.CachePage(store, time.Hour, getVolume))
-        // g.GET("/volumes/:id/volumes", cache.CachePage(store, time.Hour, getVolumeVolumes))
+        ttl := ttls.TTL("volumes")
+        g.GET("/volumes", cache.CachePage(store, ttl, listVolumes))
+        g.GET("/volumes/:id", cache.CachePage(store, ttl, getVolume))
+        // g.GET("/volumes/:id/volumes", cache.CachePage(store, ttl, getVolumeVolumes))
 }</span>
 
 // List volumes.
