@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -11,6 +10,7 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -18,11 +18,12 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore) {
+func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
 	logging.Logger.Info("Setting up system endpoint handlers...")
-	g.GET("/systems", cache.CachePage(store, time.Hour, listSystems))
-	g.GET("/systems/:id", cache.CachePage(store, time.Hour, getSystem))
-	// g.GET("/systems/:id/systems", cache.CachePage(store, time.Hour, getSystemSystems))
+	ttl := ttls.TTL("systems")
+	g.GET("/systems", cache.CachePage(store, ttl, listSystems))
+	g.GET("/systems/:id", cache.CachePage(store, ttl, getSystem))
+	// g.GET("/systems/:id/systems", cache.CachePage(store, ttl, getSystemSystems))
 }
 
 // List systems.

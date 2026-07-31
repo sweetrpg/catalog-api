@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	apicores "github.com/sweetrpg/api-core.go/server"
 	_ "github.com/sweetrpg/api-core.go/vo"
+	"github.com/sweetrpg/catalog-api/readiness"
 	"github.com/sweetrpg/common.go/logging"
 )
 
@@ -46,6 +47,15 @@ func healthHandler(c *gin.Context) {
 	// }
 
 	resp := apicores.HealthHandler(c.Request.Context())
+
+	// Fold the cache backend's reachability into the same readiness signal Mongo already
+	// reports, so a configured-but-unreachable Redis surfaces as a failing readiness probe
+	// (Degraded in ArgoCD) instead of a silent cache-miss-only degradation.
+	if !readiness.CacheReady() {
+		resp.Messages = append(resp.Messages, "cache backend unreachable")
+		resp.Errors++
+	}
+
 	status := http.StatusOK
 	if resp.Errors > 0 {
 		status = http.StatusServiceUnavailable
