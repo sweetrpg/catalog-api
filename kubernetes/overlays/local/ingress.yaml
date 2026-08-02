@@ -1,0 +1,24 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: api-v1
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: sweetrpg-catalog-strip-prefix-v1@kubernetescrd
+    kubernetes.io/ingress.class: traefik
+
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: sweetrpg.local
+      http:
+        paths:
+          - pathType: Prefix
+            path: /api/catalog
+            backend:
+              service:
+                name: api-v1
+                port:
+                  name: http

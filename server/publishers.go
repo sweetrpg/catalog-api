@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -11,6 +10,7 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -18,11 +18,12 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore) {
+func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
 	logging.Logger.Info("Setting up publisher endpoint handlers...")
-	g.GET("/publishers", cache.CachePage(store, time.Hour, listPublishers))
-	g.GET("/publishers/:id", cache.CachePage(store, time.Hour, getPublisher))
-	// g.GET("/publishers/:id/publishers", cache.CachePage(store, time.Hour, getPublisherPublishers))
+	ttl := ttls.TTL("publishers")
+	g.GET("/publishers", cache.CachePage(store, ttl, listPublishers))
+	g.GET("/publishers/:id", cache.CachePage(store, ttl, getPublisher))
+	// g.GET("/publishers/:id/publishers", cache.CachePage(store, ttl, getPublisherPublishers))
 }
 
 // List publishers.

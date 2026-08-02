@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -11,6 +10,7 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -18,11 +18,12 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore) {
+func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
 	logging.Logger.Info("Setting up studio endpoint handlers...")
-	g.GET("/studios", cache.CachePage(store, time.Hour, listStudios))
-	g.GET("/studios/:id", cache.CachePage(store, time.Hour, getStudio))
-	// g.GET("/studios/:id/studios", cache.CachePage(store, time.Hour, getStudioStudios))
+	ttl := ttls.TTL("studios")
+	g.GET("/studios", cache.CachePage(store, ttl, listStudios))
+	g.GET("/studios/:id", cache.CachePage(store, ttl, getStudio))
+	// g.GET("/studios/:id/studios", cache.CachePage(store, ttl, getStudioStudios))
 }
 
 // List studios.

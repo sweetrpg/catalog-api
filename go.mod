@@ -3,10 +3,12 @@ module github.com/sweetrpg/catalog-api
 go 1.26.5
 
 require (
-	github.com/getsentry/sentry-go v0.43.0
-	github.com/gin-contrib/cache v1.4.1
+	github.com/alicebob/miniredis/v2 v2.38.0
+	github.com/getsentry/sentry-go v0.48.0
+	github.com/gin-contrib/cache v1.4.4
 	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-gonic/gin v1.12.0
+	github.com/gomodule/redigo v1.9.3
 	github.com/google/jsonapi v1.0.0
 	github.com/grafana/pyroscope-go v1.4.1
 	github.com/joho/godotenv v1.5.1
@@ -23,7 +25,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.69.0
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/trace v1.44.0
-	golang.org/x/time v0.14.0
+	golang.org/x/time v0.15.0
 )
 
 require (
@@ -57,7 +59,6 @@ require (
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/gomodule/redigo v1.9.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grafana/pyroscope-go/godeltaprof v0.1.11 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
@@ -88,6 +89,7 @@ require (
 	github.com/xdg-go/scram v1.2.0 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	github.com/zerodha/logf v0.5.5 // indirect
 	go.jtlabs.io/query v1.6.1 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.6.0 // indirect

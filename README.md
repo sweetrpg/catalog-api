@@ -1,6 +1,7 @@
 # SweetRPG Catalog API
 
 [![CI](https://github.com/sweetrpg/catalog-api/actions/workflows/ci.yaml/badge.svg)](https://github.com/sweetrpg/catalog-api/actions/workflows/ci.yaml)
+[![Coverage](https://img.shields.io/endpoint?url=https://sweetrpg.github.io/catalog-api/coverage-badge.json)](https://sweetrpg.github.io/catalog-api/)
 [![License](https://img.shields.io/github/license/sweetrpg/catalog-api.svg)](https://img.shields.io/github/license/sweetrpg/catalog-api.svg)
 [![Issues](https://img.shields.io/github/issues/sweetrpg/catalog-api.svg)](https://img.shields.io/github/issues/sweetrpg/catalog-api.svg)
 [![PRs](https://img.shields.io/github/issues-pr/sweetrpg/catalog-api.svg)](https://img.shields.io/github/issues-pr/sweetrpg/catalog-api.svg)

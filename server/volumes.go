@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -11,6 +10,7 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -18,11 +18,12 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore) {
+func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
 	logging.Logger.Info("Setting up volume endpoint handlers...")
-	g.GET("/volumes", cache.CachePage(store, time.Hour, listVolumes))
-	g.GET("/volumes/:id", cache.CachePage(store, time.Hour, getVolume))
-	// g.GET("/volumes/:id/volumes", cache.CachePage(store, time.Hour, getVolumeVolumes))
+	ttl := ttls.TTL("volumes")
+	g.GET("/volumes", cache.CachePage(store, ttl, listVolumes))
+	g.GET("/volumes/:id", cache.CachePage(store, ttl, getVolume))
+	// g.GET("/volumes/:id/volumes", cache.CachePage(store, ttl, getVolumeVolumes))
 }
 
 // List volumes.

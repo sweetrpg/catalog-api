@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: api-env
+
+data:
+  ENV: local
+  BUILD_INFO_PATH: /app/config/build-info.json
+  # OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo-distributor.observability.svc.cluster.local:4318/
+  SENTRY_RELEASE: "1"
+  REDIS_HOST: redis.sweetrpg-catalog.svc.cluster.local
+  REDIS_PORT: "6379"
+  # Traefik strips /api/catalog/0 (or /1) before the request reaches this app (see
+  # middlewares.yaml) - every self-referencing link this app generates needs the full prefix
+  # added back, not just the /0 dev overlay uses (this overlay shares one host with every other
+  # app, unlike dev's dedicated api.catalog.dev.sweetrpg.com).
+  INGRESS_BASE_PATH: /api/catalog/0
+  INGRESS_HOST: sweetrpg.local
+  INGRESS_SCHEMES: https

@@ -3,16 +3,17 @@ package server
 import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
+	"github.com/sweetrpg/catalog-api/cachettl"
 )
 
-func SetupHandlers(g *gin.Engine, cache persistence.CacheStore) {
-	setupContributionHandlers(g, cache)
-	setupLicenseHandlers(g, cache)
-	setupPersonHandlers(g, cache)
-	setupPublisherHandlers(g, cache)
-	setupReviewHandlers(g, cache)
-	setupStudioHandlers(g, cache)
-	setupSystemHandlers(g, cache)
-	setupVolumeHandlers(g, cache)
+func SetupHandlers(g *gin.Engine, cache persistence.CacheStore, ttls cachettl.Config) {
+	setupContributionHandlers(g, cache, ttls)
+	setupLicenseHandlers(g, cache, ttls)
+	setupPersonHandlers(g, cache, ttls)
+	setupPublisherHandlers(g, cache, ttls)
+	setupReviewHandlers(g, cache, ttls)
+	setupStudioHandlers(g, cache, ttls)
+	setupSystemHandlers(g, cache, ttls)
+	setupVolumeHandlers(g, cache, ttls)
 	setupStatusHandlers(g)
 }

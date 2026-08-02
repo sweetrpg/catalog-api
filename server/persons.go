@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -11,6 +10,7 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -18,11 +18,12 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore) {
+func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
 	logging.Logger.Info("Setting up person endpoint handlers...")
-	g.GET("/persons", cache.CachePage(store, time.Hour, listPersons))
-	g.GET("/persons/:id", cache.CachePage(store, time.Hour, getPerson))
-	// g.GET("/persons/:id/persons", cache.CachePage(store, time.Hour, getPersonPersons))
+	ttl := ttls.TTL("persons")
+	g.GET("/persons", cache.CachePage(store, ttl, listPersons))
+	g.GET("/persons/:id", cache.CachePage(store, ttl, getPerson))
+	// g.GET("/persons/:id/persons", cache.CachePage(store, ttl, getPersonPersons))
 }
 
 // List persons.

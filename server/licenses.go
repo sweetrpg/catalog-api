@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -11,6 +10,7 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -19,11 +19,12 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore) {
+func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
 	logging.Logger.Info("Setting up license endpoint handlers...")
-	g.GET("/licenses", cache.CachePage(store, time.Hour, listLicenses))
-	g.GET("/licenses/:id", cache.CachePage(store, time.Hour, getLicense))
-	g.GET("/licenses/:id/volumes", cache.CachePage(store, time.Hour, getLicenseVolumes))
+	ttl := ttls.TTL("licenses")
+	g.GET("/licenses", cache.CachePage(store, ttl, listLicenses))
+	g.GET("/licenses/:id", cache.CachePage(store, ttl, getLicense))
+	g.GET("/licenses/:id/volumes", cache.CachePage(store, ttl, getLicenseVolumes))
 }
 
 // List licenses.
