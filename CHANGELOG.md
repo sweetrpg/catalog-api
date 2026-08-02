@@ -1,4 +1,21 @@
 
+## 0.5.0 - 2026-08-02
+
+### Added
+- Add overlays/local for the shared Tailscale front door (#141)
+
+
+### Documentation
+- Add coverage badge to README (#138)
+- Fix coverage badge URL to point at GitHub Pages (#140)
+
+
+### Fixed
+- Remove HPA and PDB from dev overlay
+- Point local overlay at the shared local MongoDB
+
+
+
 ## 0.4.0 - 2026-07-26
 
 ### Added
