@@ -13,17 +13,18 @@ data:
   DB_SCHEME: mongodb+srv
   DB_HOST: cluster0.z9nxg.mongodb.net
   DB_USER: catalog-api
-  DB_NAME: catalog
+  DB_NAME: sweetrpg-catalog
   DB_OPTS: retryWrites=true&w=majority
   BUILD_INFO_PATH: /app/config/build-info.json
   OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo-distributor.observability.svc.cluster.local:4318/
   PYROSCOPE_SERVER_ADDRESS: http://pyroscope.observability.svc.cluster.local:4040
   PYROSCOPE_TENANT_ID: psw
   SENTRY_RELEASE: "1"
-  # redis-master is the service name the infrastructure/catalog Helm chart actually creates
-  # (bitnami/redis convention) - "redis" alone has never resolved, which is part of why this
-  # was never exercised end-to-end. See openspec/changes/catalog-api-caching-rate-limiting.
-  REDIS_HOST: redis-master.sweetrpg-catalog.svc.cluster.local
+  # The infra repo's catalog/cache chart migrated from Bitnami's redis chart (which used a
+  # "<release>-master" Service name) to the Valkey chart with fullnameOverride: redis - the
+  # Service is just "redis" now. "redis-master" never resolved, which is part of why this was
+  # never exercised end-to-end. See openspec/changes/catalog-api-caching-rate-limiting.
+  REDIS_HOST: redis.sweetrpg-catalog.svc.cluster.local
   REDIS_PORT: "6379"
   CACHE_TTLS: "licenses=30m,volumes=30m,systems=2h,publishers=2h,studios=2h,persons=1h,contributions=1h,reviews=15m"
   CACHE_DEFAULT_TTL: 1h
