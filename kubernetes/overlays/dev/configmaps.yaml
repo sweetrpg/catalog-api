@@ -13,7 +13,7 @@ data:
   DB_SCHEME: mongodb+srv
   DB_HOST: cluster0.z9nxg.mongodb.net
   DB_USER: catalog-api
-  DB_NAME: catalog
+  DB_NAME: sweetrpg-catalog
   DB_OPTS: retryWrites=true&w=majority
   BUILD_INFO_PATH: /app/config/build-info.json
   OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo-distributor.observability.svc.cluster.local:4318/
