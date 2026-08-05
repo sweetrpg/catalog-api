@@ -9,7 +9,7 @@ metadata:
   name: catalog-api
 
 spec:
-  databaseName: admin
+  databaseName: catalog
   username: catalog-api
   passwordSecretRef:
     name: catalog-api-db-credentials
