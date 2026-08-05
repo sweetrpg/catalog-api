@@ -9,16 +9,15 @@ metadata:
     traefik.ingress.kubernetes.io/router.tls: "true"
     traefik.ingress.kubernetes.io/router.middlewares: sweetrpg-catalog-strip-prefix-v1@kubernetescrd
     kubernetes.io/ingress.class: traefik
-    cert-manager.io/cluster-issuer: letsencrypt-prd
 
 spec:
   ingressClassName: traefik
   rules:
-    - host: api.catalog.dev.sweetrpg.com
+    - host: dev.sweetrpg.com
       http:
         paths:
           - pathType: Prefix
-            path: /
+            path: /api/catalog
             backend:
               service:
                 name: api-v1
@@ -26,5 +25,7 @@ spec:
                   name: http
   tls:
     - hosts:
-        - api.catalog.dev.sweetrpg.com
-      secretName: catalog-api-v1-tls
+        - dev.sweetrpg.com
+      # Shared secretName across every frontend's Ingress for this host, deliberately - see
+      # main-web's Ingress and docs/git-repos.md.
+      secretName: sweetrpg-dev-tls
