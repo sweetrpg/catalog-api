@@ -9,7 +9,7 @@ metadata:
   name: catalog-api
 
 spec:
-  databaseName: catalog
+  databaseName: sweetrpg-catalog
   username: catalog-api
   passwordSecretRef:
     name: catalog-api-db-credentials
@@ -17,7 +17,7 @@ spec:
     name: sweetrpg
     namespace: sweetrpg-db
   roles:
-    - databaseName: catalog
+    - databaseName: sweetrpg-catalog
       roleName: readWrite
   x509Type: NONE
 
