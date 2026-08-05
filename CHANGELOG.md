@@ -1,6 +1,9 @@
 
 ## 0.6.2 - 2026-08-05
 
+
+## 0.6.2 - 2026-08-05
+
 ### Fixed
 - Point atlas-db-password ExternalSecrets at new Akeyless path/key
 
