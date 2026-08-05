@@ -1,4 +1,11 @@
 
+## 0.6.1 - 2026-08-05
+
+### Fixed
+- Correct dev REDIS_HOST to match Valkey chart's Service name
+
+
+
 ## 0.6.0 - 2026-08-05
 
 ### Added
