@@ -8,6 +8,9 @@
 
 ## 0.5.0 - 2026-08-02
 
+
+## 0.5.0 - 2026-08-02
+
 ### Added
 - Add overlays/local for the shared Tailscale front door (#141)
 
