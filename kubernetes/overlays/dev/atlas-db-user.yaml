@@ -17,7 +17,7 @@ spec:
     name: sweetrpg
     namespace: sweetrpg-db
   roles:
-    - databaseName: sweetrpg-catalog
+    - databaseName: catalog
       roleName: readWrite
   x509Type: NONE
 
