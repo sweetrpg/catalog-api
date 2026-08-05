@@ -1,4 +1,16 @@
 
+## 0.6.0 - 2026-08-05
+
+### Added
+- Connect via catalog-api's own Atlas database user
+
+
+### Fixed
+- Database name
+- Correct catalog-api's actual database name to 'catalog'
+
+
+
 ## 0.5.1 - 2026-08-05
 
 ### Fixed
