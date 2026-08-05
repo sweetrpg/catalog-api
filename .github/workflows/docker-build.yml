@@ -117,6 +117,13 @@ jobs:
         needs: [meta, build]
         runs-on: ubuntu-latest
         steps:
+            # This job doesn't need source to merge Docker manifests, but the Sentry release
+            # step below shells out to `sentry-cli releases propose-version`, which needs an
+            # actual git checkout to derive a release name from - without this, it fails with
+            # "could not find repository at '.'".
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
             - name: Download digests
               uses: actions/download-artifact@v8
               with:

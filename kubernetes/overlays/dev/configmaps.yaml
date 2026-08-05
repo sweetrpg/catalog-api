@@ -7,15 +7,15 @@ metadata:
 
 data:
   ENV: dev
-  SERVICE_CHECK_URL: unset
-  HEALTH_CHECK_URL: unset
+  # mongodb.go builds the connection string from these DB_* parts rather than one opaque
+  # DB_URI - only the password (DB_PW, in secrets.yaml) is sensitive. DB_HOST is Atlas's own
+  # SRV hostname for Cluster0 - not secret, but not derivable from anything else in this repo.
+  DB_SCHEME: mongodb+srv
+  DB_HOST: cluster0.z9nxg.mongodb.net
+  DB_USER: catalog-api
+  DB_NAME: catalog
+  DB_OPTS: retryWrites=true&w=majority
   BUILD_INFO_PATH: /app/config/build-info.json
-  SERVICE_REGISTRATION_URL: "http://consul.sweetrpg-support.svc.cluster.local:1234"
-  JAEGER_SERVICE_NAME: api.sweetrpg-catalog
-  JAEGER_SAMPLER_TYPE: ratelimiting
-  JAEGER_SAMPLER_PARAM: "1"
-  JAEGER_PROPAGATION: b3
-  JAEGER_ENDPOINT: http://jaeger-collector.observability.svc.cluster.local:9411/api/v2/spans
   OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo-distributor.observability.svc.cluster.local:4318/
   PYROSCOPE_SERVER_ADDRESS: http://pyroscope.observability.svc.cluster.local:4040
   PYROSCOPE_TENANT_ID: psw
