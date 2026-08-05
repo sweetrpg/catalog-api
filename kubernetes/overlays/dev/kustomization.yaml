@@ -10,6 +10,7 @@ resources:
     - ingress.yaml
     - middlewares.yaml
     - pod-monitor.yaml
+    - atlas-db-user.yaml
 
 labels:
     - pairs:
