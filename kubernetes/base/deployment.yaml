@@ -79,7 +79,15 @@ spec:
                             - name: Authorization
                               value: $(HEALTH_TOKEN)
                         initialDelaySeconds: 30
-                        timeoutSeconds: 10
+                        # api-core.go's HealthHandler budgets up to 5s each for its two Mongo
+                        # checks (list-collections, ping-database) - 10s worst case with zero
+                        # margin against this probe's own timeout. When Mongo ran close to that
+                        # ceiling, kubelet's probe timeout fired first and closed the connection
+                        # mid-check, canceling the request context and surfacing as "context
+                        # canceled" rather than a clean per-check timeout - indistinguishable
+                        # from a real Mongo outage without reading a raw trace. 20s leaves
+                        # headroom above the worst case instead of exactly matching it.
+                        timeoutSeconds: 20
                   volumeMounts:
                       - mountPath: /data
                         name: data
