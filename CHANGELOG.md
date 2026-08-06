@@ -1,4 +1,12 @@
 
+## 0.6.3 - 2026-08-06
+
+### Fixed
+- Target DB_PASSWORD explicitly in the catalog-api-db rewrite
+- Remove startup log dump of the full process environment
+
+
+
 ## 0.6.2 - 2026-08-05
 
 
