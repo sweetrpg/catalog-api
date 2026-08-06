@@ -72,22 +72,21 @@ spec:
                         timeoutSeconds: 10
                         interval: 10
                   readinessProbe:
+                        # Deliberately the shallow /status/ping, not /status/health - readiness
+                        # gates whether this pod receives traffic at all, and /status/health does
+                        # live Mongo + Redis checks against Atlas's M0 (shared, free-tier)
+                        # cluster. Every replica hits the same Atlas cluster, so a single
+                        # transient blip there was taking every pod NotReady simultaneously -
+                        # a full outage from a momentary dependency hiccup the process itself
+                        # was otherwise fine to keep serving through. /status/health stays
+                        # available as an observability endpoint; it just no longer controls
+                        # routing.
                         httpGet:
-                            path: /status/health
+                            path: /status/ping
                             port: http
-                            httpHeaders:
-                            - name: Authorization
-                              value: $(HEALTH_TOKEN)
-                        initialDelaySeconds: 30
-                        # api-core.go's HealthHandler budgets up to 5s each for its two Mongo
-                        # checks (list-collections, ping-database) - 10s worst case with zero
-                        # margin against this probe's own timeout. When Mongo ran close to that
-                        # ceiling, kubelet's probe timeout fired first and closed the connection
-                        # mid-check, canceling the request context and surfacing as "context
-                        # canceled" rather than a clean per-check timeout - indistinguishable
-                        # from a real Mongo outage without reading a raw trace. 20s leaves
-                        # headroom above the worst case instead of exactly matching it.
-                        timeoutSeconds: 20
+                        initialDelaySeconds: 10
+                        timeoutSeconds: 10
+                        periodSeconds: 10
                   volumeMounts:
                       - mountPath: /data
                         name: data
