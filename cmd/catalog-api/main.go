@@ -240,16 +240,18 @@ func setupRedisPool() *redis.Pool {
 	}
 }
 
-// setupCache builds the response cache store and, when REDIS_HOST is configured, verifies
-// connectivity before the service reports ready. A configured-but-unreachable Redis fails the
-// readiness probe (see readiness.CacheReady, consumed by /status/health) instead of silently
-// falling back to uncached behavior.
+// setupCache builds the response cache store and, when REDIS_HOST is configured, registers the
+// Redis pool with readiness so /status/health live-pings it on every call (see
+// readiness.CacheReady) instead of trusting a boot-time snapshot - a Redis outage that resolves
+// on its own then lets readiness recover without a pod restart. Also does one startup ping
+// purely to log early if Redis is unreachable at boot; that ping no longer determines
+// readiness by itself.
 func setupCache(redisPool *redis.Pool) persistence.CacheStore {
 	logging.Logger.Info("Setting up query cache...")
 
 	redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
 	if !found {
-		readiness.SetCacheReady(true)
+		readiness.SetCachePool(nil)
 		return persistence.NewInMemoryStore(time.Hour)
 	}
 
@@ -257,14 +259,13 @@ func setupCache(redisPool *redis.Pool) persistence.CacheStore {
 	redisPass := os.Getenv(apiconstants.REDIS_PASS)
 	cache := persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), redisPass, time.Hour)
 
+	readiness.SetCachePool(redisPool)
+
 	ctx, cancel := context.WithTimeout(context.Background(), redisConnectTimeout)
 	defer cancel()
 	if err := ratelimit.Ping(ctx, redisPool); err != nil {
-		logging.Logger.Error("REDIS_HOST is configured but unreachable; failing readiness instead of silently serving uncached responses",
+		logging.Logger.Error("REDIS_HOST is configured but unreachable at startup; readiness will keep live-checking on each /status/health call",
 			"redis_host", redisHost, "error", err.Error())
-		readiness.SetCacheReady(false)
-	} else {
-		readiness.SetCacheReady(true)
 	}
 
 	return cache
