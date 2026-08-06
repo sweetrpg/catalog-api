@@ -1,4 +1,11 @@
 
+## 0.6.4 - 2026-08-06
+
+### Fixed
+- Live-ping the cache backend instead of caching a boot-time result
+
+
+
 ## 0.6.3 - 2026-08-06
 
 ### Fixed
