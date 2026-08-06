@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -25,7 +26,7 @@ func TestSetupCacheReportsReadyWhenRedisReachable(t *testing.T) {
 
 	setupCache(pool)
 
-	if !readiness.CacheReady() {
+	if !readiness.CacheReady(context.Background()) {
 		t.Fatal("readiness.CacheReady() = false, want true when Redis is reachable")
 	}
 }
@@ -43,7 +44,7 @@ func TestSetupCacheFailsReadinessWhenRedisUnreachable(t *testing.T) {
 
 	setupCache(pool)
 
-	if readiness.CacheReady() {
+	if readiness.CacheReady(context.Background()) {
 		t.Fatal("readiness.CacheReady() = true, want false when REDIS_HOST is configured but unreachable")
 	}
 }
@@ -60,7 +61,7 @@ func TestSetupCacheReportsReadyWhenRedisNotConfigured(t *testing.T) {
 
 	setupCache(nil)
 
-	if !readiness.CacheReady() {
+	if !readiness.CacheReady(context.Background()) {
 		t.Fatal("readiness.CacheReady() = false, want true when no cache backend is configured (in-memory store, no dependency to fail)")
 	}
 }

@@ -1,15 +1,36 @@
 package readiness
 
-import "testing"
+import (
+	"context"
+	"testing"
 
-func TestSetCacheReadyRoundTrips(t *testing.T) {
-	SetCacheReady(true)
-	if !CacheReady() {
-		t.Fatal("CacheReady() = false after SetCacheReady(true), want true")
+	"github.com/alicebob/miniredis/v2"
+	"github.com/gomodule/redigo/redis"
+)
+
+func TestCacheReadyWithNoPoolConfigured(t *testing.T) {
+	SetCachePool(nil)
+	if !CacheReady(context.Background()) {
+		t.Fatal("CacheReady() = false with no pool configured, want true")
+	}
+}
+
+func TestCacheReadyLivePingsRatherThanCaching(t *testing.T) {
+	s := miniredis.RunT(t)
+	addr := s.Addr()
+	pool := &redis.Pool{
+		Dial: func() (redis.Conn, error) { return redis.Dial("tcp", addr) },
+	}
+	SetCachePool(pool)
+	defer SetCachePool(nil)
+
+	if !CacheReady(context.Background()) {
+		t.Fatal("CacheReady() = false with a reachable pool, want true")
 	}
 
-	SetCacheReady(false)
-	if CacheReady() {
-		t.Fatal("CacheReady() = true after SetCacheReady(false), want false")
+	s.Close()
+
+	if CacheReady(context.Background()) {
+		t.Fatal("CacheReady() = true after the backend closed, want false - check should be live, not cached")
 	}
 }

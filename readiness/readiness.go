@@ -3,18 +3,30 @@
 // service silently degrading to an uncached or unlimited mode.
 package readiness
 
-import "sync/atomic"
+import (
+	"context"
+	"sync/atomic"
 
-var cacheReady atomic.Bool
+	"github.com/gomodule/redigo/redis"
+	"github.com/sweetrpg/catalog-api/ratelimit"
+)
 
-// SetCacheReady records whether the configured cache backend (Redis, when REDIS_HOST is set)
-// is currently reachable. Services without REDIS_HOST configured should call this with true,
-// since the in-memory fallback store has no external dependency to fail.
-func SetCacheReady(ready bool) {
-	cacheReady.Store(ready)
+var cachePool atomic.Pointer[redis.Pool]
+
+// SetCachePool records the Redis pool CacheReady live-pings on each call. Pass nil when no
+// cache backend is configured (REDIS_HOST unset) - CacheReady then reports true, since the
+// in-memory fallback store has no external dependency to fail.
+func SetCachePool(pool *redis.Pool) {
+	cachePool.Store(pool)
 }
 
-// CacheReady reports the last-known reachability of the configured cache backend.
-func CacheReady() bool {
-	return cacheReady.Load()
+// CacheReady live-pings the configured cache backend rather than returning a cached boot-time
+// result - a Redis outage that resolves on its own should let readiness recover without
+// requiring a pod restart.
+func CacheReady(ctx context.Context) bool {
+	pool := cachePool.Load()
+	if pool == nil {
+		return true
+	}
+	return ratelimit.Ping(ctx, pool) == nil
 }
