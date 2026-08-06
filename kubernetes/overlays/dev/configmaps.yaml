@@ -34,5 +34,5 @@ data:
   RATE_LIMIT_STANDARD: "30"
   RATE_LIMIT_STANDARD_WINDOW_SECONDS: "60"
   INGRESS_BASE_PATH: /0
-  INGRESS_HOST: api.catalog.dev.sweetrpg.com
+  INGRESS_HOST: dev.sweetrpg.com
   INGRESS_SCHEMES: http,https
