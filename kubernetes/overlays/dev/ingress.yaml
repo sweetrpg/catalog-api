@@ -16,8 +16,17 @@ spec:
     - host: dev.sweetrpg.com
       http:
         paths:
+          # /0 always points at the latest version (currently v1); /1 is the pinned v1 route.
+          # Frontends should call /0 unless they need a specific version.
           - pathType: Prefix
-            path: /api/catalog
+            path: /api/0/catalog
+            backend:
+              service:
+                name: api-v0
+                port:
+                  name: http
+          - pathType: Prefix
+            path: /api/1/catalog
             backend:
               service:
                 name: api-v1

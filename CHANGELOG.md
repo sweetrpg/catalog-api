@@ -1,4 +1,11 @@
 
+## 0.6.8 - 2026-08-06
+
+### Fixed
+- Version-prefixed Ingress paths with a latest-alias Service
+
+
+
 ## 0.6.7 - 2026-08-06
 
 ### Fixed
