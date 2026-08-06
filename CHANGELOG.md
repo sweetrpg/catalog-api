@@ -1,4 +1,11 @@
 
+## 0.6.6 - 2026-08-06
+
+### Fixed
+- Widen readinessProbe timeout margin above Mongo's worst case
+
+
+
 ## 0.6.5 - 2026-08-06
 
 ### Fixed
