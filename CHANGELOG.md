@@ -1,4 +1,11 @@
 
+## 0.6.5 - 2026-08-06
+
+### Fixed
+- Run the cache readiness check concurrently, not after Mongo
+
+
+
 ## 0.6.4 - 2026-08-06
 
 ### Fixed
