@@ -1,4 +1,11 @@
 
+## 0.6.7 - 2026-08-06
+
+### Fixed
+- Point readinessProbe at /status/ping, not /status/health
+
+
+
 ## 0.6.6 - 2026-08-06
 
 ### Fixed
