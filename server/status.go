@@ -52,6 +52,16 @@ func healthHandler(c *gin.Context) {
 	// 	return
 	// }
 
+	// Run the cache check concurrently with api-core.go's Mongo checks rather than after them -
+	// the k8s readinessProbe here has its own 10s timeout, matching api-core.go's Mongo budget
+	// alone; stacking the cache ping on top sequentially could push total handler time past
+	// that window and fail the probe on latency even when every individual check would have
+	// succeeded.
+	cacheCtx, cacheCancel := context.WithTimeout(c.Request.Context(), cacheReadyTimeout)
+	defer cacheCancel()
+	cacheReadyCh := make(chan bool, 1)
+	go func() { cacheReadyCh <- readiness.CacheReady(cacheCtx) }()
+
 	resp := apicores.HealthHandler(c.Request.Context())
 
 	// Fold the cache backend's reachability into the same readiness signal Mongo already
@@ -59,9 +69,7 @@ func healthHandler(c *gin.Context) {
 	// (Degraded in ArgoCD) instead of a silent cache-miss-only degradation. Live-pinged on
 	// every call rather than trusting a boot-time snapshot, so a Redis outage that resolves
 	// lets readiness recover without a pod restart.
-	cacheCtx, cacheCancel := context.WithTimeout(c.Request.Context(), cacheReadyTimeout)
-	defer cacheCancel()
-	if !readiness.CacheReady(cacheCtx) {
+	if !<-cacheReadyCh {
 		resp.Messages = append(resp.Messages, "cache backend unreachable")
 		resp.Errors++
 	}
