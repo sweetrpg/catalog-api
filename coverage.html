@@ -57,7 +57,7 @@
 				
 				<option value="file0">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
-				<option value="file1">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (19.3%)</option>
+				<option value="file1">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (18.7%)</option>
 				
 				<option value="file2">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
@@ -403,9 +403,9 @@ func setupRedisPool() *redis.Pool <span class="cov6" title="2">{
         return &amp;redis.Pool{
                 MaxIdle:     5,
                 IdleTimeout: 240 * time.Second,
-                Dial: func() (redis.Conn, error) </span><span class="cov6" title="2">{
+                Dial: func() (redis.Conn, error) </span><span class="cov10" title="3">{
                         c, err := redis.Dial("tcp", addr, redis.DialConnectTimeout(redisConnectTimeout))
-                        if err != nil </span><span class="cov1" title="1">{
+                        if err != nil </span><span class="cov6" title="2">{
                                 return nil, err
                         }</span>
                         <span class="cov1" title="1">if redisPass != "" </span><span class="cov0" title="0">{
@@ -419,16 +419,18 @@ func setupRedisPool() *redis.Pool <span class="cov6" title="2">{
         }
 }
 
-// setupCache builds the response cache store and, when REDIS_HOST is configured, verifies
-// connectivity before the service reports ready. A configured-but-unreachable Redis fails the
-// readiness probe (see readiness.CacheReady, consumed by /status/health) instead of silently
-// falling back to uncached behavior.
+// setupCache builds the response cache store and, when REDIS_HOST is configured, registers the
+// Redis pool with readiness so /status/health live-pings it on every call (see
+// readiness.CacheReady) instead of trusting a boot-time snapshot - a Redis outage that resolves
+// on its own then lets readiness recover without a pod restart. Also does one startup ping
+// purely to log early if Redis is unreachable at boot; that ping no longer determines
+// readiness by itself.
 func setupCache(redisPool *redis.Pool) persistence.CacheStore <span class="cov10" title="3">{
         logging.Logger.Info("Setting up query cache...")
 
         redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
         if !found </span><span class="cov1" title="1">{
-                readiness.SetCacheReady(true)
+                readiness.SetCachePool(nil)
                 return persistence.NewInMemoryStore(time.Hour)
         }</span>
 
@@ -436,14 +438,13 @@ func setupCache(redisPool *redis.Pool) persistence.CacheStore <span class="cov10
         redisPass := os.Getenv(apiconstants.REDIS_PASS)
         cache := persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), redisPass, time.Hour)
 
+        readiness.SetCachePool(redisPool)
+
         ctx, cancel := context.WithTimeout(context.Background(), redisConnectTimeout)
         defer cancel()
         if err := ratelimit.Ping(ctx, redisPool); err != nil </span><span class="cov1" title="1">{
-                logging.Logger.Error("REDIS_HOST is configured but unreachable; failing readiness instead of silently serving uncached responses",
+                logging.Logger.Error("REDIS_HOST is configured but unreachable at startup; readiness will keep live-checking on each /status/health call",
                         "redis_host", redisHost, "error", err.Error())
-                readiness.SetCacheReady(false)
-        }</span> else<span class="cov1" title="1"> {
-                readiness.SetCacheReady(true)
         }</span>
 
         <span class="cov6" title="2">return cache</span>
@@ -1219,21 +1220,33 @@ func Ping(ctx context.Context, pool *redis.Pool) error <span class="cov3" title=
 // service silently degrading to an uncached or unlimited mode.
 package readiness
 
-import "sync/atomic"
+import (
+        "context"
+        "sync/atomic"
 
-var cacheReady atomic.Bool
+        "github.com/gomodule/redigo/redis"
+        "github.com/sweetrpg/catalog-api/ratelimit"
+)
 
-// SetCacheReady records whether the configured cache backend (Redis, when REDIS_HOST is set)
-// is currently reachable. Services without REDIS_HOST configured should call this with true,
-// since the in-memory fallback store has no external dependency to fail.
-func SetCacheReady(ready bool) <span class="cov10" title="2">{
-        cacheReady.Store(ready)
+var cachePool atomic.Pointer[redis.Pool]
+
+// SetCachePool records the Redis pool CacheReady live-pings on each call. Pass nil when no
+// cache backend is configured (REDIS_HOST unset) - CacheReady then reports true, since the
+// in-memory fallback store has no external dependency to fail.
+func SetCachePool(pool *redis.Pool) <span class="cov10" title="3">{
+        cachePool.Store(pool)
 }</span>
 
-// CacheReady reports the last-known reachability of the configured cache backend.
-func CacheReady() bool <span class="cov10" title="2">{
-        return cacheReady.Load()
-}</span>
+// CacheReady live-pings the configured cache backend rather than returning a cached boot-time
+// result - a Redis outage that resolves on its own should let readiness recover without
+// requiring a pod restart.
+func CacheReady(ctx context.Context) bool <span class="cov10" title="3">{
+        pool := cachePool.Load()
+        if pool == nil </span><span class="cov1" title="1">{
+                return true
+        }</span>
+        <span class="cov6" title="2">return ratelimit.Ping(ctx, pool) == nil</span>
+}
 </pre>
 		
 		<pre class="file" id="file5" style="display: none">package server
@@ -1768,7 +1781,9 @@ func getReview(c *gin.Context) <span class="cov0" title="0">{
 		<pre class="file" id="file11" style="display: none">package server
 
 import (
+        "context"
         "net/http"
+        "time"
 
         "github.com/gin-gonic/gin"
         apicores "github.com/sweetrpg/api-core.go/server"
@@ -1776,6 +1791,10 @@ import (
         "github.com/sweetrpg/catalog-api/readiness"
         "github.com/sweetrpg/common.go/logging"
 )
+
+// cacheReadyTimeout bounds the live Redis ping in healthHandler, matching api-core.go's
+// healthCheckTimeout for the equivalent Mongo checks.
+const cacheReadyTimeout = 5 * time.Second
 
 func setupStatusHandlers(g *gin.Engine) <span class="cov0" title="0">{
         logging.Logger.Info("Setting up status endpoint handlers...")
@@ -1817,8 +1836,12 @@ func healthHandler(c *gin.Context) <span class="cov0" title="0">{
 
         // Fold the cache backend's reachability into the same readiness signal Mongo already
         // reports, so a configured-but-unreachable Redis surfaces as a failing readiness probe
-        // (Degraded in ArgoCD) instead of a silent cache-miss-only degradation.
-        if !readiness.CacheReady() </span><span class="cov0" title="0">{
+        // (Degraded in ArgoCD) instead of a silent cache-miss-only degradation. Live-pinged on
+        // every call rather than trusting a boot-time snapshot, so a Redis outage that resolves
+        // lets readiness recover without a pod restart.
+        cacheCtx, cacheCancel := context.WithTimeout(c.Request.Context(), cacheReadyTimeout)
+        defer cacheCancel()
+        if !readiness.CacheReady(cacheCtx) </span><span class="cov0" title="0">{
                 resp.Messages = append(resp.Messages, "cache backend unreachable")
                 resp.Errors++
         }</span>
