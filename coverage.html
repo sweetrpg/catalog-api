@@ -57,7 +57,7 @@
 				
 				<option value="file0">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
-				<option value="file1">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (19.1%)</option>
+				<option value="file1">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (19.3%)</option>
 				
 				<option value="file2">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
@@ -232,7 +232,6 @@ const redisConnectTimeout = 5 * time.Second
 // @license.url https://mit-license.org/
 func main() <span class="cov0" title="0">{
         _ = godotenv.Load(".env")
-        log.Printf("ENV: %v", os.Environ())
 
         logging.Init()
 
