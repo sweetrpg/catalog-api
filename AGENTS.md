@@ -31,6 +31,12 @@ contributions, persons, publishers, reviews, studios, systems). It's a thin Gin-
 Depends on `api-core.go`, `catalog-data.go`, `common.go`, and `mongodb.go`. Nothing depends on
 this repo - it's the top of the catalog dependency chain.
 
+## Logging
+
+HTTP access logs output in JSON format via `slog-gin` middleware, configured in `cmd/catalog-api/main.go`.
+Application logs remain under `common.go/logging` control. This provides structured logs suitable for
+log aggregation systems while keeping HTTP and application concerns separate.
+
 ## Caching and Rate Limiting
 
 See `platform/docs/service-conventions.md`'s Caching and Rate limiting sections for the
