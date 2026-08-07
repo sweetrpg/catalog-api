@@ -9,7 +9,7 @@ metadata:
   name: catalog-api
 
 spec:
-  databaseName: sweetrpg-catalog
+  databaseName: admin
   username: catalog-api
   passwordSecretRef:
     name: catalog-api-db-credentials
