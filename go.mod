@@ -13,6 +13,7 @@ require (
 	github.com/grafana/pyroscope-go v1.4.1
 	github.com/joho/godotenv v1.5.1
 	github.com/penglongli/gin-metrics v0.1.13
+	github.com/samber/slog-gin v1.21.1
 	github.com/sinhashubham95/go-actuator v1.6.0
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1

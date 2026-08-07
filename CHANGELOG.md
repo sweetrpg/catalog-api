@@ -1,4 +1,19 @@
 
+## 0.7.0 - 2026-08-07
+
+### Added
+- Add slog-gin for JSON HTTP access logging
+
+
+### Documentation
+- Document slog-gin JSON HTTP logging
+
+
+### Fixed
+- Authenticate AtlasDatabaseUser against admin, not app db
+
+
+
 ## 0.6.8 - 2026-08-06
 
 ### Fixed
