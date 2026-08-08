@@ -5,12 +5,17 @@ namespace: sweetrpg-catalog
 
 resources:
     - ../../base
+    - atlas-db-user.yaml
     - configmaps.yaml
-    - secrets.yaml
     - ingress.yaml
     - middlewares.yaml
+    - password.yaml
     - pod-monitor.yaml
-    - atlas-db-user.yaml
+    - secrets/auth.yaml
+    - secrets/cache.yaml
+    - secrets/db.yaml
+    - secrets/files.yaml
+    - secrets/misc.yaml
 
 labels:
     - pairs:
@@ -22,8 +27,3 @@ labels:
 
 generatorOptions:
     disableNameSuffixHash: true
-
-images:
-    - name: catalog-api
-      newName: ghcr.io/sweetrpg/catalog-api
-      newTag: v0.2.2
