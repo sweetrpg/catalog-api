@@ -57,7 +57,7 @@
 				
 				<option value="file0">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
-				<option value="file1">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (18.7%)</option>
+				<option value="file1">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (18.2%)</option>
 				
 				<option value="file2">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
@@ -183,6 +183,7 @@ import (
         "context"
         "fmt"
         "log"
+        "log/slog"
         "net/http"
         "os"
         "strconv"
@@ -197,6 +198,7 @@ import (
         "github.com/grafana/pyroscope-go"
         "github.com/joho/godotenv"
         "github.com/penglongli/gin-metrics/ginmetrics"
+        sloggin "github.com/samber/slog-gin"
         actuator "github.com/sinhashubham95/go-actuator"
         swaggerfiles "github.com/swaggo/files"
         ginSwagger "github.com/swaggo/gin-swagger"
@@ -241,7 +243,11 @@ func main() <span class="cov0" title="0">{
                 defer stopProfiling()
         }</span>
 
-        <span class="cov0" title="0">r := gin.Default()
+        <span class="cov0" title="0">httpLogger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+        r := gin.New()
+        r.Use(sloggin.New(httpLogger))
+        r.Use(gin.Recovery())
         // r.LoadHTMLGlob("tmpl/*")
 
         setupTracing(r)
