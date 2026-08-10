@@ -1,5 +1,5 @@
 
-## 0.7.0 - 2026-08-07
+## 0.7.0 - 2026-08-10
 
 ### Added
 - Add slog-gin for JSON HTTP access logging
