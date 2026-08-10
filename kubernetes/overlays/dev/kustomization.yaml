@@ -7,7 +7,6 @@ resources:
     - ../../base
     - atlas-db-user.yaml
     - configmaps.yaml
-    - feature-flags.yaml
     - ingress.yaml
     - middlewares.yaml
     - password.yaml
