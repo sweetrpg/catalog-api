@@ -11,6 +11,6 @@ spec:
       test:
         state: "ENABLED"
         variants:
-        bar: "BAR"
-        baz: "BAZ"
+            bar: "BAR"
+            baz: "BAZ"
         defaultVariant: "bar"
