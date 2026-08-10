@@ -32,7 +32,7 @@ spec:
                 prometheus.io/path: '/metrics'
                 prometheus.io/port: '8000'
                 openfeature.dev/enabled: "true"
-                openfeature.dev/featureflagsource: "feature-flags"
+                openfeature.dev/featureflagsource: "sweetrpg-system/catalog-api"
         spec:
             serviceAccountName: api
             enableServiceLinks: false
