@@ -25,6 +25,12 @@ const (
 const (
 	ServiceName = "catalog-api"
 
+	// ProfilingEnabledFlag is the feature-flag key gating continuous
+	// profiling, evaluated via api-core.go/featureflags. Replaces the old
+	// PYROSCOPE_SERVER_ADDRESS-presence check; see
+	// openspec/changes/pyroscope-profiling-feature-flag in sweetrpg/platform.
+	ProfilingEnabledFlag = "profiling-enabled"
+
 	ErrorCacheUnavailable     = "cache_unavailable"
 	ErrorRateLimitUnavailable = "rate_limit_unavailable"
 )
