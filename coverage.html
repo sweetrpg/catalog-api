@@ -57,7 +57,7 @@
 				
 				<option value="file0">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
-				<option value="file1">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (18.2%)</option>
+				<option value="file1">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (17.7%)</option>
 				
 				<option value="file2">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
@@ -203,6 +203,7 @@ import (
         swaggerfiles "github.com/swaggo/files"
         ginSwagger "github.com/swaggo/gin-swagger"
         apiconstants "github.com/sweetrpg/api-core.go/constants"
+        "github.com/sweetrpg/api-core.go/featureflags"
         "github.com/sweetrpg/api-core.go/tracing"
         "github.com/sweetrpg/api-core.go/vo"
         "github.com/sweetrpg/catalog-api/cachettl"
@@ -239,7 +240,9 @@ func main() <span class="cov0" title="0">{
 
         setupSentry()
 
-        if stopProfiling := setupProfiling(); stopProfiling != nil </span><span class="cov0" title="0">{
+        ff := featureflags.New(constants.ServiceName)
+
+        if stopProfiling := setupProfiling(ff); stopProfiling != nil </span><span class="cov0" title="0">{
                 defer stopProfiling()
         }</span>
 
@@ -343,12 +346,22 @@ func setupSentry() <span class="cov0" title="0">{
         }
 }
 
-func setupProfiling() func() <span class="cov0" title="0">{
+// setupProfiling starts continuous profiling only when the profiling-enabled
+// feature flag evaluates to true, regardless of whether
+// PYROSCOPE_SERVER_ADDRESS happens to be set - the flag is the on/off
+// control, PYROSCOPE_SERVER_ADDRESS is only the destination. See the
+// pyroscope-profiling-flag spec's three scenarios.
+func setupProfiling(ff *featureflags.Client) func() <span class="cov0" title="0">{
         logging.Logger.Info("Setting up continuous profiling...")
 
-        serverAddress, found := os.LookupEnv(constants.PYROSCOPE_SERVER_ADDRESS)
+        if !ff.BoolFlag(context.Background(), constants.ProfilingEnabledFlag, false) </span><span class="cov0" title="0">{
+                logging.Logger.Info("profiling-enabled flag is off, continuous profiling disabled")
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">serverAddress, found := os.LookupEnv(constants.PYROSCOPE_SERVER_ADDRESS)
         if !found </span><span class="cov0" title="0">{
-                logging.Logger.Warn("PYROSCOPE_SERVER_ADDRESS not set, continuous profiling disabled")
+                logging.Logger.Warn("profiling-enabled flag is on but PYROSCOPE_SERVER_ADDRESS not set, continuous profiling disabled")
                 return nil
         }</span>
 
