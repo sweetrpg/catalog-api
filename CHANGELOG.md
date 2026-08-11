@@ -1,4 +1,11 @@
 
+## 0.8.0 - 2026-08-11
+
+### Added
+- Gate continuous profiling behind the profiling-enabled feature flag
+
+
+
 ## 0.7.1 - 2026-08-10
 
 ### Fixed

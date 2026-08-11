@@ -16,7 +16,6 @@ resources:
     - secrets/db.yaml
     - secrets/files.yaml
     - secrets/misc.yaml
-    - feature-flags.yaml
 
 labels:
     - pairs:

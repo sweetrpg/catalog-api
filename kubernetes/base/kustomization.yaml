@@ -5,7 +5,6 @@ kind: Kustomization
 resources:
   - configmaps.yaml
   - deployment.yaml
-  - feature-flag-source.yaml
   - service-account.yaml
   - service-latest.yaml
   - service.yaml
