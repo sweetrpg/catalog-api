@@ -10,7 +10,9 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
+	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -18,12 +20,20 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
+func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client) {
 	logging.Logger.Info("Setting up volume endpoint handlers...")
 	ttl := ttls.TTL("volumes")
 	g.GET("/volumes", cache.CachePage(store, ttl, listVolumes))
 	g.GET("/volumes/:id", cache.CachePage(store, ttl, getVolume))
 	// g.GET("/volumes/:id/volumes", cache.CachePage(store, ttl, getVolumeVolumes))
+
+	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
+	g.PATCH("/volumes/:id", writeRoles, patchVolume)
+
+	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
+	g.GET("/volumes/:id/proposed-changes", reviewRoles, listVolumeProposedChanges)
+	g.POST("/volumes/:id/proposed-changes/:proposalId/accept", reviewRoles, acceptVolumeProposedChange)
+	g.POST("/volumes/:id/proposed-changes/:proposalId/reject", reviewRoles, rejectVolumeProposedChange)
 }
 
 // List volumes.

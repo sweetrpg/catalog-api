@@ -19,6 +19,12 @@ const (
 	RATE_LIMIT_CHEAP_WINDOW        = "RATE_LIMIT_CHEAP_WINDOW_SECONDS"
 	RATE_LIMIT_STANDARD            = "RATE_LIMIT_STANDARD"
 	RATE_LIMIT_STANDARD_WINDOW     = "RATE_LIMIT_STANDARD_WINDOW_SECONDS"
+
+	// AUTH_API_URL points at auth-api's base URL (e.g.
+	// http://api-v1.sweetrpg-auth.svc.cluster.local:8000), used to verify bearer tokens and
+	// resolve roles via POST /authz/check for write endpoints. See platform docs/openspec.md's
+	// volume-edit-with-approval-workflow change.
+	AUTH_API_URL = "AUTH_API_URL"
 )
 
 // Value constants

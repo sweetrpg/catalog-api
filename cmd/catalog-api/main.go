@@ -27,9 +27,11 @@ import (
 	"github.com/sweetrpg/api-core.go/featureflags"
 	"github.com/sweetrpg/api-core.go/tracing"
 	"github.com/sweetrpg/api-core.go/vo"
+	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/docs"
+	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-api/ratelimit"
 	"github.com/sweetrpg/catalog-api/readiness"
 	"github.com/sweetrpg/catalog-api/server"
@@ -92,6 +94,9 @@ func main() {
 
 	database.SetupDatabase()
 	defer database.TeardownDatabase()
+	if err := proposedchanges.EnsureIndexes(context.Background()); err != nil {
+		logging.Logger.Error("Error while ensuring proposed_changes indexes", "error", err.Error())
+	}
 
 	// Actuator
 	setupAcuator(r)
@@ -102,7 +107,9 @@ func main() {
 	// Add rate limiter
 	r.Use(RateLimiter(redisPool))
 
-	server.SetupHandlers(r, cache, ttls)
+	authzClient := authz.NewClient(util.GetEnv(constants.AUTH_API_URL, ""))
+
+	server.SetupHandlers(r, cache, ttls, authzClient)
 
 	_ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
 }
