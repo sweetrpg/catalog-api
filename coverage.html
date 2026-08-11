@@ -3,7 +3,7 @@
 <html>
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>cachettl: Go Coverage Report</title>
+		<title>authz: Go Coverage Report</title>
 		<style>
 			body {
 				background: black;
@@ -55,35 +55,19 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
+				<option value="file0">github.com/sweetrpg/catalog-api/authz/client.go (78.3%)</option>
 				
-				<option value="file1">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (17.7%)</option>
+				<option value="file1">github.com/sweetrpg/catalog-api/authz/middleware.go (91.1%)</option>
 				
-				<option value="file2">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
+				<option value="file2">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
-				<option value="file3">github.com/sweetrpg/catalog-api/ratelimit/ratelimit.go (91.7%)</option>
+				<option value="file3">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (17.4%)</option>
 				
-				<option value="file4">github.com/sweetrpg/catalog-api/readiness/readiness.go (100.0%)</option>
+				<option value="file4">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
-				<option value="file5">github.com/sweetrpg/catalog-api/server/contributions.go (0.0%)</option>
+				<option value="file5">github.com/sweetrpg/catalog-api/ratelimit/ratelimit.go (91.7%)</option>
 				
-				<option value="file6">github.com/sweetrpg/catalog-api/server/handlers.go (0.0%)</option>
-				
-				<option value="file7">github.com/sweetrpg/catalog-api/server/licenses.go (0.0%)</option>
-				
-				<option value="file8">github.com/sweetrpg/catalog-api/server/persons.go (0.0%)</option>
-				
-				<option value="file9">github.com/sweetrpg/catalog-api/server/publishers.go (0.0%)</option>
-				
-				<option value="file10">github.com/sweetrpg/catalog-api/server/reviews.go (0.0%)</option>
-				
-				<option value="file11">github.com/sweetrpg/catalog-api/server/status.go (0.0%)</option>
-				
-				<option value="file12">github.com/sweetrpg/catalog-api/server/studios.go (0.0%)</option>
-				
-				<option value="file13">github.com/sweetrpg/catalog-api/server/systems.go (0.0%)</option>
-				
-				<option value="file14">github.com/sweetrpg/catalog-api/server/volumes.go (0.0%)</option>
+				<option value="file6">github.com/sweetrpg/catalog-api/readiness/readiness.go (100.0%)</option>
 				
 				</select>
 			</div>
@@ -106,7 +90,219 @@
 		</div>
 		<div id="content">
 		
-		<pre class="file" id="file0" style="display: none">// Package cachettl resolves the cache TTL for a given route group, loaded once at startup
+		<pre class="file" id="file0" style="display: none">// Package authz calls auth-api's POST /authz/check to verify a caller's bearer token and
+// resolve their roles, and provides Gin middleware that gates a route on holding one of a set
+// of allowed roles. See platform's volume-edit-authorization spec
+// (openspec/changes/volume-edit-with-approval-workflow in sweetrpg/platform).
+package authz
+
+import (
+        "bytes"
+        "context"
+        "encoding/json"
+        "fmt"
+        "net/http"
+        "time"
+)
+
+// Platform role names, matching auth-api's fixed role model exactly (see
+// openspec/specs/user-authorization/spec.md's "Role model" requirement).
+const (
+        RoleUser      = "user"
+        RoleSubmitter = "submitter"
+        RoleEditor    = "editor"
+        RoleModerator = "moderator"
+        RoleApprover  = "approver"
+        RoleAdmin     = "admin"
+)
+
+// CheckResponse is the union of auth-api's allowed/denied /authz/check response shapes.
+type CheckResponse struct {
+        Allowed bool     `json:"allowed"`
+        Roles   []string `json:"roles"`
+        Sub     string   `json:"sub"`
+        Reason  string   `json:"reason"`
+}
+
+// InvalidTokenError means auth-api rejected the bearer token itself (missing, expired,
+// unverifiable) - distinct from a service-level deny (Allowed: false with a Reason) or a
+// transport/backend failure.
+type InvalidTokenError struct{}
+
+func (InvalidTokenError) Error() string <span class="cov0" title="0">{ return "authz: invalid or missing token" }</span>
+
+// Client calls auth-api's /authz/check endpoint.
+type Client struct {
+        baseURL string
+        http    *http.Client
+}
+
+// NewClient builds a Client against auth-api's base URL (e.g.
+// http://api-v1.sweetrpg-auth.svc.cluster.local:8000). An empty baseURL is accepted so the
+// service can still start when AUTH_API_URL isn't configured; every Check call will then fail
+// with a transport error, which RequireAnyRole surfaces as a 503.
+func NewClient(baseURL string) *Client <span class="cov10" title="9">{
+        return &amp;Client{baseURL: baseURL, http: &amp;http.Client{Timeout: 5 * time.Second}}
+}</span>
+
+// Check verifies token against auth-api and returns the caller's allowed/roles/subject for the
+// given service name. Returns InvalidTokenError if auth-api rejects the token itself.
+func (c *Client) Check(ctx context.Context, token, service string) (*CheckResponse, error) <span class="cov9" title="8">{
+        body, err := json.Marshal(map[string]string{"service": service})
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("authz: marshal request: %w", err)
+        }</span>
+
+        <span class="cov9" title="8">req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/authz/check", bytes.NewReader(body))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("authz: build request: %w", err)
+        }</span>
+        <span class="cov9" title="8">req.Header.Set("Content-Type", "application/json")
+        req.Header.Set("Authorization", "Bearer "+token)
+
+        resp, err := c.http.Do(req)
+        if err != nil </span><span class="cov3" title="2">{
+                return nil, fmt.Errorf("authz: request failed: %w", err)
+        }</span>
+        <span class="cov8" title="6">defer func() </span><span class="cov8" title="6">{ _ = resp.Body.Close() }</span>()
+
+        <span class="cov8" title="6">if resp.StatusCode == http.StatusUnauthorized </span><span class="cov1" title="1">{
+                return nil, InvalidTokenError{}
+        }</span>
+        <span class="cov7" title="5">if resp.StatusCode != http.StatusOK </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("authz: unexpected status %d from auth-api", resp.StatusCode)
+        }</span>
+
+        <span class="cov7" title="5">var out CheckResponse
+        if err := json.NewDecoder(resp.Body).Decode(&amp;out); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("authz: decode response: %w", err)
+        }</span>
+        <span class="cov7" title="5">return &amp;out, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package authz
+
+import (
+        "net/http"
+
+        "github.com/gin-gonic/gin"
+        apiv "github.com/sweetrpg/api-core.go/vo"
+        "github.com/sweetrpg/common.go/logging"
+)
+
+// Gin context keys set by RequireAnyRole; read via Roles/Subject.
+const (
+        rolesContextKey   = "authz.roles"
+        subjectContextKey = "authz.subject"
+)
+
+// RequireAnyRole returns Gin middleware that verifies the caller's bearer token against
+// auth-api's /authz/check for the given service name, then requires the caller hold at least
+// one of allowedRoles. On success, the verified roles and subject are stashed in the Gin
+// context (read via Roles(c) / Subject(c)) for the handler to use.
+func RequireAnyRole(client *Client, service string, allowedRoles ...string) gin.HandlerFunc <span class="cov10" title="5">{
+        return func(c *gin.Context) </span><span class="cov10" title="5">{
+                token := bearerToken(c)
+                if token == "" </span><span class="cov1" title="1">{
+                        unauthorized(c)
+                        return
+                }</span>
+
+                <span class="cov8" title="4">result, err := client.Check(c.Request.Context(), token, service)
+                if err != nil </span><span class="cov1" title="1">{
+                        if _, ok := err.(InvalidTokenError); ok </span><span class="cov0" title="0">{
+                                unauthorized(c)
+                                return
+                        }</span>
+                        <span class="cov1" title="1">logging.Logger.Error("authz check failed", "error", err.Error())
+                        c.AbortWithStatusJSON(http.StatusServiceUnavailable, apiv.ErrorVO{
+                                Error:   "authz_unavailable",
+                                Message: "Unable to verify authorization",
+                        })
+                        return</span>
+                }
+
+                <span class="cov7" title="3">if !result.Allowed </span><span class="cov1" title="1">{
+                        forbidden(c)
+                        return
+                }</span>
+
+                <span class="cov4" title="2">if !hasAnyRole(result.Roles, allowedRoles) </span><span class="cov1" title="1">{
+                        forbidden(c)
+                        return
+                }</span>
+
+                <span class="cov1" title="1">c.Set(rolesContextKey, result.Roles)
+                c.Set(subjectContextKey, result.Sub)
+                c.Next()</span>
+        }
+}
+
+// Roles returns the verified roles stashed in the Gin context by RequireAnyRole.
+func Roles(c *gin.Context) []string <span class="cov1" title="1">{
+        if v, ok := c.Get(rolesContextKey); ok </span><span class="cov1" title="1">{
+                if roles, ok := v.([]string); ok </span><span class="cov1" title="1">{
+                        return roles
+                }</span>
+        }
+        <span class="cov0" title="0">return nil</span>
+}
+
+// Subject returns the verified Auth0 subject stashed in the Gin context by RequireAnyRole.
+func Subject(c *gin.Context) string <span class="cov1" title="1">{
+        if v, ok := c.Get(subjectContextKey); ok </span><span class="cov1" title="1">{
+                if sub, ok := v.(string); ok </span><span class="cov1" title="1">{
+                        return sub
+                }</span>
+        }
+        <span class="cov0" title="0">return ""</span>
+}
+
+// HasRole reports whether roles contains want.
+func HasRole(roles []string, want string) bool <span class="cov10" title="5">{
+        for _, r := range roles </span><span class="cov10" title="5">{
+                if r == want </span><span class="cov4" title="2">{
+                        return true
+                }</span>
+        }
+        <span class="cov7" title="3">return false</span>
+}
+
+func hasAnyRole(have []string, want []string) bool <span class="cov4" title="2">{
+        for _, w := range want </span><span class="cov8" title="4">{
+                if HasRole(have, w) </span><span class="cov1" title="1">{
+                        return true
+                }</span>
+        }
+        <span class="cov1" title="1">return false</span>
+}
+
+func bearerToken(c *gin.Context) string <span class="cov10" title="5">{
+        const prefix = "Bearer "
+        auth := c.GetHeader("Authorization")
+        if len(auth) &lt;= len(prefix) || auth[:len(prefix)] != prefix </span><span class="cov1" title="1">{
+                return ""
+        }</span>
+        <span class="cov8" title="4">return auth[len(prefix):]</span>
+}
+
+func unauthorized(c *gin.Context) <span class="cov1" title="1">{
+        c.AbortWithStatusJSON(http.StatusUnauthorized, apiv.ErrorVO{
+                Error:   "invalid_token",
+                Message: "Missing or invalid bearer token",
+        })
+}</span>
+
+func forbidden(c *gin.Context) <span class="cov4" title="2">{
+        c.AbortWithStatusJSON(http.StatusForbidden, apiv.ErrorVO{
+                Error:   "forbidden",
+                Message: "Caller does not have a qualifying role",
+        })
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">// Package cachettl resolves the cache TTL for a given route group, loaded once at startup
 // from the CACHE_TTLS env var so slower-changing entities and faster-changing ones aren't
 // forced onto the same cache policy.
 package cachettl
@@ -177,7 +373,7 @@ func (c Config) TTL(route string) time.Duration <span class="cov9" title="8">{
 }
 </pre>
 		
-		<pre class="file" id="file1" style="display: none">package main
+		<pre class="file" id="file3" style="display: none">package main
 
 import (
         "context"
@@ -206,9 +402,11 @@ import (
         "github.com/sweetrpg/api-core.go/featureflags"
         "github.com/sweetrpg/api-core.go/tracing"
         "github.com/sweetrpg/api-core.go/vo"
+        "github.com/sweetrpg/catalog-api/authz"
         "github.com/sweetrpg/catalog-api/cachettl"
         "github.com/sweetrpg/catalog-api/constants"
         "github.com/sweetrpg/catalog-api/docs"
+        "github.com/sweetrpg/catalog-api/proposedchanges"
         "github.com/sweetrpg/catalog-api/ratelimit"
         "github.com/sweetrpg/catalog-api/readiness"
         "github.com/sweetrpg/catalog-api/server"
@@ -271,9 +469,12 @@ func main() <span class="cov0" title="0">{
 
         database.SetupDatabase()
         defer database.TeardownDatabase()
+        if err := proposedchanges.EnsureIndexes(context.Background()); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("Error while ensuring proposed_changes indexes", "error", err.Error())
+        }</span>
 
         // Actuator
-        setupAcuator(r)
+        <span class="cov0" title="0">setupAcuator(r)
 
         // Swagger
         setupSwagger(r)
@@ -281,7 +482,9 @@ func main() <span class="cov0" title="0">{
         // Add rate limiter
         r.Use(RateLimiter(redisPool))
 
-        server.SetupHandlers(r, cache, ttls)
+        authzClient := authz.NewClient(util.GetEnv(constants.AUTH_API_URL, ""))
+
+        server.SetupHandlers(r, cache, ttls, authzClient)
 
         _ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))</span>
 }
@@ -586,7 +789,7 @@ func globalRateLimiter() gin.HandlerFunc <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file2" style="display: none">// Package docs Code generated by swaggo/swag. DO NOT EDIT
+		<pre class="file" id="file4" style="display: none">// Package docs Code generated by swaggo/swag. DO NOT EDIT
 package docs
 
 import "github.com/swaggo/swag"
@@ -1161,7 +1364,7 @@ func init() <span class="cov0" title="0">{
 }</span>
 </pre>
 		
-		<pre class="file" id="file3" style="display: none">// Package ratelimit implements a Redis-backed, per-client, per-route-tier request rate
+		<pre class="file" id="file5" style="display: none">// Package ratelimit implements a Redis-backed, per-client, per-route-tier request rate
 // limiter. Counters live in Redis (INCR + EXPIRE) rather than per-pod memory, so the limit is
 // consistent across catalog-api's replicas instead of being N times looser depending on how
 // many pods happen to be up.
@@ -1234,7 +1437,7 @@ func Ping(ctx context.Context, pool *redis.Pool) error <span class="cov3" title=
 }
 </pre>
 		
-		<pre class="file" id="file4" style="display: none">// Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
+		<pre class="file" id="file6" style="display: none">// Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
 // api-core.go's HealthHandler already covers) so /status/health can fail loud instead of the
 // service silently degrading to an uncached or unlimited mode.
 package readiness
@@ -1265,910 +1468,6 @@ func CacheReady(ctx context.Context) bool <span class="cov10" title="3">{
                 return true
         }</span>
         <span class="cov6" title="2">return ratelimit.Ping(ctx, pool) == nil</span>
-}
-</pre>
-		
-		<pre class="file" id="file5" style="display: none">package server
-
-import (
-        "fmt"
-        "net/http"
-
-        "github.com/getsentry/sentry-go"
-        "github.com/gin-contrib/cache"
-        "github.com/gin-contrib/cache/persistence"
-        "github.com/gin-gonic/gin"
-        "github.com/google/jsonapi"
-        "github.com/sweetrpg/api-core.go/tracing"
-        apiutil "github.com/sweetrpg/api-core.go/util"
-        _ "github.com/sweetrpg/api-core.go/vo"
-        "github.com/sweetrpg/catalog-api/cachettl"
-        "github.com/sweetrpg/catalog-data.go/data"
-        "github.com/sweetrpg/common.go/logging"
-        "go.opentelemetry.io/otel"
-        "go.opentelemetry.io/otel/attribute"
-        oteltrace "go.opentelemetry.io/otel/trace"
-)
-
-func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
-        logging.Logger.Info("Setting up contribution endpoint handlers...")
-        ttl := ttls.TTL("contributions")
-        g.GET("/contributions", cache.CachePage(store, ttl, listContributions))
-        g.GET("/contributions/:id", cache.CachePage(store, ttl, getContribution))
-        // g.GET("/contributions/:id/contributions", cache.CachePage(store, ttl, getContributionContributions))
-}</span>
-
-// List contributions.
-//
-//        @Summary                List contributions
-//        @Description        Lists the contributions in the database.
-//        @Tags                        contributions
-//        @Produce                json
-//        @Success                200                {object}        interface{}
-//        @Failure                500                {object}        vo.ErrorVO
-//        @Router                        /contributions [get]
-func listContributions(c *gin.Context) <span class="cov0" title="0">{
-        params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-
-        span := tracing.BuildSpanWithParams(c.Request.Context(), "contributions", "list-contributions", params)
-        vos, err := data.QueryContributions(c.Request.Context(), params)
-        span.End()
-        logging.Logger.Info(fmt.Sprintf("vos=%v", vos))
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-
-// Get a contribution.
-//
-//        @Summary                Get a contribution
-//        @Description        Get the details of a contribution from the database.
-//        @Tags                        contributions
-//        @Produce                json
-//        @Param                        id                path                string                        true        "Contribution ID"
-//        @Success                204                {object}        interface{}
-//        @Failure                404                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /contributions/{id} [get]
-func getContribution(c *gin.Context) <span class="cov0" title="0">{
-        id := c.Param("id")
-
-        _, span := otel.Tracer("contributions").Start(c.Request.Context(), "get-contribution", oteltrace.WithAttributes(attribute.String("id", id)))
-        vo, err := data.GetContribution(c.Request.Context(), id)
-        span.End()
-        logging.Logger.Info(fmt.Sprintf("vo=%v", vo))
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">if vo == nil </span><span class="cov0" title="0">{
-                c.JSON(http.StatusNotFound, gin.H{})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vo); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-</pre>
-		
-		<pre class="file" id="file6" style="display: none">package server
-
-import (
-        "github.com/gin-contrib/cache/persistence"
-        "github.com/gin-gonic/gin"
-        "github.com/sweetrpg/catalog-api/cachettl"
-)
-
-func SetupHandlers(g *gin.Engine, cache persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
-        setupContributionHandlers(g, cache, ttls)
-        setupLicenseHandlers(g, cache, ttls)
-        setupPersonHandlers(g, cache, ttls)
-        setupPublisherHandlers(g, cache, ttls)
-        setupReviewHandlers(g, cache, ttls)
-        setupStudioHandlers(g, cache, ttls)
-        setupSystemHandlers(g, cache, ttls)
-        setupVolumeHandlers(g, cache, ttls)
-        setupStatusHandlers(g)
-}</span>
-</pre>
-		
-		<pre class="file" id="file7" style="display: none">package server
-
-import (
-        "net/http"
-
-        "github.com/getsentry/sentry-go"
-        "github.com/gin-contrib/cache"
-        "github.com/gin-contrib/cache/persistence"
-        "github.com/gin-gonic/gin"
-        "github.com/google/jsonapi"
-        "github.com/sweetrpg/api-core.go/tracing"
-        apiutil "github.com/sweetrpg/api-core.go/util"
-        "github.com/sweetrpg/catalog-api/cachettl"
-        "github.com/sweetrpg/catalog-data.go/data"
-        "github.com/sweetrpg/common.go/logging"
-        "go.mongodb.org/mongo-driver/bson/primitive"
-        "go.opentelemetry.io/otel"
-        "go.opentelemetry.io/otel/attribute"
-        oteltrace "go.opentelemetry.io/otel/trace"
-)
-
-func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
-        logging.Logger.Info("Setting up license endpoint handlers...")
-        ttl := ttls.TTL("licenses")
-        g.GET("/licenses", cache.CachePage(store, ttl, listLicenses))
-        g.GET("/licenses/:id", cache.CachePage(store, ttl, getLicense))
-        g.GET("/licenses/:id/volumes", cache.CachePage(store, ttl, getLicenseVolumes))
-}</span>
-
-// List licenses.
-//
-//        @Summary                List licenses
-//        @Description        Lists the licenses in the database.
-//        @Tags                        licenses
-//        @Produce                json
-//        @Success                200                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /licenses [get]
-func listLicenses(c *gin.Context) <span class="cov0" title="0">{
-        params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-
-        span := tracing.BuildSpanWithParams(c.Request.Context(), "licenses", "list-licenses", params)
-        vos, err := data.QueryLicenses(c.Request.Context(), params)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-
-// Get license volumes.
-//
-//        @Summary                Get license volumes
-//        @Description        Gets all the volumes associated with a particular license
-//        @Tags                        licenses
-//        @Produce                json
-//        @Param                        id                path                string                        true        "License ID"
-//        @Success                204                {object}        interface{}
-//        @Failure                404                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /licenses/{id}/volumes [get]
-func getLicenseVolumes(c *gin.Context) <span class="cov0" title="0">{
-        id, err := primitive.ObjectIDFromHex(c.Param("id"))
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-
-        inOp := "$in"
-        params.Filter = []apiutil.Filter{{
-                Field:     "license_ids",
-                Operation: &amp;inOp,
-                Value:     []string{id.Hex()},
-        }}
-
-        span := tracing.BuildSpanWithParams(c.Request.Context(), "licenses", "list-license-volumes", params)
-        vos, err := data.QueryVolumes(c.Request.Context(), params)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-
-// Get a license.
-//
-//        @Summary                Get a license
-//        @Description        Get the details of a license from the database.
-//        @Tags                        licenses
-//        @Produce                json
-//        @Param                        id                path                string                        true        "License ID"
-//        @Success                204                {object}        interface{}
-//        @Failure                404                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /licenses/{id} [get]
-func getLicense(c *gin.Context) <span class="cov0" title="0">{
-        id := c.Param("id")
-
-        _, span := otel.Tracer("licenses").Start(c.Request.Context(), "get-license", oteltrace.WithAttributes(attribute.String("id", id)))
-        vo, err := data.GetLicense(c.Request.Context(), id)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">if vo == nil </span><span class="cov0" title="0">{
-                c.JSON(http.StatusNotFound, gin.H{})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vo); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-</pre>
-		
-		<pre class="file" id="file8" style="display: none">package server
-
-import (
-        "net/http"
-
-        "github.com/getsentry/sentry-go"
-        "github.com/gin-contrib/cache"
-        "github.com/gin-contrib/cache/persistence"
-        "github.com/gin-gonic/gin"
-        "github.com/google/jsonapi"
-        "github.com/sweetrpg/api-core.go/tracing"
-        apiutil "github.com/sweetrpg/api-core.go/util"
-        "github.com/sweetrpg/catalog-api/cachettl"
-        "github.com/sweetrpg/catalog-data.go/data"
-        "github.com/sweetrpg/common.go/logging"
-        "go.opentelemetry.io/otel"
-        "go.opentelemetry.io/otel/attribute"
-        oteltrace "go.opentelemetry.io/otel/trace"
-)
-
-func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
-        logging.Logger.Info("Setting up person endpoint handlers...")
-        ttl := ttls.TTL("persons")
-        g.GET("/persons", cache.CachePage(store, ttl, listPersons))
-        g.GET("/persons/:id", cache.CachePage(store, ttl, getPerson))
-        // g.GET("/persons/:id/persons", cache.CachePage(store, ttl, getPersonPersons))
-}</span>
-
-// List persons.
-//
-//        @Summary                List persons
-//        @Description        Lists the persons in the database.
-//        @Tags                        persons
-//        @Produce                json
-//        @Success                200                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /persons [get]
-func listPersons(c *gin.Context) <span class="cov0" title="0">{
-        params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-
-        span := tracing.BuildSpanWithParams(c.Request.Context(), "persons", "list-persons", params)
-        vos, err := data.QueryPersons(c.Request.Context(), params)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil </span><span class="cov0" title="0">{
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-
-// Get a person.
-//
-//        @Summary                Get a person
-//        @Description        Get the details of a person from the database.
-//        @Tags                        persons
-//        @Produce                json
-//        @Param                        id                path                string                        true        "Person ID"
-//        @Success                204                {object}        interface{}
-//        @Failure                404                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /persons/{id} [get]
-func getPerson(c *gin.Context) <span class="cov0" title="0">{
-        id := c.Param("id")
-
-        _, span := otel.Tracer("persons").Start(c.Request.Context(), "get-person", oteltrace.WithAttributes(attribute.String("id", id)))
-        vo, err := data.GetPerson(c.Request.Context(), id)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">if vo == nil </span><span class="cov0" title="0">{
-                c.JSON(http.StatusNotFound, gin.H{})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vo); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-</pre>
-		
-		<pre class="file" id="file9" style="display: none">package server
-
-import (
-        "net/http"
-
-        "github.com/getsentry/sentry-go"
-        "github.com/gin-contrib/cache"
-        "github.com/gin-contrib/cache/persistence"
-        "github.com/gin-gonic/gin"
-        "github.com/google/jsonapi"
-        "github.com/sweetrpg/api-core.go/tracing"
-        apiutil "github.com/sweetrpg/api-core.go/util"
-        "github.com/sweetrpg/catalog-api/cachettl"
-        "github.com/sweetrpg/catalog-data.go/data"
-        "github.com/sweetrpg/common.go/logging"
-        "go.opentelemetry.io/otel"
-        "go.opentelemetry.io/otel/attribute"
-        oteltrace "go.opentelemetry.io/otel/trace"
-)
-
-func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
-        logging.Logger.Info("Setting up publisher endpoint handlers...")
-        ttl := ttls.TTL("publishers")
-        g.GET("/publishers", cache.CachePage(store, ttl, listPublishers))
-        g.GET("/publishers/:id", cache.CachePage(store, ttl, getPublisher))
-        // g.GET("/publishers/:id/publishers", cache.CachePage(store, ttl, getPublisherPublishers))
-}</span>
-
-// List publishers.
-//
-//        @Summary                List publishers
-//        @Description        Lists the publishers in the database.
-//        @Tags                        publishers
-//        @Produce                json
-//        @Success                200                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /publishers [get]
-func listPublishers(c *gin.Context) <span class="cov0" title="0">{
-        params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-
-        span := tracing.BuildSpanWithParams(c.Request.Context(), "publishers", "list-publishers", params)
-        vos, err := data.QueryPublishers(c.Request.Context(), params)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-
-// Get a publisher.
-//
-//        @Summary                Get a publisher
-//        @Description        Get the details of a publisher from the database.
-//        @Tags                        publishers
-//        @Produce                json
-//        @Param                        id                path                string                        true        "Publisher ID"
-//        @Success                204                {object}        interface{}
-//        @Failure                404                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /publishers/{id} [get]
-func getPublisher(c *gin.Context) <span class="cov0" title="0">{
-        id := c.Param("id")
-
-        _, span := otel.Tracer("publishers").Start(c.Request.Context(), "get-publisher", oteltrace.WithAttributes(attribute.String("id", id)))
-        vo, err := data.GetPublisher(c.Request.Context(), id)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">if vo == nil </span><span class="cov0" title="0">{
-                c.JSON(http.StatusNotFound, gin.H{})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vo); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-</pre>
-		
-		<pre class="file" id="file10" style="display: none">package server
-
-import (
-        "net/http"
-
-        "github.com/getsentry/sentry-go"
-        "github.com/gin-contrib/cache"
-        "github.com/gin-contrib/cache/persistence"
-        "github.com/gin-gonic/gin"
-        "github.com/google/jsonapi"
-        "github.com/sweetrpg/api-core.go/tracing"
-        apiutil "github.com/sweetrpg/api-core.go/util"
-        "github.com/sweetrpg/catalog-api/cachettl"
-        "github.com/sweetrpg/catalog-data.go/data"
-        "github.com/sweetrpg/common.go/logging"
-        "go.opentelemetry.io/otel"
-        "go.opentelemetry.io/otel/attribute"
-        oteltrace "go.opentelemetry.io/otel/trace"
-)
-
-func setupReviewHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
-        logging.Logger.Info("Setting up review endpoint handlers...")
-        ttl := ttls.TTL("reviews")
-        g.GET("/reviews", cache.CachePage(store, ttl, listReviews))
-        g.GET("/reviews/:id", cache.CachePage(store, ttl, getReview))
-        // g.GET("/reviews/:id/reviews", cache.CachePage(store, ttl, getReviewReviews))
-}</span>
-
-// List reviews.
-//
-//        @Summary                List reviews
-//        @Description        Lists the reviews in the database.
-//        @Tags                        reviews
-//        @Produce                json
-//        @Success                200                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /reviews [get]
-func listReviews(c *gin.Context) <span class="cov0" title="0">{
-        params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-
-        span := tracing.BuildSpanWithParams(c.Request.Context(), "reviews", "list-reviews", params)
-        vos, err := data.QueryReviews(c.Request.Context(), params)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-
-// Get a review.
-//
-//        @Summary                Get a review
-//        @Description        Get the details of a review from the database.
-//        @Tags                        reviews
-//        @Produce                json
-//        @Param                        id                path                string                        true        "Review ID"
-//        @Success                204                {object}        interface{}
-//        @Failure                404                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /reviews/{id} [get]
-func getReview(c *gin.Context) <span class="cov0" title="0">{
-        id := c.Param("id")
-
-        _, span := otel.Tracer("reviews").Start(c.Request.Context(), "get-review", oteltrace.WithAttributes(attribute.String("id", id)))
-        vo, err := data.GetReview(c.Request.Context(), id)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">if vo == nil </span><span class="cov0" title="0">{
-                c.JSON(http.StatusNotFound, gin.H{})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vo); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-</pre>
-		
-		<pre class="file" id="file11" style="display: none">package server
-
-import (
-        "context"
-        "net/http"
-        "time"
-
-        "github.com/gin-gonic/gin"
-        apicores "github.com/sweetrpg/api-core.go/server"
-        _ "github.com/sweetrpg/api-core.go/vo"
-        "github.com/sweetrpg/catalog-api/readiness"
-        "github.com/sweetrpg/common.go/logging"
-)
-
-// cacheReadyTimeout bounds the live Redis ping in healthHandler, matching api-core.go's
-// healthCheckTimeout for the equivalent Mongo checks.
-const cacheReadyTimeout = 5 * time.Second
-
-func setupStatusHandlers(g *gin.Engine) <span class="cov0" title="0">{
-        logging.Logger.Info("Setting up status endpoint handlers...")
-
-        </span><span class="cov0" title="0">{
-                a := g.Group("/status")
-                // TODO: a.Use()
-                a.GET("/health", healthHandler)
-        }</span>
-
-        <span class="cov0" title="0">g.GET("/status/ping", pingHandler)</span>
-}
-
-// Health check.
-//
-//         Do a health check of the application and its dependencies and return the results
-//                @Summary                Health check
-//                @Description        Health check
-//                @Tags                        status
-//                @Produce                json
-//                @Success                200                {object}        vo.HealthResponseVO
-//                @Router                        /status/health [get]
-func healthHandler(c *gin.Context) <span class="cov0" title="0">{
-        // authHeader := c.Request.Header["Authorization"]
-        // if authHeader == nil || len(authHeader) != 1 {
-        //         c.JSON(http.StatusUnauthorized, apicorev.ErrorVO{
-        //                 Error: apicorec.ErrorUnauthorized,
-        //         })
-        //         return
-        // }
-        // if authHeader[0] != os.Getenv(constants.HEALTH_TOKEN) {
-        //         c.JSON(http.StatusForbidden, apicorev.ErrorVO{
-        //                 Error: apicorec.ErrorForbidden,
-        //         })
-        //         return
-        // }
-
-        // Run the cache check concurrently with api-core.go's Mongo checks rather than after them -
-        // the k8s readinessProbe here has its own 10s timeout, matching api-core.go's Mongo budget
-        // alone; stacking the cache ping on top sequentially could push total handler time past
-        // that window and fail the probe on latency even when every individual check would have
-        // succeeded.
-        cacheCtx, cacheCancel := context.WithTimeout(c.Request.Context(), cacheReadyTimeout)
-        defer cacheCancel()
-        cacheReadyCh := make(chan bool, 1)
-        go func() </span><span class="cov0" title="0">{ cacheReadyCh &lt;- readiness.CacheReady(cacheCtx) }</span>()
-
-        <span class="cov0" title="0">resp := apicores.HealthHandler(c.Request.Context())
-
-        // Fold the cache backend's reachability into the same readiness signal Mongo already
-        // reports, so a configured-but-unreachable Redis surfaces as a failing readiness probe
-        // (Degraded in ArgoCD) instead of a silent cache-miss-only degradation. Live-pinged on
-        // every call rather than trusting a boot-time snapshot, so a Redis outage that resolves
-        // lets readiness recover without a pod restart.
-        if !&lt;-cacheReadyCh </span><span class="cov0" title="0">{
-                resp.Messages = append(resp.Messages, "cache backend unreachable")
-                resp.Errors++
-        }</span>
-
-        <span class="cov0" title="0">status := http.StatusOK
-        if resp.Errors &gt; 0 </span><span class="cov0" title="0">{
-                status = http.StatusServiceUnavailable
-        }</span>
-        <span class="cov0" title="0">c.JSON(status, resp)</span>
-}
-
-// Ping the application.
-//
-//         A shallow health check to see if basic responses are working. Returns the date and hostname of the server handling the request.
-//                @Summary                Ping
-//                @Description        Ping
-//                @Tags                        status
-//                @Produce                json
-//                @Success                200                {object}        vo.PingResponseVO
-//                @Router                        /status/ping [get]
-func pingHandler(c *gin.Context) <span class="cov0" title="0">{
-        c.JSON(http.StatusOK, apicores.PingHandler())
-}</span>
-</pre>
-		
-		<pre class="file" id="file12" style="display: none">package server
-
-import (
-        "net/http"
-
-        "github.com/getsentry/sentry-go"
-        "github.com/gin-contrib/cache"
-        "github.com/gin-contrib/cache/persistence"
-        "github.com/gin-gonic/gin"
-        "github.com/google/jsonapi"
-        "github.com/sweetrpg/api-core.go/tracing"
-        apiutil "github.com/sweetrpg/api-core.go/util"
-        "github.com/sweetrpg/catalog-api/cachettl"
-        "github.com/sweetrpg/catalog-data.go/data"
-        "github.com/sweetrpg/common.go/logging"
-        "go.opentelemetry.io/otel"
-        "go.opentelemetry.io/otel/attribute"
-        oteltrace "go.opentelemetry.io/otel/trace"
-)
-
-func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
-        logging.Logger.Info("Setting up studio endpoint handlers...")
-        ttl := ttls.TTL("studios")
-        g.GET("/studios", cache.CachePage(store, ttl, listStudios))
-        g.GET("/studios/:id", cache.CachePage(store, ttl, getStudio))
-        // g.GET("/studios/:id/studios", cache.CachePage(store, ttl, getStudioStudios))
-}</span>
-
-// List studios.
-//
-//        @Summary                List studios
-//        @Description        Lists the studios in the database.
-//        @Tags                        studios
-//        @Produce                json
-//        @Success                200                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /studios [get]
-func listStudios(c *gin.Context) <span class="cov0" title="0">{
-        params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-
-        span := tracing.BuildSpanWithParams(c.Request.Context(), "studios", "list-studios", params)
-        vos, err := data.QueryStudios(c.Request.Context(), params)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-
-// Get a studio.
-//
-//        @Summary                Get a studio
-//        @Description        Get the details of a studio from the database.
-//        @Tags                        studios
-//        @Produce                json
-//        @Param                        id                path                string                        true        "Studio ID"
-//        @Success                204                {object}        interface{}
-//        @Failure                404                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /studios/{id} [get]
-func getStudio(c *gin.Context) <span class="cov0" title="0">{
-        id := c.Param("id")
-
-        _, span := otel.Tracer("studios").Start(c.Request.Context(), "get-studio", oteltrace.WithAttributes(attribute.String("id", id)))
-        vo, err := data.GetStudio(c.Request.Context(), id)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">if vo == nil </span><span class="cov0" title="0">{
-                c.JSON(http.StatusNotFound, gin.H{})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vo); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-</pre>
-		
-		<pre class="file" id="file13" style="display: none">package server
-
-import (
-        "net/http"
-
-        "github.com/getsentry/sentry-go"
-        "github.com/gin-contrib/cache"
-        "github.com/gin-contrib/cache/persistence"
-        "github.com/gin-gonic/gin"
-        "github.com/google/jsonapi"
-        "github.com/sweetrpg/api-core.go/tracing"
-        apiutil "github.com/sweetrpg/api-core.go/util"
-        "github.com/sweetrpg/catalog-api/cachettl"
-        "github.com/sweetrpg/catalog-data.go/data"
-        "github.com/sweetrpg/common.go/logging"
-        "go.opentelemetry.io/otel"
-        "go.opentelemetry.io/otel/attribute"
-        oteltrace "go.opentelemetry.io/otel/trace"
-)
-
-func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
-        logging.Logger.Info("Setting up system endpoint handlers...")
-        ttl := ttls.TTL("systems")
-        g.GET("/systems", cache.CachePage(store, ttl, listSystems))
-        g.GET("/systems/:id", cache.CachePage(store, ttl, getSystem))
-        // g.GET("/systems/:id/systems", cache.CachePage(store, ttl, getSystemSystems))
-}</span>
-
-// List systems.
-//
-//        @Summary                List systems
-//        @Description        Lists the systems in the database.
-//        @Tags                        systems
-//        @Produce                json
-//        @Success                200                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /systems [get]
-func listSystems(c *gin.Context) <span class="cov0" title="0">{
-        params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-
-        span := tracing.BuildSpanWithParams(c.Request.Context(), "systems", "list-systems", params)
-        vos, err := data.QuerySystems(c.Request.Context(), params)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-
-// Get a system.
-//
-//        @Summary                Get a system
-//        @Description        Get the details of a system from the database.
-//        @Tags                        systems
-//        @Produce                json
-//        @Param                        id                path                string                        true        "System ID"
-//        @Success                204                {object}        interface{}
-//        @Failure                404                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /systems/{id} [get]
-func getSystem(c *gin.Context) <span class="cov0" title="0">{
-        id := c.Param("id")
-
-        _, span := otel.Tracer("systems").Start(c.Request.Context(), "get-system", oteltrace.WithAttributes(attribute.String("id", id)))
-        vo, err := data.GetSystem(c.Request.Context(), id)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">if vo == nil </span><span class="cov0" title="0">{
-                c.JSON(http.StatusNotFound, gin.H{})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vo); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-</pre>
-		
-		<pre class="file" id="file14" style="display: none">package server
-
-import (
-        "net/http"
-
-        "github.com/getsentry/sentry-go"
-        "github.com/gin-contrib/cache"
-        "github.com/gin-contrib/cache/persistence"
-        "github.com/gin-gonic/gin"
-        "github.com/google/jsonapi"
-        "github.com/sweetrpg/api-core.go/tracing"
-        apiutil "github.com/sweetrpg/api-core.go/util"
-        "github.com/sweetrpg/catalog-api/cachettl"
-        "github.com/sweetrpg/catalog-data.go/data"
-        "github.com/sweetrpg/common.go/logging"
-        "go.opentelemetry.io/otel"
-        "go.opentelemetry.io/otel/attribute"
-        oteltrace "go.opentelemetry.io/otel/trace"
-)
-
-func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) <span class="cov0" title="0">{
-        logging.Logger.Info("Setting up volume endpoint handlers...")
-        ttl := ttls.TTL("volumes")
-        g.GET("/volumes", cache.CachePage(store, ttl, listVolumes))
-        g.GET("/volumes/:id", cache.CachePage(store, ttl, getVolume))
-        // g.GET("/volumes/:id/volumes", cache.CachePage(store, ttl, getVolumeVolumes))
-}</span>
-
-// List volumes.
-//
-//        @Summary                List volumes
-//        @Description        Lists the volumes in the database.
-//        @Tags                        volumes
-//        @Produce                json
-//        @Success                200                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /volumes [get]
-func listVolumes(c *gin.Context) <span class="cov0" title="0">{
-        params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-        logging.Logger.Debug("Listing volumes with params", "params", params)
-
-        span := tracing.BuildSpanWithParams(c.Request.Context(), "volumes", "list-volumes", params)
-        vos, err := data.QueryVolumes(c.Request.Context(), params)
-        logging.Logger.Debug("Retrieved volumes", "vos", vos)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
-}
-
-// Get a volume.
-//
-//        @Summary                Get a volume
-//        @Description        Get the details of a volume from the database.
-//        @Tags                        volumes
-//        @Produce                json
-//        @Param                        id                path                string                        true        "Volume ID"
-//        @Success                204                {object}        interface{}
-//        @Failure                404                {object}        interface{}
-//        @Failure                500                {object}        interface{}
-//        @Router                        /volumes/{id} [get]
-func getVolume(c *gin.Context) <span class="cov0" title="0">{
-        id := c.Param("id")
-
-        _, span := otel.Tracer("volumes").Start(c.Request.Context(), "get-volume", oteltrace.WithAttributes(attribute.String("id", id)))
-        vo, err := data.GetVolume(c.Request.Context(), id)
-        span.End()
-        if err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-                return
-        }</span>
-
-        <span class="cov0" title="0">if vo == nil </span><span class="cov0" title="0">{
-                c.JSON(http.StatusNotFound, gin.H{})
-                return
-        }</span>
-
-        <span class="cov0" title="0">c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-        if err := jsonapi.MarshalPayload(c.Writer, vo); err != nil </span><span class="cov0" title="0">{
-                sentry.CaptureException(err)
-                c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        }</span>
 }
 </pre>
 		
