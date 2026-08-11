@@ -108,7 +108,7 @@ func acceptVolumeProposedChange(c *gin.Context) {
 	appliedAny := false
 
 	for field, change := range proposal.Diff {
-		if !(acceptAll || acceptSet[field]) {
+		if !acceptAll && !acceptSet[field] {
 			change.Status = proposedchanges.StatusRejected
 			proposal.Diff[field] = change
 			rejected = append(rejected, field)
