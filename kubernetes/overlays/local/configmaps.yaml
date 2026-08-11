@@ -20,10 +20,9 @@ data:
   SENTRY_RELEASE: "1"
   REDIS_HOST: redis.sweetrpg-catalog.svc.cluster.local
   REDIS_PORT: "6379"
-  # Traefik strips /api/catalog/0 (or /1) before the request reaches this app (see
+  # Traefik strips /api/0/catalog (or /1) before the request reaches this app (see
   # middlewares.yaml) - every self-referencing link this app generates needs the full prefix
-  # added back, not just the /0 dev overlay uses (this overlay shares one host with every other
-  # app, unlike dev's dedicated api.catalog.dev.sweetrpg.com).
-  INGRESS_BASE_PATH: /api/catalog/0
+  # added back.
+  INGRESS_BASE_PATH: /api/0/catalog
   INGRESS_HOST: sweetrpg.local
   INGRESS_SCHEMES: https
