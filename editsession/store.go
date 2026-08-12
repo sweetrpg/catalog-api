@@ -1,8 +1,9 @@
 // Package editsession reads/deletes the shared, session-backed volume edit state that
 // catalog-web writes to Redis (REDIS_DB=2 on catalog-api's own Redis instance - see
-// docs/frontend-conventions.md's edit-session schema in sweetrpg/platform). catalog-api never
-// creates or updates a session itself, only reads it at finalize time and deletes it once
-// finalize completes.
+// docs/frontend-conventions.md's edit-session schema in sweetrpg/platform). catalog-api reads
+// a session at finalize time and deletes it once finalize completes; the one exception to
+// "catalog-api never creates a session" is pull-back (task 5.4), which recreates a pending
+// proposal's diff as a fresh session so the submitter can resume editing it.
 package editsession
 
 import (
@@ -63,6 +64,25 @@ func (s *Store) Get(ctx context.Context, userID, recordType string) (*Session, e
 		return nil, fmt.Errorf("editsession: unmarshal %s: %w", Key(userID, recordType), err)
 	}
 	return &session, nil
+}
+
+// Set writes userID's session for recordType, overwriting any existing one. Used only by
+// pull-back (task 5.4) - every other session write comes from catalog-web directly.
+func (s *Store) Set(ctx context.Context, userID, recordType string, session Session) error {
+	conn, err := s.pool.GetContext(ctx)
+	if err != nil {
+		return fmt.Errorf("editsession: get connection: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	raw, err := json.Marshal(session)
+	if err != nil {
+		return fmt.Errorf("editsession: marshal session for %s: %w", Key(userID, recordType), err)
+	}
+	if _, err := conn.Do("SET", Key(userID, recordType), raw); err != nil {
+		return fmt.Errorf("editsession: set %s: %w", Key(userID, recordType), err)
+	}
+	return nil
 }
 
 // Delete removes a user's in-flight session for recordType. A missing session is not an error.

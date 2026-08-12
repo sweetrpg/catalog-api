@@ -43,6 +43,10 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.POST("/volumes/:id/proposed-changes/:proposalId/reject", reviewRoles, func(c *gin.Context) {
 		rejectVolumeProposedChange(c, assetsClient)
 	})
+	g.POST("/volumes/:id/proposed-changes/:proposalId/retract", writeRoles, retractVolumeProposedChange)
+	g.POST("/volumes/:id/proposed-changes/:proposalId/pull-back", writeRoles, func(c *gin.Context) {
+		pullBackVolumeProposedChange(c, editSessions)
+	})
 }
 
 // List volumes.

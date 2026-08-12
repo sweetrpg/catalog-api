@@ -14,11 +14,16 @@ import (
 const CollectionName = "proposed_changes"
 
 // Field-level and overall proposal statuses.
+//
+// StatusRetracted is submitter-initiated (the submitter withdraws their own pending proposal,
+// see task 5.3) and distinct from StatusRejected (a reviewer's outcome) - both are terminal and
+// non-pending, but who initiated it and why differ, which matters for reporting/audit.
 const (
 	StatusPending           = "pending"
 	StatusAccepted          = "accepted"
 	StatusRejected          = "rejected"
 	StatusPartiallyAccepted = "partially_accepted"
+	StatusRetracted         = "retracted"
 )
 
 // FieldChange is one changed field's old (live-at-submission-time) and proposed value, plus its

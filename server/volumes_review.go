@@ -10,6 +10,7 @@ import (
 	apiv "github.com/sweetrpg/api-core.go/vo"
 	"github.com/sweetrpg/catalog-api/assets"
 	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
@@ -234,6 +235,128 @@ func rejectVolumeProposedChange(c *gin.Context, assetsClient *assets.Client) {
 		Status:     proposal.Status,
 		Rejected:   rejected,
 	})
+}
+
+// Retract a pending proposed change.
+//
+//	@Summary		Retract a proposed volume change
+//	@Description	submitter only, and only their own submissions.
+//	@Tags			volumes
+//	@Produce		json
+//	@Param			id			path		string	true	"Volume ID"
+//	@Param			proposalId	path		string	true	"Proposed change ID"
+//	@Success		200			{object}	reviewProposalResponse
+//	@Failure		403			{object}	apiv.ErrorVO
+//	@Failure		404			{object}	apiv.ErrorVO
+//	@Failure		409			{object}	apiv.ErrorVO
+//	@Failure		500			{object}	apiv.ErrorVO
+//	@Router			/volumes/{id}/proposed-changes/{proposalId}/retract [post]
+func retractVolumeProposedChange(c *gin.Context) {
+	volumeID := c.Param("id")
+	proposalID := c.Param("proposalId")
+
+	proposal, ok := loadPendingProposal(c, volumeID, proposalID)
+	if !ok {
+		return
+	}
+	if proposal.SubmittedBy != authz.Subject(c) {
+		c.JSON(http.StatusForbidden, apiv.ErrorVO{Error: "forbidden", Message: "You can only retract your own submissions"})
+		return
+	}
+
+	// Not finishReview - retracting isn't a reviewer's decision (no ReviewedBy/DeriveStatus),
+	// it's the submitter withdrawing their own pending proposal.
+	proposal.Status = proposedchanges.StatusRetracted
+	if err := proposedchanges.Update(c.Request.Context(), proposal); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "retract_failed", Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, reviewProposalResponse{ProposalID: proposalID, Status: proposal.Status})
+}
+
+// pullBackResponse is the response for a successful pull-back.
+type pullBackResponse struct {
+	RecordID string `json:"recordId"`
+	Status   string `json:"status"`
+}
+
+// Pull a pending proposed change back into a fresh edit session, retracting it in the process.
+//
+//	@Summary		Pull a proposed volume change back into an edit session
+//	@Description	submitter only, and only their own submissions. Fails with 409 if the caller already has an in-flight session for this record type - same conflict as starting any other session.
+//	@Tags			volumes
+//	@Produce		json
+//	@Param			id			path		string	true	"Volume ID"
+//	@Param			proposalId	path		string	true	"Proposed change ID"
+//	@Success		200			{object}	pullBackResponse
+//	@Failure		403			{object}	apiv.ErrorVO
+//	@Failure		404			{object}	apiv.ErrorVO
+//	@Failure		409			{object}	apiv.ErrorVO
+//	@Failure		500			{object}	apiv.ErrorVO
+//	@Router			/volumes/{id}/proposed-changes/{proposalId}/pull-back [post]
+func pullBackVolumeProposedChange(c *gin.Context, editSessions *editsession.Store) {
+	volumeID := c.Param("id")
+	proposalID := c.Param("proposalId")
+	userID := authz.Subject(c)
+
+	proposal, ok := loadPendingProposal(c, volumeID, proposalID)
+	if !ok {
+		return
+	}
+	if proposal.SubmittedBy != userID {
+		c.JSON(http.StatusForbidden, apiv.ErrorVO{Error: "forbidden", Message: "You can only pull back your own submissions"})
+		return
+	}
+
+	existingSession, err := editSessions.Get(c.Request.Context(), userID, recordTypeVolume)
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "session_lookup_failed", Message: err.Error()})
+		return
+	}
+	if existingSession != nil {
+		c.JSON(http.StatusConflict, apiv.ErrorVO{
+			Error:   "session_exists",
+			Message: "You already have an in-flight edit session for this record type - finish or discard it before pulling back a submission",
+		})
+		return
+	}
+
+	fields := make(map[string]any, len(proposal.Diff))
+	for field, change := range proposal.Diff {
+		fields[field] = change.New
+	}
+	now := time.Now()
+	session := editsession.Session{
+		RecordID:           proposal.RecordID,
+		Fields:             fields,
+		StagedCoverAssetId: proposal.StagedCoverAssetId,
+		SampleAssetIds:     proposal.StagedSampleAssetIds,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
+	if err := editSessions.Set(c.Request.Context(), userID, recordTypeVolume, session); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "session_create_failed", Message: err.Error()})
+		return
+	}
+
+	proposal.Status = proposedchanges.StatusRetracted
+	if err := proposedchanges.Update(c.Request.Context(), proposal); err != nil {
+		// Compensate: the session was created but the source proposal couldn't be retracted -
+		// "creates the session and retracts the source, or does neither" (task 5.4). Roll the
+		// session back out rather than leaving one without the other.
+		if delErr := editSessions.Delete(c.Request.Context(), userID, recordTypeVolume); delErr != nil {
+			sentry.CaptureException(delErr)
+		}
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "pull_back_failed", Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, pullBackResponse{RecordID: proposal.RecordID, Status: proposal.Status})
 }
 
 // loadPendingProposal fetches a proposal, verifying it belongs to volumeID and is still

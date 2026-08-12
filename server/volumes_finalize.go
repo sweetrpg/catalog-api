@@ -12,6 +12,7 @@ import (
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-api/proposedchanges"
+	"github.com/sweetrpg/catalog-api/submissioncap"
 	"github.com/sweetrpg/catalog-data.go/data"
 )
 
@@ -107,8 +108,31 @@ func finalizeVolumeSession(c *gin.Context, assetsClient *assets.Client, editSess
 		return
 	}
 
-	// Submitter: the staged cover/samples ride along on the proposal itself rather than
-	// through the generic Diff map (which can't represent them yet, same limitation as
+	// Submitter: check the unapproved-submission cap before creating anything - a rejected
+	// finalize must not touch the session (existing.RecordID stays theirs to retry) or count
+	// against the cap itself.
+	capValue, err := submissioncap.CapFor(c.Request.Context(), userID)
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "cap_lookup_failed", Message: err.Error()})
+		return
+	}
+	pendingCount, err := proposedchanges.CountPendingBySubmitter(c.Request.Context(), userID)
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "cap_lookup_failed", Message: err.Error()})
+		return
+	}
+	if pendingCount >= capValue {
+		c.JSON(http.StatusBadRequest, apiv.ErrorVO{
+			Error:   "submission_cap_reached",
+			Message: fmt.Sprintf("You have %d pending submissions, at your cap of %d - retract one before finalizing another", pendingCount, capValue),
+		})
+		return
+	}
+
+	// The staged cover/samples ride along on the proposal itself rather than through the
+	// generic Diff map (which can't represent them yet, same limitation as
 	// req.hasEditorOnlyFields' other cases) - see proposedchanges.ProposedChange's doc comment.
 	diff := patchRequestDiff(req)
 	for field, change := range diff {

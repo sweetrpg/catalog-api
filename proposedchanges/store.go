@@ -76,3 +76,18 @@ func Update(ctx context.Context, p *ProposedChange) error {
 	}
 	return nil
 }
+
+// CountPendingBySubmitter counts submittedBy's pending proposals across every record - the
+// unapproved-submission-cap check at finalize time (task 5.1) is per-user, not per-record.
+func CountPendingBySubmitter(ctx context.Context, submittedBy string) (int, error) {
+	filter := bson.D{
+		{Key: "submitted_by", Value: submittedBy},
+		{Key: "status", Value: StatusPending},
+	}
+
+	count, err := database.Db.Collection(CollectionName).CountDocuments(ctx, filter)
+	if err != nil {
+		return 0, fmt.Errorf("proposedchanges: count pending by submitter: %w", err)
+	}
+	return int(count), nil
+}

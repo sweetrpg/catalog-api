@@ -19,5 +19,6 @@ func SetupHandlers(g *gin.Engine, cache persistence.CacheStore, ttls cachettl.Co
 	setupSystemHandlers(g, cache, ttls)
 	setupVolumeHandlers(g, cache, ttls, authzClient, assetsClient, editSessions)
 	setupVocabularyHandlers(g, authzClient)
+	setupSubmissionCapHandlers(g, authzClient)
 	setupStatusHandlers(g)
 }

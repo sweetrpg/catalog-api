@@ -72,9 +72,11 @@ func newTestDepsWithAssets(t *testing.T, roles []string, assetsURL string) testD
 	t.Cleanup(authAPI.Close)
 
 	redisPool := newTestRedisPool(t)
+	authzClient := authz.NewClient(authAPI.URL)
 
 	r := gin.New()
-	setupVolumeHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authz.NewClient(authAPI.URL), assets.NewClient(assetsURL), editsession.NewStore(redisPool))
+	setupVolumeHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authzClient, assets.NewClient(assetsURL), editsession.NewStore(redisPool))
+	setupSubmissionCapHandlers(r, authzClient)
 	return testDeps{Router: r, AssetsURL: assetsURL, RedisPool: redisPool}
 }
 
@@ -222,12 +224,19 @@ func seedPerson(t *testing.T, id, name string) {
 
 func doPatch(t *testing.T, r *gin.Engine, path string, body any) *httptest.ResponseRecorder {
 	t.Helper()
+	return doRequest(t, r, http.MethodPatch, path, body)
+}
+
+// doRequest is the general form doPatch/doPost delegate to - kept for methods (PUT, ...)
+// neither of them covers.
+func doRequest(t *testing.T, r *gin.Engine, method, path string, body any) *httptest.ResponseRecorder {
+	t.Helper()
 
 	buf, err := json.Marshal(body)
 	if err != nil {
 		t.Fatalf("marshal request body: %v", err)
 	}
-	req := httptest.NewRequest(http.MethodPatch, path, bytes.NewReader(buf))
+	req := httptest.NewRequest(method, path, bytes.NewReader(buf))
 	req.Header.Set("Authorization", "Bearer some-token")
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
