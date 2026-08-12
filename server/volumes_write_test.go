@@ -14,6 +14,7 @@ import (
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-data.go/data"
+	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
 	"github.com/sweetrpg/common.go/logging"
 	"github.com/sweetrpg/mongodb.go/constants"
@@ -58,6 +59,23 @@ func seedVolume(t *testing.T, title string) *vo.VolumeVO {
 		t.Fatalf("GetVolume() error = %v", err)
 	}
 	return got
+}
+
+// seedPublisher/seedStudio insert a minimal Publisher/Studio document directly - catalog-data.go
+// has no Add function for either (read-only entities, per AGENTS.md), so tests that need one to
+// exist go straight through the mongodb.go database package instead of the data package.
+func seedPublisher(t *testing.T, id, name string) {
+	t.Helper()
+	if _, err := database.Insert("publishers", catalogmodels.Publisher{ID: id, Name: name}); err != nil {
+		t.Fatalf("seed publisher: %v", err)
+	}
+}
+
+func seedStudio(t *testing.T, id, name string) {
+	t.Helper()
+	if _, err := database.Insert("studios", catalogmodels.Studio{ID: id, Name: name}); err != nil {
+		t.Fatalf("seed studio: %v", err)
+	}
 }
 
 func doPatch(t *testing.T, r *gin.Engine, path string, body any) *httptest.ResponseRecorder {
@@ -107,6 +125,82 @@ func TestPatchVolumeEditorAppliesDirectly(t *testing.T) {
 	}
 	if got.Title != "Edited By Editor" {
 		t.Errorf("live Title = %q, want %q", got.Title, "Edited By Editor")
+	}
+}
+
+func TestPatchVolumeEditorAppliesProperties(t *testing.T) {
+	seed := seedVolume(t, "Original Title")
+	r := newTestRouter(t, []string{authz.RoleEditor})
+
+	rec := doPatch(t, r, "/volumes/"+seed.ID, map[string]any{
+		"properties": []map[string]string{
+			{"name": "ISBN", "kind": "text", "value": "978-0-000-00000-0"},
+		},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	got, err := data.GetVolume(t.Context(), seed.ID)
+	if err != nil {
+		t.Fatalf("GetVolume() error = %v", err)
+	}
+	if len(got.Properties) != 1 || got.Properties[0].Name != "ISBN" || got.Properties[0].Value != "978-0-000-00000-0" {
+		t.Errorf("Properties = %+v, want one ISBN property", got.Properties)
+	}
+}
+
+func TestPatchVolumeEditorAppliesPublisherAndStudioIDs(t *testing.T) {
+	seedPublisher(t, "pub-1", "Test Publisher")
+	seedStudio(t, "studio-1", "Test Studio")
+	seed := seedVolume(t, "Original Title")
+	r := newTestRouter(t, []string{authz.RoleEditor})
+
+	rec := doPatch(t, r, "/volumes/"+seed.ID, map[string]any{
+		"publisherIds": []string{"pub-1"},
+		"studioIds":    []string{"studio-1"},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	got, err := data.GetVolume(t.Context(), seed.ID)
+	if err != nil {
+		t.Fatalf("GetVolume() error = %v", err)
+	}
+	if len(got.Publishers) != 1 || got.Publishers[0].ID != "pub-1" {
+		t.Errorf("Publishers = %+v, want [pub-1]", got.Publishers)
+	}
+	if len(got.Studios) != 1 || got.Studios[0].ID != "studio-1" {
+		t.Errorf("Studios = %+v, want [studio-1]", got.Studios)
+	}
+}
+
+func TestPatchVolumeSubmitterCannotSetEditorOnlyFields(t *testing.T) {
+	seed := seedVolume(t, "Original Title")
+	r := newTestRouter(t, []string{authz.RoleSubmitter})
+
+	rec := doPatch(t, r, "/volumes/"+seed.ID, map[string]any{
+		"title":      "Should Be Rejected Entirely",
+		"properties": []map[string]string{{"name": "ISBN", "kind": "text", "value": "123"}},
+	})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+
+	got, err := data.GetVolume(t.Context(), seed.ID)
+	if err != nil {
+		t.Fatalf("GetVolume() error = %v", err)
+	}
+	if got.Title != "Original Title" {
+		t.Errorf("live Title = %q, want unchanged - the whole request should be rejected, not partially applied", got.Title)
+	}
+	pending, err := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
+	if err != nil {
+		t.Fatalf("ListPending() error = %v", err)
+	}
+	if len(pending) != 0 {
+		t.Errorf("ListPending() returned %d, want 0 - no proposal should be created either", len(pending))
 	}
 }
 
