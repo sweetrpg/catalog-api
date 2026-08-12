@@ -1,4 +1,12 @@
 
+## 0.10.0 - 2026-08-12
+
+### Added
+- Add associated-volumes endpoints for publishers, studios, persons
+- Add PATCH and proposed-change review endpoints for entities
+
+
+
 ## 0.9.0 - 2026-08-12
 
 ### Added
