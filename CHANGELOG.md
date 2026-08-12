@@ -1,4 +1,16 @@
 
+## 0.9.0 - 2026-08-12
+
+### Added
+- Add role-gated volume editing with submitter review workflow
+
+
+### Fixed
+- Simplify negated OR to De Morgan's form in acceptVolumeProposedChange
+- Correct INGRESS_BASE_PATH to match actual Ingress routes
+
+
+
 ## 0.8.0 - 2026-08-11
 
 ### Added
