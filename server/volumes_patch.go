@@ -22,14 +22,26 @@ type propertyRequest struct {
 	Value string `json:"value"`
 }
 
+// creditRequest is one desired (person, contribution type) credit. Credits is a full-replace
+// list, diffed against the volume's existing contributions in applyVolumePatch - same semantics
+// as PublisherIDs/StudioIDs.
+type creditRequest struct {
+	PersonID         string `json:"personId"`
+	ContributionType string `json:"contributionType"`
+}
+
 // patchVolumeRequest's fields are pointers so an absent field (nil) is distinguishable from an
 // explicit empty string/omitted array - only present fields are part of the edit/proposal.
 //
-// Properties/PublisherIDs/StudioIDs are editor/admin-only for now (see applyVolumePatch) - the
-// submitter proposal path's FieldChange.New is applied back via a `.(string)` type assertion
-// (volumes_review.go), which can't represent these shapes yet. A submitter request touching any
-// of them is rejected with a clear error rather than silently dropping the field - extending the
-// proposal review path to handle non-string field types is tracked separately, not done here.
+// Properties/PublisherIDs/StudioIDs/Credits are editor/admin-only for now (see
+// applyVolumePatch) - the submitter proposal path's FieldChange.New is applied back via a
+// `.(string)` type assertion (volumes_review.go), which can't represent these shapes yet. A
+// submitter request touching any of them is rejected with a clear error rather than silently
+// dropping the field - extending the proposal review path to handle non-string field types is
+// tracked separately, not done here.
+//
+// Format is editor/admin-only permanently, not as a stopgap - per volume-format-selector's
+// spec, a submitter session can't set it at all, directly or via proposal.
 type patchVolumeRequest struct {
 	Title        *string            `json:"title"`
 	Description  *string            `json:"description"`
@@ -37,12 +49,15 @@ type patchVolumeRequest struct {
 	Properties   *[]propertyRequest `json:"properties"`
 	PublisherIDs *[]string          `json:"publisherIds"`
 	StudioIDs    *[]string          `json:"studioIds"`
+	Credits      *[]creditRequest   `json:"credits"`
+	Format       *string            `json:"format"`
 }
 
 // hasEditorOnlyFields reports whether req touches a field the submitter-proposal path can't yet
-// represent (see patchVolumeRequest's doc comment).
+// represent, or that's permanently editor/admin-only (see patchVolumeRequest's doc comment).
 func (req patchVolumeRequest) hasEditorOnlyFields() bool {
-	return req.Properties != nil || req.PublisherIDs != nil || req.StudioIDs != nil
+	return req.Properties != nil || req.PublisherIDs != nil || req.StudioIDs != nil ||
+		req.Credits != nil || req.Format != nil
 }
 
 type pendingProposalResponse struct {
@@ -192,7 +207,18 @@ func applyVolumePatch(c *gin.Context, existing *vo.VolumeVO, req patchVolumeRequ
 		}
 		updated.Studios = studios
 	}
+	if req.Format != nil {
+		updated.Format = *req.Format
+	}
 	updated.UpdatedBy = authz.Subject(c)
+
+	if req.Credits != nil {
+		if err := applyCreditsDiff(c, existing.ID, *req.Credits, updated.UpdatedBy); err != nil {
+			sentry.CaptureException(err)
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "update_failed", Message: err.Error()})
+			return
+		}
+	}
 
 	result, err := data.UpdateVolume(c.Request.Context(), existing.ID, &updated)
 	if err != nil {
@@ -210,6 +236,52 @@ func applyVolumePatch(c *gin.Context, existing *vo.VolumeVO, req patchVolumeRequ
 	if err := jsonapi.MarshalPayload(c.Writer, result); err != nil {
 		sentry.CaptureException(err)
 	}
+}
+
+// applyCreditsDiff reconciles a volume's contribution credits against desired - the full,
+// intended set of (person, contribution type) pairs - deleting existing single-role
+// contributions no longer present and adding new ones. Only single-role contributions
+// (Roles == [type]) are considered part of this mechanism; a contribution with multiple roles
+// (predating credits, or created some other way) is left untouched even if none of its roles
+// match, since it isn't representable as one desired pair.
+func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, updatedBy string) error {
+	existing, err := data.QueryContributionsByVolume(c.Request.Context(), volumeID)
+	if err != nil {
+		return err
+	}
+
+	type creditKey struct {
+		personID string
+		roleType string
+	}
+	wanted := make(map[creditKey]bool, len(desired))
+	for _, cr := range desired {
+		wanted[creditKey{cr.PersonID, cr.ContributionType}] = true
+	}
+
+	have := make(map[creditKey]bool, len(existing))
+	for _, contribution := range existing {
+		if len(contribution.Roles) != 1 {
+			continue
+		}
+		key := creditKey{contribution.Person.ID, contribution.Roles[0]}
+		have[key] = true
+		if !wanted[key] {
+			if _, err := data.DeleteContribution(c.Request.Context(), contribution.ID); err != nil {
+				return err
+			}
+		}
+	}
+
+	for key := range wanted {
+		if have[key] {
+			continue
+		}
+		if _, err := data.AddContribution(c.Request.Context(), key.personID, volumeID, []string{key.roleType}, updatedBy); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // proposeVolumeChange stores diff as a pending proposed change rather than touching the live

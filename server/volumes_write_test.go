@@ -78,6 +78,13 @@ func seedStudio(t *testing.T, id, name string) {
 	}
 }
 
+func seedPerson(t *testing.T, id, name string) {
+	t.Helper()
+	if _, err := database.Insert("persons", catalogmodels.Person{ID: id, Name: name}); err != nil {
+		t.Fatalf("seed person: %v", err)
+	}
+}
+
 func doPatch(t *testing.T, r *gin.Engine, path string, body any) *httptest.ResponseRecorder {
 	t.Helper()
 
@@ -173,6 +180,75 @@ func TestPatchVolumeEditorAppliesPublisherAndStudioIDs(t *testing.T) {
 	}
 	if len(got.Studios) != 1 || got.Studios[0].ID != "studio-1" {
 		t.Errorf("Studios = %+v, want [studio-1]", got.Studios)
+	}
+}
+
+func TestPatchVolumeEditorAppliesFormat(t *testing.T) {
+	seed := seedVolume(t, "Original Title")
+	r := newTestRouter(t, []string{authz.RoleEditor})
+
+	rec := doPatch(t, r, "/volumes/"+seed.ID, map[string]any{"format": "hardcover"})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	got, err := data.GetVolume(t.Context(), seed.ID)
+	if err != nil {
+		t.Fatalf("GetVolume() error = %v", err)
+	}
+	if got.Format != "hardcover" {
+		t.Errorf("Format = %q, want %q", got.Format, "hardcover")
+	}
+}
+
+func TestPatchVolumeEditorAppliesCredits(t *testing.T) {
+	seedPerson(t, "person-1", "Test Author")
+	seed := seedVolume(t, "Original Title")
+	r := newTestRouter(t, []string{authz.RoleEditor})
+
+	rec := doPatch(t, r, "/volumes/"+seed.ID, map[string]any{
+		"credits": []map[string]string{{"personId": "person-1", "contributionType": "Author"}},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	credits, err := data.QueryContributionsByVolume(t.Context(), seed.ID)
+	if err != nil {
+		t.Fatalf("QueryContributionsByVolume() error = %v", err)
+	}
+	if len(credits) != 1 || credits[0].Person.ID != "person-1" || len(credits[0].Roles) != 1 || credits[0].Roles[0] != "Author" {
+		t.Fatalf("credits = %+v, want one person-1/Author credit", credits)
+	}
+
+	// A second PATCH with an empty credits list removes the previously added credit.
+	rec = doPatch(t, r, "/volumes/"+seed.ID, map[string]any{"credits": []map[string]string{}})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	credits, err = data.QueryContributionsByVolume(t.Context(), seed.ID)
+	if err != nil {
+		t.Fatalf("QueryContributionsByVolume() error = %v", err)
+	}
+	if len(credits) != 0 {
+		t.Errorf("credits after removal = %+v, want none", credits)
+	}
+}
+
+func TestPatchVolumeSubmitterCannotSetFormatOrCredits(t *testing.T) {
+	seed := seedVolume(t, "Original Title")
+	r := newTestRouter(t, []string{authz.RoleSubmitter})
+
+	rec := doPatch(t, r, "/volumes/"+seed.ID, map[string]any{"format": "PDF"})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("format status = %d, want %d, body: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+
+	rec = doPatch(t, r, "/volumes/"+seed.ID, map[string]any{
+		"credits": []map[string]string{{"personId": "person-1", "contributionType": "Author"}},
+	})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("credits status = %d, want %d, body: %s", rec.Code, http.StatusBadRequest, rec.Body.String())
 	}
 }
 
