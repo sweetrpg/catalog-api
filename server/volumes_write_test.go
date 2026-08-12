@@ -3,15 +3,21 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync"
 	"testing"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
+	"github.com/gomodule/redigo/redis"
+	"github.com/sweetrpg/catalog-api/assets"
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
+	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-data.go/data"
 	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
@@ -32,9 +38,32 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// testDeps exposes the fakes newTestRouter wires up, so individual tests can seed a staged
+// asset or an edit session directly (bypassing the endpoints that would normally create them -
+// catalog-web writes sessions and stages assets, neither of which catalog-api itself does).
+type testDeps struct {
+	Router    *gin.Engine
+	AssetsURL string
+	RedisPool *redis.Pool
+}
+
 // newTestRouter wires the real setupVolumeHandlers against a fake auth-api that always returns
-// roles, so tests exercise the real authz middleware + handler chain end to end.
+// roles, a fake assets-web, and a real editsession.Store backed by miniredis, so tests exercise
+// the real authz middleware + handler chain end to end.
 func newTestRouter(t *testing.T, roles []string) *gin.Engine {
+	t.Helper()
+	return newTestDeps(t, roles).Router
+}
+
+func newTestDeps(t *testing.T, roles []string) testDeps {
+	t.Helper()
+	return newTestDepsWithAssets(t, roles, newFakeAssetsServer(t).URL)
+}
+
+// newTestDepsWithAssets is newTestDeps but against a caller-supplied assets-web fake, so two
+// routers (e.g. a submitter's and a reviewing editor's) can share one staged-asset store - a
+// proposal's staged cover/samples must be visible to whichever router later accepts/rejects it.
+func newTestDepsWithAssets(t *testing.T, roles []string, assetsURL string) testDeps {
 	t.Helper()
 
 	authAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42,9 +71,115 @@ func newTestRouter(t *testing.T, roles []string) *gin.Engine {
 	}))
 	t.Cleanup(authAPI.Close)
 
+	redisPool := newTestRedisPool(t)
+
 	r := gin.New()
-	setupVolumeHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authz.NewClient(authAPI.URL))
-	return r
+	setupVolumeHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authz.NewClient(authAPI.URL), assets.NewClient(assetsURL), editsession.NewStore(redisPool))
+	return testDeps{Router: r, AssetsURL: assetsURL, RedisPool: redisPool}
+}
+
+// seedEditSession writes a session directly into the fixture's Redis, in place of catalog-web
+// (which owns real session writes - catalog-api only reads/deletes).
+func seedEditSession(t *testing.T, deps testDeps, userID, recordType string, session editsession.Session) {
+	t.Helper()
+
+	conn, err := deps.RedisPool.GetContext(t.Context())
+	if err != nil {
+		t.Fatalf("get redis connection: %v", err)
+	}
+	defer func() { _ = conn.Close() }()
+
+	raw, err := json.Marshal(session)
+	if err != nil {
+		t.Fatalf("marshal session: %v", err)
+	}
+	if _, err := conn.Do("SET", editsession.Key(userID, recordType), raw); err != nil {
+		t.Fatalf("seed session: %v", err)
+	}
+}
+
+// seedStagedAsset uploads bytes directly to the fixture's fake assets-web under kind/id, in
+// place of a real client-side upload.
+func seedStagedAsset(t *testing.T, deps testDeps, kind, id string, data []byte) {
+	t.Helper()
+
+	client := assets.NewClient(deps.AssetsURL)
+	if err := client.Store(t.Context(), kind, id, data, "image/png"); err != nil {
+		t.Fatalf("seed staged asset: %v", err)
+	}
+}
+
+// newFakeAssetsServer is a minimal in-memory stand-in for assets-web's GET/POST/DELETE
+// /asset/<kind>/<id>, sufficient to exercise cover/sample staging-and-promotion end to end
+// without a real assets-web instance.
+func newFakeAssetsServer(t *testing.T) *httptest.Server {
+	t.Helper()
+
+	var mu sync.Mutex
+	store := map[string][]byte{}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		key := r.URL.Path // "/asset/<kind>/<id>"
+		switch r.Method {
+		case http.MethodGet:
+			mu.Lock()
+			data, ok := store[key]
+			mu.Unlock()
+			if !ok {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "image/png")
+			_, _ = w.Write(data)
+		case http.MethodPost:
+			if err := r.ParseMultipartForm(10 << 20); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			file, _, err := r.FormFile("file")
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			defer func() { _ = file.Close() }()
+			body, err := io.ReadAll(file)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			mu.Lock()
+			store[key] = body
+			mu.Unlock()
+			w.WriteHeader(http.StatusCreated)
+		case http.MethodDelete:
+			mu.Lock()
+			_, ok := store[key]
+			delete(store, key)
+			mu.Unlock()
+			if !ok {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func newTestRedisPool(t *testing.T) *redis.Pool {
+	t.Helper()
+
+	mr := miniredis.RunT(t)
+	pool := &redis.Pool{
+		Dial: func() (redis.Conn, error) {
+			return redis.Dial("tcp", mr.Addr())
+		},
+	}
+	t.Cleanup(func() { _ = pool.Close() })
+	return pool
 }
 
 func seedVolume(t *testing.T, title string) *vo.VolumeVO {

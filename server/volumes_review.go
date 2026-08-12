@@ -1,12 +1,14 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	apiv "github.com/sweetrpg/api-core.go/vo"
+	"github.com/sweetrpg/catalog-api/assets"
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-data.go/data"
@@ -69,7 +71,7 @@ func listVolumeProposedChanges(c *gin.Context) {
 //	@Failure		409			{object}	apiv.ErrorVO
 //	@Failure		500			{object}	apiv.ErrorVO
 //	@Router			/volumes/{id}/proposed-changes/{proposalId}/accept [post]
-func acceptVolumeProposedChange(c *gin.Context) {
+func acceptVolumeProposedChange(c *gin.Context, assetsClient *assets.Client) {
 	volumeID := c.Param("id")
 	proposalID := c.Param("proposalId")
 
@@ -128,6 +130,30 @@ func acceptVolumeProposedChange(c *gin.Context) {
 		appliedAny = true
 	}
 
+	if proposal.StagedCoverAssetId != "" {
+		if err := assetsClient.Promote(c.Request.Context(), "cover-staged", proposal.StagedCoverAssetId, "cover", volumeID); err != nil {
+			sentry.CaptureException(err)
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "cover_promote_failed", Message: err.Error()})
+			return
+		}
+		updated.CoverAssetId = volumeID
+		appliedAny = true
+	}
+	if len(proposal.StagedSampleAssetIds) > 0 {
+		liveSampleIds := make([]string, len(proposal.StagedSampleAssetIds))
+		for i, stagedID := range proposal.StagedSampleAssetIds {
+			liveID := fmt.Sprintf("%s-%d", volumeID, i)
+			if err := assetsClient.Promote(c.Request.Context(), "sample-staged", stagedID, "sample", liveID); err != nil {
+				sentry.CaptureException(err)
+				c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "sample_promote_failed", Message: err.Error()})
+				return
+			}
+			liveSampleIds[i] = liveID
+		}
+		updated.SampleAssetIds = liveSampleIds
+		appliedAny = true
+	}
+
 	if appliedAny {
 		updated.UpdatedBy = authz.Subject(c)
 		if _, err := data.UpdateVolume(c.Request.Context(), volumeID, &updated); err != nil {
@@ -163,7 +189,7 @@ func acceptVolumeProposedChange(c *gin.Context) {
 //	@Failure		409			{object}	apiv.ErrorVO
 //	@Failure		500			{object}	apiv.ErrorVO
 //	@Router			/volumes/{id}/proposed-changes/{proposalId}/reject [post]
-func rejectVolumeProposedChange(c *gin.Context) {
+func rejectVolumeProposedChange(c *gin.Context, assetsClient *assets.Client) {
 	volumeID := c.Param("id")
 	proposalID := c.Param("proposalId")
 
@@ -185,6 +211,21 @@ func rejectVolumeProposedChange(c *gin.Context) {
 		rejected = append(rejected, field)
 	}
 	proposal.ReviewNote = req.Note
+
+	if proposal.StagedCoverAssetId != "" {
+		if err := assetsClient.Delete(c.Request.Context(), "cover-staged", proposal.StagedCoverAssetId); err != nil {
+			sentry.CaptureException(err)
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "cover_reclaim_failed", Message: err.Error()})
+			return
+		}
+	}
+	for _, stagedID := range proposal.StagedSampleAssetIds {
+		if err := assetsClient.Delete(c.Request.Context(), "sample-staged", stagedID); err != nil {
+			sentry.CaptureException(err)
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "sample_reclaim_failed", Message: err.Error()})
+			return
+		}
+	}
 
 	finishReview(c, proposal)
 

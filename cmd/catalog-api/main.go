@@ -27,10 +27,12 @@ import (
 	"github.com/sweetrpg/api-core.go/featureflags"
 	"github.com/sweetrpg/api-core.go/tracing"
 	"github.com/sweetrpg/api-core.go/vo"
+	"github.com/sweetrpg/catalog-api/assets"
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/docs"
+	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-api/ratelimit"
 	"github.com/sweetrpg/catalog-api/readiness"
@@ -115,8 +117,15 @@ func main() {
 	r.Use(RateLimiter(redisPool))
 
 	authzClient := authz.NewClient(util.GetEnv(constants.AUTH_API_URL, ""))
+	assetsClient := assets.NewClient(util.GetEnv(constants.ASSETS_WEB_URL, ""))
 
-	server.SetupHandlers(r, cache, ttls, authzClient)
+	editSessionPool := setupEditSessionPool()
+	if editSessionPool != nil {
+		defer func() { _ = editSessionPool.Close() }()
+	}
+	editSessions := editsession.NewStore(editSessionPool)
+
+	server.SetupHandlers(r, cache, ttls, authzClient, assetsClient, editSessions)
 
 	_ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
 }
@@ -269,6 +278,46 @@ func setupRedisPool() *redis.Pool {
 				}
 			}
 			return c, nil
+		},
+	}
+}
+
+// editSessionRedisDB is the Redis DB index reserved for edit sessions on catalog-api's own
+// Redis instance (REDIS_HOST/_PORT/_PASS) - no separate host/port config needed, see
+// docs/frontend-conventions.md's Redis registry in sweetrpg/platform.
+const editSessionRedisDB = 2
+
+// setupEditSessionPool builds a second redigo pool against the same Redis instance as
+// setupRedisPool, but selecting editSessionRedisDB - a separate pool (not a shared one with a
+// per-command SELECT) so cache/rate-limit connections can never accidentally read/write edit
+// session keys or vice versa. Returns nil when no Redis is configured, matching
+// setupRedisPool's behavior.
+func setupEditSessionPool() *redis.Pool {
+	redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
+	if !found {
+		return nil
+	}
+
+	redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
+	redisPass := os.Getenv(apiconstants.REDIS_PASS)
+	addr := fmt.Sprintf("%s:%s", redisHost, redisPort)
+
+	return &redis.Pool{
+		MaxIdle:     5,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			dialOpts := []redis.DialOption{
+				redis.DialConnectTimeout(redisConnectTimeout),
+				redis.DialDatabase(editSessionRedisDB),
+			}
+			if redisPass != "" {
+				// DialPassword, not a manual AUTH after Dial - DialDatabase's SELECT runs
+				// during Dial() itself, before any command this func could issue afterward;
+				// against a password-protected Redis that SELECT would fail pre-auth. Passing
+				// the password as a DialOption lets redigo order AUTH before SELECT internally.
+				dialOpts = append(dialOpts, redis.DialPassword(redisPass))
+			}
+			return redis.Dial("tcp", addr, dialOpts...)
 		},
 	}
 }

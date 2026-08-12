@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/getsentry/sentry-go"
@@ -30,6 +31,9 @@ type creditRequest struct {
 	ContributionType string `json:"contributionType"`
 }
 
+// maxSampleAssetIds is the cap on a volume's sample images (volume-sample-pages spec).
+const maxSampleAssetIds = 5
+
 // patchVolumeRequest's fields are pointers so an absent field (nil) is distinguishable from an
 // explicit empty string/omitted array - only present fields are part of the edit/proposal.
 //
@@ -43,21 +47,23 @@ type creditRequest struct {
 // Format is editor/admin-only permanently, not as a stopgap - per volume-format-selector's
 // spec, a submitter session can't set it at all, directly or via proposal.
 type patchVolumeRequest struct {
-	Title        *string            `json:"title"`
-	Description  *string            `json:"description"`
-	Notes        *string            `json:"notes"`
-	Properties   *[]propertyRequest `json:"properties"`
-	PublisherIDs *[]string          `json:"publisherIds"`
-	StudioIDs    *[]string          `json:"studioIds"`
-	Credits      *[]creditRequest   `json:"credits"`
-	Format       *string            `json:"format"`
+	Title          *string            `json:"title"`
+	Description    *string            `json:"description"`
+	Notes          *string            `json:"notes"`
+	Properties     *[]propertyRequest `json:"properties"`
+	PublisherIDs   *[]string          `json:"publisherIds"`
+	StudioIDs      *[]string          `json:"studioIds"`
+	Credits        *[]creditRequest   `json:"credits"`
+	Format         *string            `json:"format"`
+	CoverAssetId   *string            `json:"coverAssetId"`
+	SampleAssetIds *[]string          `json:"sampleAssetIds"`
 }
 
 // hasEditorOnlyFields reports whether req touches a field the submitter-proposal path can't yet
 // represent, or that's permanently editor/admin-only (see patchVolumeRequest's doc comment).
 func (req patchVolumeRequest) hasEditorOnlyFields() bool {
 	return req.Properties != nil || req.PublisherIDs != nil || req.StudioIDs != nil ||
-		req.Credits != nil || req.Format != nil
+		req.Credits != nil || req.Format != nil || req.CoverAssetId != nil || req.SampleAssetIds != nil
 }
 
 type pendingProposalResponse struct {
@@ -174,8 +180,11 @@ func setFieldValue(v *vo.VolumeVO, field, value string) {
 }
 
 // applyVolumePatch merges req's present fields into existing and writes the result directly to
-// the live record - the admin/editor direct-edit path.
-func applyVolumePatch(c *gin.Context, existing *vo.VolumeVO, req patchVolumeRequest) {
+// the live record - the admin/editor direct-edit path. Returns whether the update succeeded (an
+// HTTP response, success or failure, has always already been written either way) - callers that
+// have follow-up cleanup contingent on success (finalizeVolumeSession deleting the now-applied
+// session) need to know which happened.
+func applyVolumePatch(c *gin.Context, existing *vo.VolumeVO, req patchVolumeRequest) bool {
 	updated := *existing
 	if req.Title != nil {
 		updated.Title = *req.Title
@@ -210,13 +219,26 @@ func applyVolumePatch(c *gin.Context, existing *vo.VolumeVO, req patchVolumeRequ
 	if req.Format != nil {
 		updated.Format = *req.Format
 	}
+	if req.CoverAssetId != nil {
+		updated.CoverAssetId = *req.CoverAssetId
+	}
+	if req.SampleAssetIds != nil {
+		if len(*req.SampleAssetIds) > maxSampleAssetIds {
+			c.JSON(http.StatusBadRequest, apiv.ErrorVO{
+				Error:   "sample_limit_exceeded",
+				Message: fmt.Sprintf("a volume may have at most %d samples", maxSampleAssetIds),
+			})
+			return false
+		}
+		updated.SampleAssetIds = *req.SampleAssetIds
+	}
 	updated.UpdatedBy = authz.Subject(c)
 
 	if req.Credits != nil {
 		if err := applyCreditsDiff(c, existing.ID, *req.Credits, updated.UpdatedBy); err != nil {
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "update_failed", Message: err.Error()})
-			return
+			return false
 		}
 	}
 
@@ -224,11 +246,11 @@ func applyVolumePatch(c *gin.Context, existing *vo.VolumeVO, req patchVolumeRequ
 	if err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "update_failed", Message: err.Error()})
-		return
+		return false
 	}
 	if result == nil {
 		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
-		return
+		return false
 	}
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
@@ -236,6 +258,7 @@ func applyVolumePatch(c *gin.Context, existing *vo.VolumeVO, req patchVolumeRequ
 	if err := jsonapi.MarshalPayload(c.Writer, result); err != nil {
 		sentry.CaptureException(err)
 	}
+	return true
 }
 
 // applyCreditsDiff reconciles a volume's contribution credits against desired - the full,

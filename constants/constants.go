@@ -25,6 +25,12 @@ const (
 	// resolve roles via POST /authz/check for write endpoints. See platform docs/openspec.md's
 	// volume-edit-with-approval-workflow change.
 	AUTH_API_URL = "AUTH_API_URL"
+
+	// ASSETS_WEB_URL points at assets-web's base URL (e.g.
+	// http://api-v1.sweetrpg-assets.svc.cluster.local:8000), used to promote a staged
+	// cover/sample asset to live (or reclaim it) on volume edit session finalize/accept/reject.
+	// See durable-volume-editing in sweetrpg/platform.
+	ASSETS_WEB_URL = "ASSETS_WEB_URL"
 )
 
 // Value constants
