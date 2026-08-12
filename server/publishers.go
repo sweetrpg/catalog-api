@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -10,20 +11,64 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
+	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-data.go/data"
+	"github.com/sweetrpg/catalog-objects.go/vo"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
+var publisherPatchConfig = entityPatchConfig[vo.PublisherVO]{
+	recordType: "publisher",
+	get: func(c *gin.Context, id string) (*vo.PublisherVO, error) {
+		return data.GetPublisher(c.Request.Context(), id)
+	},
+	update: func(c *gin.Context, id string, entity *vo.PublisherVO) (*vo.PublisherVO, error) {
+		return data.UpdatePublisher(c.Request.Context(), id, entity)
+	},
+	setUpdatedBy: func(v *vo.PublisherVO, by string) { v.UpdatedBy = by },
+	fields: map[string]entityFieldAccessor[vo.PublisherVO]{
+		"name": {
+			get: func(v *vo.PublisherVO) string { return v.Name },
+			set: func(v *vo.PublisherVO, s string) { v.Name = s },
+		},
+		"address": {
+			get: func(v *vo.PublisherVO) string { return v.Address },
+			set: func(v *vo.PublisherVO, s string) { v.Address = s },
+		},
+		"website": {
+			get: func(v *vo.PublisherVO) string { return v.Website.String() },
+			set: func(v *vo.PublisherVO, s string) {
+				if u, err := url.Parse(s); err == nil && u != nil {
+					v.Website = *u
+				}
+			},
+		},
+		"notes": {
+			get: func(v *vo.PublisherVO) string { return v.Notes },
+			set: func(v *vo.PublisherVO, s string) { v.Notes = s },
+		},
+	},
+}
+
+func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client) {
 	logging.Logger.Info("Setting up publisher endpoint handlers...")
 	ttl := ttls.TTL("publishers")
 	g.GET("/publishers", cache.CachePage(store, ttl, listPublishers))
 	g.GET("/publishers/:id", cache.CachePage(store, ttl, getPublisher))
 	g.GET("/publishers/:id/volumes", cache.CachePage(store, ttl, getPublisherVolumes))
+
+	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
+	g.PATCH("/publishers/:id", writeRoles, patchEntity(publisherPatchConfig))
+
+	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
+	g.GET("/publishers/:id/proposed-changes", reviewRoles, listEntityProposedChanges("publisher"))
+	g.POST("/publishers/:id/proposed-changes/:proposalId/accept", reviewRoles, acceptEntityProposedChange(publisherPatchConfig))
+	g.POST("/publishers/:id/proposed-changes/:proposalId/reject", reviewRoles, rejectEntityProposedChange("publisher"))
 }
 
 // List publishers.

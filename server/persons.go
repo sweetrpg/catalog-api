@@ -10,7 +10,9 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
+	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/catalog-objects.go/vo"
 	"github.com/sweetrpg/common.go/logging"
@@ -19,12 +21,41 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
+var personPatchConfig = entityPatchConfig[vo.PersonVO]{
+	recordType: "person",
+	get: func(c *gin.Context, id string) (*vo.PersonVO, error) {
+		return data.GetPerson(c.Request.Context(), id)
+	},
+	update: func(c *gin.Context, id string, entity *vo.PersonVO) (*vo.PersonVO, error) {
+		return data.UpdatePerson(c.Request.Context(), id, entity)
+	},
+	setUpdatedBy: func(v *vo.PersonVO, by string) { v.UpdatedBy = by },
+	fields: map[string]entityFieldAccessor[vo.PersonVO]{
+		"name": {
+			get: func(v *vo.PersonVO) string { return v.Name },
+			set: func(v *vo.PersonVO, s string) { v.Name = s },
+		},
+		"notes": {
+			get: func(v *vo.PersonVO) string { return v.Notes },
+			set: func(v *vo.PersonVO, s string) { v.Notes = s },
+		},
+	},
+}
+
+func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client) {
 	logging.Logger.Info("Setting up person endpoint handlers...")
 	ttl := ttls.TTL("persons")
 	g.GET("/persons", cache.CachePage(store, ttl, listPersons))
 	g.GET("/persons/:id", cache.CachePage(store, ttl, getPerson))
 	g.GET("/persons/:id/volumes", cache.CachePage(store, ttl, getPersonVolumes))
+
+	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
+	g.PATCH("/persons/:id", writeRoles, patchEntity(personPatchConfig))
+
+	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
+	g.GET("/persons/:id/proposed-changes", reviewRoles, listEntityProposedChanges("person"))
+	g.POST("/persons/:id/proposed-changes/:proposalId/accept", reviewRoles, acceptEntityProposedChange(personPatchConfig))
+	g.POST("/persons/:id/proposed-changes/:proposalId/reject", reviewRoles, rejectEntityProposedChange("person"))
 }
 
 // List persons.
