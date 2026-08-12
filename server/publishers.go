@@ -23,7 +23,7 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls ca
 	ttl := ttls.TTL("publishers")
 	g.GET("/publishers", cache.CachePage(store, ttl, listPublishers))
 	g.GET("/publishers/:id", cache.CachePage(store, ttl, getPublisher))
-	// g.GET("/publishers/:id/publishers", cache.CachePage(store, ttl, getPublisherPublishers))
+	g.GET("/publishers/:id/volumes", cache.CachePage(store, ttl, getPublisherVolumes))
 }
 
 // List publishers.
@@ -40,6 +40,45 @@ func listPublishers(c *gin.Context) {
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "publishers", "list-publishers", params)
 	vos, err := data.QueryPublishers(c.Request.Context(), params)
+	span.End()
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
+// Get publisher volumes.
+//
+//	@Summary		Get publisher volumes
+//	@Description	Gets all the volumes associated with a particular publisher
+//	@Tags			publishers
+//	@Produce		json
+//	@Param			id		path		string			true	"Publisher ID"
+//	@Success		204		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/publishers/{id}/volumes [get]
+func getPublisherVolumes(c *gin.Context) {
+	id := c.Param("id")
+
+	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+
+	inOp := "$in"
+	params.Filter = []apiutil.Filter{{
+		Field:     "publisher_ids",
+		Operation: &inOp,
+		Value:     []string{id},
+	}}
+
+	span := tracing.BuildSpanWithParams(c.Request.Context(), "publishers", "list-publisher-volumes", params)
+	vos, err := data.QueryVolumes(c.Request.Context(), params)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)

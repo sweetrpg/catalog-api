@@ -12,6 +12,7 @@ import (
 	apiutil "github.com/sweetrpg/api-core.go/util"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-data.go/data"
+	"github.com/sweetrpg/catalog-objects.go/vo"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -23,7 +24,7 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	ttl := ttls.TTL("persons")
 	g.GET("/persons", cache.CachePage(store, ttl, listPersons))
 	g.GET("/persons/:id", cache.CachePage(store, ttl, getPerson))
-	// g.GET("/persons/:id/persons", cache.CachePage(store, ttl, getPersonPersons))
+	g.GET("/persons/:id/volumes", cache.CachePage(store, ttl, getPersonVolumes))
 }
 
 // List persons.
@@ -49,6 +50,54 @@ func listPersons(c *gin.Context) {
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
 	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
+// Get person volumes.
+//
+//	@Summary		Get person volumes
+//	@Description	Gets all the volumes a particular person has contributed to
+//	@Tags			persons
+//	@Produce		json
+//	@Param			id		path		string			true	"Person ID"
+//	@Success		204		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/persons/{id}/volumes [get]
+func getPersonVolumes(c *gin.Context) {
+	id := c.Param("id")
+
+	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	inOp := "$in"
+	params.Filter = []apiutil.Filter{{
+		Field:     "person_id",
+		Operation: &inOp,
+		Value:     []string{id},
+	}}
+
+	span := tracing.BuildSpanWithParams(c.Request.Context(), "persons", "list-person-volumes", params)
+	contributions, err := data.QueryContributions(c.Request.Context(), params)
+	span.End()
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	seen := make(map[string]bool, len(contributions))
+	vos := make([]*vo.VolumeVO, 0, len(contributions))
+	for _, contribution := range contributions {
+		if contribution.Volume == nil || seen[contribution.Volume.ID] {
+			continue
+		}
+		seen[contribution.Volume.ID] = true
+		vos = append(vos, contribution.Volume)
+	}
+
+	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 }
