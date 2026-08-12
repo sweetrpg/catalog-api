@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -10,8 +11,11 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
+	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-data.go/data"
+	"github.com/sweetrpg/catalog-objects.go/vo"
 	"github.com/sweetrpg/common.go/logging"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.opentelemetry.io/otel"
@@ -19,12 +23,73 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
+var licensePatchConfig = entityPatchConfig[vo.LicenseVO]{
+	recordType: "license",
+	get: func(c *gin.Context, id string) (*vo.LicenseVO, error) {
+		return data.GetLicense(c.Request.Context(), id)
+	},
+	update: func(c *gin.Context, id string, entity *vo.LicenseVO) (*vo.LicenseVO, error) {
+		return data.UpdateLicense(c.Request.Context(), id, entity)
+	},
+	setUpdatedBy: func(v *vo.LicenseVO, by string) { v.UpdatedBy = by },
+	fields: map[string]entityFieldAccessor[vo.LicenseVO]{
+		"title": {
+			get: func(v *vo.LicenseVO) string { return v.Title },
+			set: func(v *vo.LicenseVO, s string) { v.Title = s },
+		},
+		"short_title": {
+			get: func(v *vo.LicenseVO) string { return v.ShortTitle },
+			set: func(v *vo.LicenseVO, s string) { v.ShortTitle = s },
+		},
+		"version": {
+			get: func(v *vo.LicenseVO) string { return v.Version },
+			set: func(v *vo.LicenseVO, s string) { v.Version = s },
+		},
+		"deed": {
+			get: func(v *vo.LicenseVO) string { return v.Deed },
+			set: func(v *vo.LicenseVO, s string) { v.Deed = s },
+		},
+		"legal_code": {
+			get: func(v *vo.LicenseVO) string { return v.LegalCode },
+			set: func(v *vo.LicenseVO, s string) { v.LegalCode = s },
+		},
+		"website": {
+			get: func(v *vo.LicenseVO) string { return v.Website.String() },
+			set: func(v *vo.LicenseVO, s string) {
+				if u, err := url.Parse(s); err == nil && u != nil {
+					v.Website = *u
+				}
+			},
+		},
+		"status": {
+			get: func(v *vo.LicenseVO) string { return v.Status },
+			set: func(v *vo.LicenseVO, s string) { v.Status = s },
+		},
+		"availability": {
+			get: func(v *vo.LicenseVO) string { return v.Availability },
+			set: func(v *vo.LicenseVO, s string) { v.Availability = s },
+		},
+		"notes": {
+			get: func(v *vo.LicenseVO) string { return v.Notes },
+			set: func(v *vo.LicenseVO, s string) { v.Notes = s },
+		},
+	},
+}
+
+func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client) {
 	logging.Logger.Info("Setting up license endpoint handlers...")
 	ttl := ttls.TTL("licenses")
 	g.GET("/licenses", cache.CachePage(store, ttl, listLicenses))
 	g.GET("/licenses/:id", cache.CachePage(store, ttl, getLicense))
 	g.GET("/licenses/:id/volumes", cache.CachePage(store, ttl, getLicenseVolumes))
+
+	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
+	g.PATCH("/licenses/:id", writeRoles, patchEntity(licensePatchConfig))
+
+	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
+	g.GET("/licenses/:id/proposed-changes", reviewRoles, listEntityProposedChanges("license"))
+	g.POST("/licenses/:id/proposed-changes/:proposalId/accept", reviewRoles, acceptEntityProposedChange(licensePatchConfig))
+	g.POST("/licenses/:id/proposed-changes/:proposalId/reject", reviewRoles, rejectEntityProposedChange("license"))
 }
 
 // List licenses.
