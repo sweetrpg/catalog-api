@@ -10,9 +10,11 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/assets"
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
+	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -20,7 +22,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client) {
+func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client, assetsClient *assets.Client, editSessions *editsession.Store) {
 	logging.Logger.Info("Setting up volume endpoint handlers...")
 	ttl := ttls.TTL("volumes")
 	g.GET("/volumes", cache.CachePage(store, ttl, listVolumes))
@@ -29,11 +31,22 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
 	g.PATCH("/volumes/:id", writeRoles, patchVolume)
+	g.POST("/volumes/:id/finalize-session", writeRoles, func(c *gin.Context) {
+		finalizeVolumeSession(c, assetsClient, editSessions)
+	})
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
 	g.GET("/volumes/:id/proposed-changes", reviewRoles, listVolumeProposedChanges)
-	g.POST("/volumes/:id/proposed-changes/:proposalId/accept", reviewRoles, acceptVolumeProposedChange)
-	g.POST("/volumes/:id/proposed-changes/:proposalId/reject", reviewRoles, rejectVolumeProposedChange)
+	g.POST("/volumes/:id/proposed-changes/:proposalId/accept", reviewRoles, func(c *gin.Context) {
+		acceptVolumeProposedChange(c, assetsClient)
+	})
+	g.POST("/volumes/:id/proposed-changes/:proposalId/reject", reviewRoles, func(c *gin.Context) {
+		rejectVolumeProposedChange(c, assetsClient)
+	})
+	g.POST("/volumes/:id/proposed-changes/:proposalId/retract", writeRoles, retractVolumeProposedChange)
+	g.POST("/volumes/:id/proposed-changes/:proposalId/pull-back", writeRoles, func(c *gin.Context) {
+		pullBackVolumeProposedChange(c, editSessions)
+	})
 }
 
 // List volumes.
