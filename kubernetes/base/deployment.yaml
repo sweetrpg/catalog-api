@@ -28,6 +28,7 @@ spec:
                 version: v1
                 release: prometheus
             annotations:
+                reloader.stakater.com/auto: "true"
                 prometheus.io/scrape: "true"
                 prometheus.io/path: '/metrics'
                 prometheus.io/port: '8000'

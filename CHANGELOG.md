@@ -1,4 +1,15 @@
 
+## 0.11.0 - 2026-08-13
+
+### Added
+- Allow editors to set properties, publishers, and studios via PATCH
+- Add shared contribution-type/property-name/format lists
+- Support format and contributor credits on PATCH
+- Sample/cover PATCH support, finalize-session, staged-asset promotion
+- Submission cap, retract, and pull-back
+
+
+
 ## 0.10.0 - 2026-08-12
 
 ### Added
