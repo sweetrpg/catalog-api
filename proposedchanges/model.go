@@ -14,11 +14,16 @@ import (
 const CollectionName = "proposed_changes"
 
 // Field-level and overall proposal statuses.
+//
+// StatusRetracted is submitter-initiated (the submitter withdraws their own pending proposal,
+// see task 5.3) and distinct from StatusRejected (a reviewer's outcome) - both are terminal and
+// non-pending, but who initiated it and why differ, which matters for reporting/audit.
 const (
 	StatusPending           = "pending"
 	StatusAccepted          = "accepted"
 	StatusRejected          = "rejected"
 	StatusPartiallyAccepted = "partially_accepted"
+	StatusRetracted         = "retracted"
 )
 
 // FieldChange is one changed field's old (live-at-submission-time) and proposed value, plus its
@@ -30,17 +35,26 @@ type FieldChange struct {
 }
 
 // ProposedChange is a submitter's proposed edit to a live record, pending admin/editor review.
+//
+// StagedCoverAssetId/StagedSampleAssetIds are separate from Diff (not settable as a normal
+// field change) - they reference assets-web's staged asset store (see the
+// durable-volume-editing change's volume-cover-staging/volume-sample-pages specs). Accepting
+// the proposal promotes them to live (assets.Client.Promote) and applies the resulting live
+// ids to the volume; rejecting reclaims (deletes) them without promoting. Empty/nil means the
+// proposal didn't reference a staged cover or samples.
 type ProposedChange struct {
-	ID          primitive.ObjectID     `bson:"_id,omitempty" json:"id"`
-	RecordType  string                 `bson:"record_type" json:"recordType"`
-	RecordID    string                 `bson:"record_id" json:"recordId"`
-	Diff        map[string]FieldChange `bson:"diff" json:"diff"`
-	Status      string                 `bson:"status" json:"status"`
-	SubmittedBy string                 `bson:"submitted_by" json:"submittedBy"`
-	SubmittedAt time.Time              `bson:"submitted_at" json:"submittedAt"`
-	ReviewedBy  string                 `bson:"reviewed_by,omitempty" json:"reviewedBy,omitempty"`
-	ReviewedAt  *time.Time             `bson:"reviewed_at,omitempty" json:"reviewedAt,omitempty"`
-	ReviewNote  string                 `bson:"review_note,omitempty" json:"reviewNote,omitempty"`
+	ID                   primitive.ObjectID     `bson:"_id,omitempty" json:"id"`
+	RecordType           string                 `bson:"record_type" json:"recordType"`
+	RecordID             string                 `bson:"record_id" json:"recordId"`
+	Diff                 map[string]FieldChange `bson:"diff" json:"diff"`
+	Status               string                 `bson:"status" json:"status"`
+	SubmittedBy          string                 `bson:"submitted_by" json:"submittedBy"`
+	SubmittedAt          time.Time              `bson:"submitted_at" json:"submittedAt"`
+	ReviewedBy           string                 `bson:"reviewed_by,omitempty" json:"reviewedBy,omitempty"`
+	ReviewedAt           *time.Time             `bson:"reviewed_at,omitempty" json:"reviewedAt,omitempty"`
+	ReviewNote           string                 `bson:"review_note,omitempty" json:"reviewNote,omitempty"`
+	StagedCoverAssetId   string                 `bson:"staged_cover_asset_id,omitempty" json:"stagedCoverAssetId,omitempty"`
+	StagedSampleAssetIds []string               `bson:"staged_sample_asset_ids,omitempty" json:"stagedSampleAssetIds,omitempty"`
 }
 
 // DeriveStatus recomputes Status from each field's individual outcome: pending while any field

@@ -22,6 +22,7 @@ require (
 	github.com/sweetrpg/catalog-data.go v0.5.0
 	github.com/sweetrpg/catalog-objects.go v0.2.0
 	github.com/sweetrpg/common.go v0.0.16
+	github.com/sweetrpg/model-core.go v0.0.173
 	github.com/sweetrpg/mongodb.go v0.0.193
 	go.mongodb.org/mongo-driver v1.17.9
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.69.0
@@ -99,7 +100,6 @@ require (
 	github.com/quic-go/quic-go v0.59.1 // indirect
 	github.com/robfig/go-cache v0.0.0-20130306151617-9fc39e0dbf62 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
-	github.com/sweetrpg/model-core.go v0.0.173 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
