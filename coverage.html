@@ -3,7 +3,7 @@
 <html>
 	<head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>authz: Go Coverage Report</title>
+		<title>assets: Go Coverage Report</title>
 		<style>
 			body {
 				background: black;
@@ -55,19 +55,23 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/sweetrpg/catalog-api/authz/client.go (78.3%)</option>
+				<option value="file0">github.com/sweetrpg/catalog-api/assets/client.go (0.0%)</option>
 				
-				<option value="file1">github.com/sweetrpg/catalog-api/authz/middleware.go (91.1%)</option>
+				<option value="file1">github.com/sweetrpg/catalog-api/authz/client.go (78.3%)</option>
 				
-				<option value="file2">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
+				<option value="file2">github.com/sweetrpg/catalog-api/authz/middleware.go (91.1%)</option>
 				
-				<option value="file3">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (17.4%)</option>
+				<option value="file3">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
-				<option value="file4">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
+				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (15.2%)</option>
 				
-				<option value="file5">github.com/sweetrpg/catalog-api/ratelimit/ratelimit.go (91.7%)</option>
+				<option value="file5">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
-				<option value="file6">github.com/sweetrpg/catalog-api/readiness/readiness.go (100.0%)</option>
+				<option value="file6">github.com/sweetrpg/catalog-api/editsession/store.go (54.3%)</option>
+				
+				<option value="file7">github.com/sweetrpg/catalog-api/ratelimit/ratelimit.go (91.7%)</option>
+				
+				<option value="file8">github.com/sweetrpg/catalog-api/readiness/readiness.go (100.0%)</option>
 				
 				</select>
 			</div>
@@ -90,7 +94,142 @@
 		</div>
 		<div id="content">
 		
-		<pre class="file" id="file0" style="display: none">// Package authz calls auth-api's POST /authz/check to verify a caller's bearer token and
+		<pre class="file" id="file0" style="display: none">// Package assets is a minimal client for assets-web's authenticated asset store
+// (GET/POST/DELETE /asset/&lt;kind&gt;/&lt;id&gt;), used to promote a staged cover/sample to live (or
+// reclaim it) on volume edit session finalize/accept/reject. See durable-volume-editing in
+// sweetrpg/platform.
+package assets
+
+import (
+        "bytes"
+        "context"
+        "fmt"
+        "io"
+        "mime/multipart"
+        "net/http"
+        "net/textproto"
+        "time"
+)
+
+// Client calls assets-web's asset store endpoints.
+type Client struct {
+        baseURL string
+        http    *http.Client
+}
+
+// NewClient builds a Client against assets-web's base URL. An empty baseURL is accepted so the
+// service can still start when ASSETS_WEB_URL isn't configured; every call will then fail with
+// a transport error.
+func NewClient(baseURL string) *Client <span class="cov0" title="0">{
+        return &amp;Client{baseURL: baseURL, http: &amp;http.Client{Timeout: 10 * time.Second}}
+}</span>
+
+// NotFoundError means assets-web has no asset at the given kind/id.
+type NotFoundError struct{ Kind, ID string }
+
+func (e NotFoundError) Error() string <span class="cov0" title="0">{ return fmt.Sprintf("assets: %s/%s not found", e.Kind, e.ID) }</span>
+
+// Get downloads an asset's bytes and content type.
+func (c *Client) Get(ctx context.Context, kind, id string) ([]byte, string, error) <span class="cov0" title="0">{
+        req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/asset/"+kind+"/"+id, nil)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, "", fmt.Errorf("assets: build get request: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">resp, err := c.http.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, "", fmt.Errorf("assets: get request failed: %w", err)
+        }</span>
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{ _ = resp.Body.Close() }</span>()
+
+        <span class="cov0" title="0">if resp.StatusCode == http.StatusNotFound </span><span class="cov0" title="0">{
+                return nil, "", NotFoundError{Kind: kind, ID: id}
+        }</span>
+        <span class="cov0" title="0">if resp.StatusCode != http.StatusOK </span><span class="cov0" title="0">{
+                return nil, "", fmt.Errorf("assets: unexpected status %d from get %s/%s", resp.StatusCode, kind, id)
+        }</span>
+
+        <span class="cov0" title="0">body, err := io.ReadAll(resp.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, "", fmt.Errorf("assets: read get response: %w", err)
+        }</span>
+        <span class="cov0" title="0">return body, resp.Header.Get("Content-Type"), nil</span>
+}
+
+// Store uploads an asset's bytes under kind/id, overwriting any existing asset there.
+func (c *Client) Store(ctx context.Context, kind, id string, data []byte, contentType string) error <span class="cov0" title="0">{
+        var buf bytes.Buffer
+        writer := multipart.NewWriter(&amp;buf)
+        header := textproto.MIMEHeader{}
+        header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename=%q`, id))
+        if contentType != "" </span><span class="cov0" title="0">{
+                header.Set("Content-Type", contentType)
+        }</span>
+        <span class="cov0" title="0">part, err := writer.CreatePart(header)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: build multipart form: %w", err)
+        }</span>
+        <span class="cov0" title="0">if _, err := part.Write(data); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: write multipart body: %w", err)
+        }</span>
+        <span class="cov0" title="0">if err := writer.Close(); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: close multipart form: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/asset/"+kind+"/"+id, &amp;buf)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: build store request: %w", err)
+        }</span>
+        <span class="cov0" title="0">req.Header.Set("Content-Type", writer.FormDataContentType())
+
+        resp, err := c.http.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: store request failed: %w", err)
+        }</span>
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{ _ = resp.Body.Close() }</span>()
+
+        <span class="cov0" title="0">if resp.StatusCode != http.StatusCreated </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: unexpected status %d from store %s/%s", resp.StatusCode, kind, id)
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// Delete removes an asset. A missing asset (404) is treated as success - the end state (no
+// asset at kind/id) is the same either way.
+func (c *Client) Delete(ctx context.Context, kind, id string) error <span class="cov0" title="0">{
+        req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.baseURL+"/asset/"+kind+"/"+id, nil)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: build delete request: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">resp, err := c.http.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: delete request failed: %w", err)
+        }</span>
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{ _ = resp.Body.Close() }</span>()
+
+        <span class="cov0" title="0">if resp.StatusCode != http.StatusNoContent &amp;&amp; resp.StatusCode != http.StatusNotFound </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: unexpected status %d from delete %s/%s", resp.StatusCode, kind, id)
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// Promote copies a staged asset (fromKind/fromID) to a live one (toKind/toID), then deletes the
+// staged copy - the promote-then-delete step every editor/admin finalize and accepted proposal
+// performs for a referenced staged cover/sample.
+func (c *Client) Promote(ctx context.Context, fromKind, fromID, toKind, toID string) error <span class="cov0" title="0">{
+        data, contentType, err := c.Get(ctx, fromKind, fromID)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: promote %s/%s -&gt; %s/%s: %w", fromKind, fromID, toKind, toID, err)
+        }</span>
+        <span class="cov0" title="0">if err := c.Store(ctx, toKind, toID, data, contentType); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: promote %s/%s -&gt; %s/%s: %w", fromKind, fromID, toKind, toID, err)
+        }</span>
+        <span class="cov0" title="0">return c.Delete(ctx, fromKind, fromID)</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Package authz calls auth-api's POST /authz/check to verify a caller's bearer token and
 // resolve their roles, and provides Gin middleware that gates a route on holding one of a set
 // of allowed roles. See platform's volume-edit-authorization spec
 // (openspec/changes/volume-edit-with-approval-workflow in sweetrpg/platform).
@@ -181,7 +320,7 @@ func (c *Client) Check(ctx context.Context, token, service string) (*CheckRespon
 }
 </pre>
 		
-		<pre class="file" id="file1" style="display: none">package authz
+		<pre class="file" id="file2" style="display: none">package authz
 
 import (
         "net/http"
@@ -302,7 +441,7 @@ func forbidden(c *gin.Context) <span class="cov4" title="2">{
 }</span>
 </pre>
 		
-		<pre class="file" id="file2" style="display: none">// Package cachettl resolves the cache TTL for a given route group, loaded once at startup
+		<pre class="file" id="file3" style="display: none">// Package cachettl resolves the cache TTL for a given route group, loaded once at startup
 // from the CACHE_TTLS env var so slower-changing entities and faster-changing ones aren't
 // forced onto the same cache policy.
 package cachettl
@@ -373,7 +512,7 @@ func (c Config) TTL(route string) time.Duration <span class="cov9" title="8">{
 }
 </pre>
 		
-		<pre class="file" id="file3" style="display: none">package main
+		<pre class="file" id="file4" style="display: none">package main
 
 import (
         "context"
@@ -402,14 +541,17 @@ import (
         "github.com/sweetrpg/api-core.go/featureflags"
         "github.com/sweetrpg/api-core.go/tracing"
         "github.com/sweetrpg/api-core.go/vo"
+        "github.com/sweetrpg/catalog-api/assets"
         "github.com/sweetrpg/catalog-api/authz"
         "github.com/sweetrpg/catalog-api/cachettl"
         "github.com/sweetrpg/catalog-api/constants"
         "github.com/sweetrpg/catalog-api/docs"
+        "github.com/sweetrpg/catalog-api/editsession"
         "github.com/sweetrpg/catalog-api/proposedchanges"
         "github.com/sweetrpg/catalog-api/ratelimit"
         "github.com/sweetrpg/catalog-api/readiness"
         "github.com/sweetrpg/catalog-api/server"
+        "github.com/sweetrpg/catalog-api/vocabularies"
         "github.com/sweetrpg/common.go/logging"
         "github.com/sweetrpg/common.go/util"
         "github.com/sweetrpg/mongodb.go/database"
@@ -472,6 +614,12 @@ func main() <span class="cov0" title="0">{
         if err := proposedchanges.EnsureIndexes(context.Background()); err != nil </span><span class="cov0" title="0">{
                 logging.Logger.Error("Error while ensuring proposed_changes indexes", "error", err.Error())
         }</span>
+        <span class="cov0" title="0">if err := vocabularies.EnsureIndexes(context.Background()); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("Error while ensuring vocabularies indexes", "error", err.Error())
+        }</span>
+        <span class="cov0" title="0">if err := vocabularies.Backfill(context.Background()); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("Error while backfilling vocabularies", "error", err.Error())
+        }</span>
 
         // Actuator
         <span class="cov0" title="0">setupAcuator(r)
@@ -483,8 +631,15 @@ func main() <span class="cov0" title="0">{
         r.Use(RateLimiter(redisPool))
 
         authzClient := authz.NewClient(util.GetEnv(constants.AUTH_API_URL, ""))
+        assetsClient := assets.NewClient(util.GetEnv(constants.ASSETS_WEB_URL, ""))
 
-        server.SetupHandlers(r, cache, ttls, authzClient)
+        editSessionPool := setupEditSessionPool()
+        if editSessionPool != nil </span><span class="cov0" title="0">{
+                defer func() </span><span class="cov0" title="0">{ _ = editSessionPool.Close() }</span>()
+        }
+        <span class="cov0" title="0">editSessions := editsession.NewStore(editSessionPool)
+
+        server.SetupHandlers(r, cache, ttls, authzClient, assetsClient, editSessions)
 
         _ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))</span>
 }
@@ -641,6 +796,46 @@ func setupRedisPool() *redis.Pool <span class="cov6" title="2">{
         }
 }
 
+// editSessionRedisDB is the Redis DB index reserved for edit sessions on catalog-api's own
+// Redis instance (REDIS_HOST/_PORT/_PASS) - no separate host/port config needed, see
+// docs/frontend-conventions.md's Redis registry in sweetrpg/platform.
+const editSessionRedisDB = 2
+
+// setupEditSessionPool builds a second redigo pool against the same Redis instance as
+// setupRedisPool, but selecting editSessionRedisDB - a separate pool (not a shared one with a
+// per-command SELECT) so cache/rate-limit connections can never accidentally read/write edit
+// session keys or vice versa. Returns nil when no Redis is configured, matching
+// setupRedisPool's behavior.
+func setupEditSessionPool() *redis.Pool <span class="cov0" title="0">{
+        redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
+        if !found </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
+        redisPass := os.Getenv(apiconstants.REDIS_PASS)
+        addr := fmt.Sprintf("%s:%s", redisHost, redisPort)
+
+        return &amp;redis.Pool{
+                MaxIdle:     5,
+                IdleTimeout: 240 * time.Second,
+                Dial: func() (redis.Conn, error) </span><span class="cov0" title="0">{
+                        dialOpts := []redis.DialOption{
+                                redis.DialConnectTimeout(redisConnectTimeout),
+                                redis.DialDatabase(editSessionRedisDB),
+                        }
+                        if redisPass != "" </span><span class="cov0" title="0">{
+                                // DialPassword, not a manual AUTH after Dial - DialDatabase's SELECT runs
+                                // during Dial() itself, before any command this func could issue afterward;
+                                // against a password-protected Redis that SELECT would fail pre-auth. Passing
+                                // the password as a DialOption lets redigo order AUTH before SELECT internally.
+                                dialOpts = append(dialOpts, redis.DialPassword(redisPass))
+                        }</span>
+                        <span class="cov0" title="0">return redis.Dial("tcp", addr, dialOpts...)</span>
+                },
+        }
+}
+
 // setupCache builds the response cache store and, when REDIS_HOST is configured, registers the
 // Redis pool with readiness so /status/health live-pings it on every call (see
 // readiness.CacheReady) instead of trusting a boot-time snapshot - a Redis outage that resolves
@@ -789,7 +984,7 @@ func globalRateLimiter() gin.HandlerFunc <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file4" style="display: none">// Package docs Code generated by swaggo/swag. DO NOT EDIT
+		<pre class="file" id="file5" style="display: none">// Package docs Code generated by swaggo/swag. DO NOT EDIT
 package docs
 
 import "github.com/swaggo/swag"
@@ -1364,7 +1559,109 @@ func init() <span class="cov0" title="0">{
 }</span>
 </pre>
 		
-		<pre class="file" id="file5" style="display: none">// Package ratelimit implements a Redis-backed, per-client, per-route-tier request rate
+		<pre class="file" id="file6" style="display: none">// Package editsession reads/deletes the shared, session-backed volume edit state that
+// catalog-web writes to Redis (REDIS_DB=2 on catalog-api's own Redis instance - see
+// docs/frontend-conventions.md's edit-session schema in sweetrpg/platform). catalog-api reads
+// a session at finalize time and deletes it once finalize completes; the one exception to
+// "catalog-api never creates a session" is pull-back (task 5.4), which recreates a pending
+// proposal's diff as a fresh session so the submitter can resume editing it.
+package editsession
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "time"
+
+        "github.com/gomodule/redigo/redis"
+)
+
+// KeyPrefix is the Redis key namespace for edit sessions: "edit-session:&lt;userId&gt;:&lt;recordType&gt;".
+const KeyPrefix = "edit-session"
+
+// Session mirrors the JSON schema catalog-web writes.
+type Session struct {
+        RecordID           string         `json:"recordId"`
+        Fields             map[string]any `json:"fields"`
+        StagedCoverAssetId string         `json:"stagedCoverAssetId,omitempty"`
+        SampleAssetIds     []string       `json:"sampleAssetIds,omitempty"`
+        CreatedAt          time.Time      `json:"createdAt"`
+        UpdatedAt          time.Time      `json:"updatedAt"`
+}
+
+// Key returns the Redis key for a user's in-flight session on a given record type.
+func Key(userID, recordType string) string <span class="cov10" title="8">{
+        return fmt.Sprintf("%s:%s:%s", KeyPrefix, userID, recordType)
+}</span>
+
+// Store reads/deletes edit sessions against a Redis pool already selecting REDIS_DB=2.
+type Store struct {
+        pool *redis.Pool
+}
+
+// NewStore wraps pool - the caller is responsible for the pool already dialing REDIS_DB=2.
+func NewStore(pool *redis.Pool) *Store <span class="cov7" title="4">{
+        return &amp;Store{pool: pool}
+}</span>
+
+// Get fetches a user's in-flight session for recordType, or nil if none exists.
+func (s *Store) Get(ctx context.Context, userID, recordType string) (*Session, error) <span class="cov4" title="2">{
+        conn, err := s.pool.GetContext(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("editsession: get connection: %w", err)
+        }</span>
+        <span class="cov4" title="2">defer func() </span><span class="cov4" title="2">{ _ = conn.Close() }</span>()
+
+        <span class="cov4" title="2">raw, err := redis.Bytes(conn.Do("GET", Key(userID, recordType)))
+        if err == redis.ErrNil </span><span class="cov1" title="1">{
+                return nil, nil
+        }</span>
+        <span class="cov1" title="1">if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("editsession: get %s: %w", Key(userID, recordType), err)
+        }</span>
+
+        <span class="cov1" title="1">var session Session
+        if err := json.Unmarshal(raw, &amp;session); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("editsession: unmarshal %s: %w", Key(userID, recordType), err)
+        }</span>
+        <span class="cov1" title="1">return &amp;session, nil</span>
+}
+
+// Set writes userID's session for recordType, overwriting any existing one. Used only by
+// pull-back (task 5.4) - every other session write comes from catalog-web directly.
+func (s *Store) Set(ctx context.Context, userID, recordType string, session Session) error <span class="cov0" title="0">{
+        conn, err := s.pool.GetContext(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("editsession: get connection: %w", err)
+        }</span>
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{ _ = conn.Close() }</span>()
+
+        <span class="cov0" title="0">raw, err := json.Marshal(session)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("editsession: marshal session for %s: %w", Key(userID, recordType), err)
+        }</span>
+        <span class="cov0" title="0">if _, err := conn.Do("SET", Key(userID, recordType), raw); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("editsession: set %s: %w", Key(userID, recordType), err)
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+// Delete removes a user's in-flight session for recordType. A missing session is not an error.
+func (s *Store) Delete(ctx context.Context, userID, recordType string) error <span class="cov4" title="2">{
+        conn, err := s.pool.GetContext(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("editsession: get connection: %w", err)
+        }</span>
+        <span class="cov4" title="2">defer func() </span><span class="cov4" title="2">{ _ = conn.Close() }</span>()
+
+        <span class="cov4" title="2">if _, err := conn.Do("DEL", Key(userID, recordType)); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("editsession: delete %s: %w", Key(userID, recordType), err)
+        }</span>
+        <span class="cov4" title="2">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">// Package ratelimit implements a Redis-backed, per-client, per-route-tier request rate
 // limiter. Counters live in Redis (INCR + EXPIRE) rather than per-pod memory, so the limit is
 // consistent across catalog-api's replicas instead of being N times looser depending on how
 // many pods happen to be up.
@@ -1437,7 +1734,7 @@ func Ping(ctx context.Context, pool *redis.Pool) error <span class="cov3" title=
 }
 </pre>
 		
-		<pre class="file" id="file6" style="display: none">// Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
+		<pre class="file" id="file8" style="display: none">// Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
 // api-core.go's HealthHandler already covers) so /status/health can fail loud instead of the
 // service silently degrading to an uncached or unlimited mode.
 package readiness
