@@ -13,6 +13,7 @@ import (
 	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-data.go/data"
+	"github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/common.go/logging"
 )
 
@@ -124,7 +125,14 @@ func acceptVolumeProposedChange(c *gin.Context, assetsClient *assets.Client) {
 		}
 
 		newValue, _ := change.New.(string)
-		setFieldValue(&updated, field, newValue)
+		switch field {
+		case "title":
+			updated.Title = newValue
+		case "description":
+			updated.Description = newValue
+		case "notes":
+			updated.Notes = newValue
+		}
 		change.Status = proposedchanges.StatusAccepted
 		proposal.Diff[field] = change
 		applied = append(applied, field)
@@ -157,7 +165,7 @@ func acceptVolumeProposedChange(c *gin.Context, assetsClient *assets.Client) {
 
 	if appliedAny {
 		updated.UpdatedBy = authz.Subject(c)
-		if _, err := data.UpdateVolume(c.Request.Context(), volumeID, &updated); err != nil {
+		if _, err := data.UpdateVolume(c.Request.Context(), volumeID, &updated, models.VersionStateLive); err != nil {
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "update_failed", Message: err.Error()})
 			return

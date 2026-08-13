@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -420,13 +421,20 @@ func TestPatchVolumeSubmitterCannotSetEditorOnlyFields(t *testing.T) {
 	}
 }
 
-func TestPatchVolumeSubmitterCreatesProposalWithoutTouchingLiveRecord(t *testing.T) {
+func TestPatchVolumeSubmitterCreatesSubmittedVersionWithoutTouchingLiveRecord(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	r := newTestRouter(t, []string{authz.RoleSubmitter})
 
 	rec := doPatch(t, r, "/volumes/"+seed.ID, map[string]string{"title": "Proposed By Submitter"})
 	if rec.Code != http.StatusAccepted {
 		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusAccepted, rec.Body.String())
+	}
+	var resp submittedVersionResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if resp.Version != 2 || resp.State != "submitted" {
+		t.Errorf("response = %+v, want version 2, state submitted", resp)
 	}
 
 	got, err := data.GetVolume(t.Context(), seed.ID)
@@ -437,15 +445,15 @@ func TestPatchVolumeSubmitterCreatesProposalWithoutTouchingLiveRecord(t *testing
 		t.Errorf("live Title = %q, want unchanged %q", got.Title, "Original Title")
 	}
 
-	pending, err := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
+	version, err := data.GetVolumeVersion(t.Context(), seed.ID, 2)
 	if err != nil {
-		t.Fatalf("ListPending() error = %v", err)
+		t.Fatalf("GetVolumeVersion() error = %v", err)
 	}
-	if len(pending) != 1 {
-		t.Fatalf("ListPending() returned %d, want 1", len(pending))
+	if version == nil {
+		t.Fatalf("GetVolumeVersion() = nil, want the submitted version")
 	}
-	if pending[0].Diff["title"].New != "Proposed By Submitter" {
-		t.Errorf("proposal title = %v, want %q", pending[0].Diff["title"].New, "Proposed By Submitter")
+	if version.Title != "Proposed By Submitter" {
+		t.Errorf("submitted version title = %q, want %q", version.Title, "Proposed By Submitter")
 	}
 }
 
@@ -459,7 +467,7 @@ func TestPatchVolumeUserRoleForbidden(t *testing.T) {
 	}
 }
 
-func TestListAndAcceptAllProposedChanges(t *testing.T) {
+func TestListAndAcceptAllVersions(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	submitter := newTestRouter(t, []string{authz.RoleSubmitter})
 	doPatch(t, submitter, "/volumes/"+seed.ID, map[string]string{
@@ -468,35 +476,34 @@ func TestListAndAcceptAllProposedChanges(t *testing.T) {
 	})
 
 	editor := newTestRouter(t, []string{authz.RoleEditor})
-	listRec := httptest.NewRequest(http.MethodGet, "/volumes/"+seed.ID+"/proposed-changes", nil)
+	listRec := httptest.NewRequest(http.MethodGet, "/volumes/"+seed.ID+"/versions", nil)
 	listRec.Header.Set("Authorization", "Bearer some-token")
 	rec := httptest.NewRecorder()
 	editor.ServeHTTP(rec, listRec)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("list status = %d, want %d", rec.Code, http.StatusOK)
 	}
-	var proposals []proposedchanges.ProposedChange
-	if err := json.Unmarshal(rec.Body.Bytes(), &proposals); err != nil {
+	var versions []vo.VolumeVersionVO
+	if err := json.Unmarshal(rec.Body.Bytes(), &versions); err != nil {
 		t.Fatalf("unmarshal list response: %v", err)
 	}
-	if len(proposals) != 1 {
-		t.Fatalf("listed %d proposals, want 1", len(proposals))
+	if len(versions) != 2 {
+		t.Fatalf("listed %d versions, want 2", len(versions))
 	}
-	proposalID := proposals[0].ID.Hex()
 
-	acceptRec := doPost(t, editor, "/volumes/"+seed.ID+"/proposed-changes/"+proposalID+"/accept", nil)
+	acceptRec := doPost(t, editor, fmt.Sprintf("/volumes/%s/versions/2/accept", seed.ID), nil)
 	if acceptRec.Code != http.StatusOK {
 		t.Fatalf("accept status = %d, want %d, body: %s", acceptRec.Code, http.StatusOK, acceptRec.Body.String())
 	}
-	var acceptResp reviewProposalResponse
+	var acceptResp reviewVersionResponse
 	if err := json.Unmarshal(acceptRec.Body.Bytes(), &acceptResp); err != nil {
 		t.Fatalf("unmarshal accept response: %v", err)
 	}
-	if acceptResp.Status != proposedchanges.StatusAccepted {
-		t.Errorf("Status = %q, want %q", acceptResp.Status, proposedchanges.StatusAccepted)
+	if acceptResp.State != "live" {
+		t.Errorf("State = %q, want %q", acceptResp.State, "live")
 	}
-	if len(acceptResp.Applied) != 2 {
-		t.Errorf("Applied = %v, want 2 fields", acceptResp.Applied)
+	if len(acceptResp.Conflicts) != 0 {
+		t.Errorf("Conflicts = %v, want none", acceptResp.Conflicts)
 	}
 
 	got, err := data.GetVolume(t.Context(), seed.ID)
@@ -508,7 +515,7 @@ func TestListAndAcceptAllProposedChanges(t *testing.T) {
 	}
 }
 
-func TestAcceptSubsetOfFields(t *testing.T) {
+func TestAcceptSubsetOfFieldsDerivesNewVersion(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	submitter := newTestRouter(t, []string{authz.RoleSubmitter})
 	doPatch(t, submitter, "/volumes/"+seed.ID, map[string]string{
@@ -517,19 +524,16 @@ func TestAcceptSubsetOfFields(t *testing.T) {
 	})
 
 	editor := newTestRouter(t, []string{authz.RoleEditor})
-	pending, _ := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
-	proposalID := pending[0].ID.Hex()
-
-	rec := doPost(t, editor, "/volumes/"+seed.ID+"/proposed-changes/"+proposalID+"/accept", map[string][]string{
+	rec := doPost(t, editor, fmt.Sprintf("/volumes/%s/versions/2/accept", seed.ID), map[string][]string{
 		"fields": {"title"},
 	})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
 	}
-	var resp reviewProposalResponse
+	var resp reviewVersionResponse
 	_ = json.Unmarshal(rec.Body.Bytes(), &resp)
-	if resp.Status != proposedchanges.StatusPartiallyAccepted {
-		t.Errorf("Status = %q, want %q", resp.Status, proposedchanges.StatusPartiallyAccepted)
+	if resp.Version != 3 {
+		t.Errorf("Version = %d, want 3 (a derived version)", resp.Version)
 	}
 
 	got, err := data.GetVolume(t.Context(), seed.ID)
@@ -542,18 +546,26 @@ func TestAcceptSubsetOfFields(t *testing.T) {
 	if got.Description != "seed description" {
 		t.Errorf("Description = %q, want unchanged", got.Description)
 	}
+
+	original, err := data.GetVolumeVersion(t.Context(), seed.ID, 2)
+	if err != nil {
+		t.Fatalf("GetVolumeVersion() error = %v", err)
+	}
+	if original.State != "partially_accepted" {
+		t.Errorf("original version state = %q, want %q", original.State, "partially_accepted")
+	}
+	if original.ResultingVersion == nil || *original.ResultingVersion != 3 {
+		t.Errorf("original version ResultingVersion = %v, want pointer to 3", original.ResultingVersion)
+	}
 }
 
-func TestRejectProposedChange(t *testing.T) {
+func TestRejectVolumeVersion(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	submitter := newTestRouter(t, []string{authz.RoleSubmitter})
 	doPatch(t, submitter, "/volumes/"+seed.ID, map[string]string{"title": "Rejected Title"})
 
 	editor := newTestRouter(t, []string{authz.RoleEditor})
-	pending, _ := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
-	proposalID := pending[0].ID.Hex()
-
-	rec := doPost(t, editor, "/volumes/"+seed.ID+"/proposed-changes/"+proposalID+"/reject", map[string]string{
+	rec := doPost(t, editor, fmt.Sprintf("/volumes/%s/versions/2/reject", seed.ID), map[string]string{
 		"note": "not needed",
 	})
 	if rec.Code != http.StatusOK {
@@ -568,35 +580,32 @@ func TestRejectProposedChange(t *testing.T) {
 		t.Errorf("live Title = %q, want unchanged", got.Title)
 	}
 
-	proposal, err := proposedchanges.Get(t.Context(), proposalID)
+	version, err := data.GetVolumeVersion(t.Context(), seed.ID, 2)
 	if err != nil {
-		t.Fatalf("Get() error = %v", err)
+		t.Fatalf("GetVolumeVersion() error = %v", err)
 	}
-	if proposal.Status != proposedchanges.StatusRejected {
-		t.Errorf("Status = %q, want %q", proposal.Status, proposedchanges.StatusRejected)
+	if version.State != "rejected" {
+		t.Errorf("State = %q, want %q", version.State, "rejected")
 	}
-	if proposal.ReviewNote != "not needed" {
-		t.Errorf("ReviewNote = %q, want %q", proposal.ReviewNote, "not needed")
+	if version.ReviewNote == nil || *version.ReviewNote != "not needed" {
+		t.Errorf("ReviewNote = %v, want %q", version.ReviewNote, "not needed")
 	}
 }
 
-func TestReviewingAlreadyReviewedProposalReturns409(t *testing.T) {
+func TestReviewingAlreadyReviewedVersionReturns400(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	submitter := newTestRouter(t, []string{authz.RoleSubmitter})
 	doPatch(t, submitter, "/volumes/"+seed.ID, map[string]string{"title": "First"})
 
 	editor := newTestRouter(t, []string{authz.RoleEditor})
-	pending, _ := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
-	proposalID := pending[0].ID.Hex()
-
-	first := doPost(t, editor, "/volumes/"+seed.ID+"/proposed-changes/"+proposalID+"/reject", nil)
+	first := doPost(t, editor, fmt.Sprintf("/volumes/%s/versions/2/reject", seed.ID), nil)
 	if first.Code != http.StatusOK {
 		t.Fatalf("first reject status = %d, want %d", first.Code, http.StatusOK)
 	}
 
-	second := doPost(t, editor, "/volumes/"+seed.ID+"/proposed-changes/"+proposalID+"/accept", nil)
-	if second.Code != http.StatusConflict {
-		t.Fatalf("second review status = %d, want %d", second.Code, http.StatusConflict)
+	second := doPost(t, editor, fmt.Sprintf("/volumes/%s/versions/2/accept", seed.ID), nil)
+	if second.Code != http.StatusBadRequest {
+		t.Fatalf("second review status = %d, want %d", second.Code, http.StatusBadRequest)
 	}
 }
 
@@ -606,18 +615,14 @@ func TestAcceptFlagsConflictWithoutApplyingStaleValue(t *testing.T) {
 	doPatch(t, submitter, "/volumes/"+seed.ID, map[string]string{"title": "Submitter's Title"})
 
 	editor := newTestRouter(t, []string{authz.RoleEditor})
-	// A direct edit lands after the proposal was submitted, changing the live title out from
-	// under it.
+	// A direct edit lands after the submission, changing the live title out from under it.
 	doPatch(t, editor, "/volumes/"+seed.ID, map[string]string{"title": "Editor's Direct Edit"})
 
-	pending, _ := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
-	proposalID := pending[0].ID.Hex()
-
-	rec := doPost(t, editor, "/volumes/"+seed.ID+"/proposed-changes/"+proposalID+"/accept", nil)
+	rec := doPost(t, editor, fmt.Sprintf("/volumes/%s/versions/2/accept", seed.ID), nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
 	}
-	var resp reviewProposalResponse
+	var resp reviewVersionResponse
 	_ = json.Unmarshal(rec.Body.Bytes(), &resp)
 	if len(resp.Conflicts) != 1 || resp.Conflicts[0] != "title" {
 		t.Errorf("Conflicts = %v, want [title]", resp.Conflicts)
@@ -628,6 +633,31 @@ func TestAcceptFlagsConflictWithoutApplyingStaleValue(t *testing.T) {
 		t.Fatalf("GetVolume() error = %v", err)
 	}
 	if got.Title != "Editor's Direct Edit" {
-		t.Errorf("Title = %q, want editor's direct edit to survive, not the stale proposal value", got.Title)
+		t.Errorf("Title = %q, want editor's direct edit to survive, not the stale submission value", got.Title)
+	}
+}
+
+func TestSetCurrentVolumeVersionAdminOnly(t *testing.T) {
+	seed := seedVolume(t, "Original Title")
+	editor := newTestRouter(t, []string{authz.RoleEditor})
+	doPatch(t, editor, "/volumes/"+seed.ID, map[string]string{"title": "V2 Title"})
+
+	forbidden := doPost(t, editor, fmt.Sprintf("/volumes/%s/versions/1/current", seed.ID), nil)
+	if forbidden.Code != http.StatusForbidden {
+		t.Fatalf("editor rollback status = %d, want %d", forbidden.Code, http.StatusForbidden)
+	}
+
+	admin := newTestRouter(t, []string{authz.RoleAdmin})
+	rec := doPost(t, admin, fmt.Sprintf("/volumes/%s/versions/1/current", seed.ID), nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("admin rollback status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	got, err := data.GetVolume(t.Context(), seed.ID)
+	if err != nil {
+		t.Fatalf("GetVolume() error = %v", err)
+	}
+	if got.Title != "Original Title" {
+		t.Errorf("live Title = %q, want rollback to restore %q", got.Title, "Original Title")
 	}
 }

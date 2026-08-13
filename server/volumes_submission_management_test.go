@@ -103,7 +103,14 @@ func TestOnlyAdminCanSetSubmissionCap(t *testing.T) {
 func TestRetractChangesStatusWithoutAffectingLiveRecord(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	deps := newTestDeps(t, []string{authz.RoleSubmitter})
-	doPatch(t, deps.Router, "/volumes/"+seed.ID, map[string]string{"title": "Proposed Title"})
+	seedEditSession(t, deps, "auth0|test-reviewer", "volume", editsession.Session{
+		RecordID: seed.ID,
+		Fields:   map[string]any{"title": "Proposed Title"},
+	})
+	finalize := doPost(t, deps.Router, "/volumes/"+seed.ID+"/finalize-session", nil)
+	if finalize.Code != http.StatusAccepted {
+		t.Fatalf("finalize status = %d, want %d, body: %s", finalize.Code, http.StatusAccepted, finalize.Body.String())
+	}
 
 	pending, err := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
 	if err != nil || len(pending) == 0 {
@@ -127,7 +134,14 @@ func TestRetractChangesStatusWithoutAffectingLiveRecord(t *testing.T) {
 func TestPullBackCreatesSessionAndRetractsSource(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	deps := newTestDeps(t, []string{authz.RoleSubmitter})
-	doPatch(t, deps.Router, "/volumes/"+seed.ID, map[string]string{"title": "Proposed Title"})
+	seedEditSession(t, deps, "auth0|test-reviewer", "volume", editsession.Session{
+		RecordID: seed.ID,
+		Fields:   map[string]any{"title": "Proposed Title"},
+	})
+	finalize := doPost(t, deps.Router, "/volumes/"+seed.ID+"/finalize-session", nil)
+	if finalize.Code != http.StatusAccepted {
+		t.Fatalf("finalize status = %d, want %d, body: %s", finalize.Code, http.StatusAccepted, finalize.Body.String())
+	}
 
 	pending, err := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
 	if err != nil || len(pending) == 0 {
@@ -167,7 +181,14 @@ func TestPullBackConflictsWithExistingSession(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	other := seedVolume(t, "Other Volume")
 	deps := newTestDeps(t, []string{authz.RoleSubmitter})
-	doPatch(t, deps.Router, "/volumes/"+seed.ID, map[string]string{"title": "Proposed Title"})
+	seedEditSession(t, deps, "auth0|test-reviewer", "volume", editsession.Session{
+		RecordID: seed.ID,
+		Fields:   map[string]any{"title": "Proposed Title"},
+	})
+	finalize := doPost(t, deps.Router, "/volumes/"+seed.ID+"/finalize-session", nil)
+	if finalize.Code != http.StatusAccepted {
+		t.Fatalf("finalize status = %d, want %d, body: %s", finalize.Code, http.StatusAccepted, finalize.Body.String())
+	}
 
 	pending, err := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
 	if err != nil || len(pending) == 0 {

@@ -38,6 +38,7 @@ import (
 	"github.com/sweetrpg/catalog-api/readiness"
 	"github.com/sweetrpg/catalog-api/server"
 	"github.com/sweetrpg/catalog-api/vocabularies"
+	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"github.com/sweetrpg/common.go/util"
 	"github.com/sweetrpg/mongodb.go/database"
@@ -102,6 +103,9 @@ func main() {
 	}
 	if err := vocabularies.EnsureIndexes(context.Background()); err != nil {
 		logging.Logger.Error("Error while ensuring vocabularies indexes", "error", err.Error())
+	}
+	if err := data.EnsureVolumeVersioningIndexes(context.Background()); err != nil {
+		logging.Logger.Error("Error while ensuring volume versioning indexes", "error", err.Error())
 	}
 	if err := vocabularies.Backfill(context.Background()); err != nil {
 		logging.Logger.Error("Error while backfilling vocabularies", "error", err.Error())
