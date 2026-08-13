@@ -198,16 +198,12 @@ func seedVolume(t *testing.T, title string) *vo.VolumeVO {
 	return got
 }
 
-// seedPublisher/seedStudio insert a minimal Publisher/Studio document directly - catalog-data.go
+// seedStudio/seedPerson insert a minimal Studio/Person document directly - catalog-data.go
 // has no Add function for either (read-only entities, per AGENTS.md), so tests that need one to
 // exist go straight through the mongodb.go database package instead of the data package.
-func seedPublisher(t *testing.T, id, name string) {
-	t.Helper()
-	if _, err := database.Insert("publishers", catalogmodels.Publisher{ID: id, Name: name}); err != nil {
-		t.Fatalf("seed publisher: %v", err)
-	}
-}
-
+// seedPublisher's own copy of this pattern lives in entity_patch_test.go (with a t.Cleanup this
+// file's version didn't have) - kept there instead of duplicated here now that both files are
+// in the same package.
 func seedStudio(t *testing.T, id, name string) {
 	t.Helper()
 	if _, err := database.Insert("studios", catalogmodels.Studio{ID: id, Name: name}); err != nil {

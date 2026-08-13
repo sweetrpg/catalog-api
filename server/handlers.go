@@ -11,11 +11,11 @@ import (
 
 func SetupHandlers(g *gin.Engine, cache persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client, assetsClient *assets.Client, editSessions *editsession.Store) {
 	setupContributionHandlers(g, cache, ttls)
-	setupLicenseHandlers(g, cache, ttls)
-	setupPersonHandlers(g, cache, ttls)
-	setupPublisherHandlers(g, cache, ttls)
+	setupLicenseHandlers(g, cache, ttls, authzClient)
+	setupPersonHandlers(g, cache, ttls, authzClient)
+	setupPublisherHandlers(g, cache, ttls, authzClient)
 	setupReviewHandlers(g, cache, ttls)
-	setupStudioHandlers(g, cache, ttls)
+	setupStudioHandlers(g, cache, ttls, authzClient)
 	setupSystemHandlers(g, cache, ttls)
 	setupVolumeHandlers(g, cache, ttls, authzClient, assetsClient, editSessions)
 	setupVocabularyHandlers(g, authzClient)
