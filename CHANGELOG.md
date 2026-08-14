@@ -1,4 +1,11 @@
 
+## 0.12.1 - 2026-08-14
+
+### Fixed
+- Filename and date of license
+
+
+
 ## 0.12.0 - 2026-08-14
 
 
