@@ -27,6 +27,8 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	ttl := ttls.TTL("volumes")
 	g.GET("/volumes", cache.CachePage(store, ttl, listVolumes))
 	g.GET("/volumes/:id", cache.CachePage(store, ttl, getVolume))
+	g.GET("/volumes/:id/versions", listVolumeVersions)
+	g.GET("/volumes/:id/versions/:version", getVolumeVersion)
 	// g.GET("/volumes/:id/volumes", cache.CachePage(store, ttl, getVolumeVolumes))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
@@ -47,6 +49,12 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.POST("/volumes/:id/proposed-changes/:proposalId/pull-back", writeRoles, func(c *gin.Context) {
 		pullBackVolumeProposedChange(c, editSessions)
 	})
+
+	g.POST("/volumes/:id/versions/:version/accept", reviewRoles, acceptVolumeVersion)
+	g.POST("/volumes/:id/versions/:version/reject", reviewRoles, rejectVolumeVersion)
+
+	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
+	g.POST("/volumes/:id/versions/:version/current", rollbackRoles, setCurrentVolumeVersion)
 }
 
 // List volumes.

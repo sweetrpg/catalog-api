@@ -11,8 +11,8 @@ import (
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-data.go/data"
+	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
-	"github.com/sweetrpg/common.go/logging"
 	modelcore "github.com/sweetrpg/model-core.go/vo"
 )
 
@@ -35,17 +35,11 @@ type creditRequest struct {
 const maxSampleAssetIds = 5
 
 // patchVolumeRequest's fields are pointers so an absent field (nil) is distinguishable from an
-// explicit empty string/omitted array - only present fields are part of the edit/proposal.
+// explicit empty string/omitted array - only present fields are part of the edit/submission.
 //
-// Properties/PublisherIDs/StudioIDs/Credits are editor/admin-only for now (see
-// applyVolumePatch) - the submitter proposal path's FieldChange.New is applied back via a
-// `.(string)` type assertion (volumes_review.go), which can't represent these shapes yet. A
-// submitter request touching any of them is rejected with a clear error rather than silently
-// dropping the field - extending the proposal review path to handle non-string field types is
-// tracked separately, not done here.
-//
-// Format is editor/admin-only permanently, not as a stopgap - per volume-format-selector's
-// spec, a submitter session can't set it at all, directly or via proposal.
+// Properties/PublisherIDs/StudioIDs/Credits/Format/CoverAssetId/SampleAssetIds are editor/admin
+// -only by policy (see hasEditorOnlyFields) - a submitter request touching any of them is
+// rejected with a clear error rather than silently dropping the field.
 type patchVolumeRequest struct {
 	Title          *string            `json:"title"`
 	Description    *string            `json:"description"`
@@ -59,30 +53,42 @@ type patchVolumeRequest struct {
 	SampleAssetIds *[]string          `json:"sampleAssetIds"`
 }
 
-// hasEditorOnlyFields reports whether req touches a field the submitter-proposal path can't yet
-// represent, or that's permanently editor/admin-only (see patchVolumeRequest's doc comment).
+// hasEditorOnlyFields reports whether req touches a field that's editor/admin-only by policy
+// (see patchVolumeRequest's doc comment).
 func (req patchVolumeRequest) hasEditorOnlyFields() bool {
 	return req.Properties != nil || req.PublisherIDs != nil || req.StudioIDs != nil ||
 		req.Credits != nil || req.Format != nil || req.CoverAssetId != nil || req.SampleAssetIds != nil
 }
 
+// pendingProposalResponse is returned by the proposed_changes-based submission paths that are
+// still in use (finalizeVolumeSession's submitter branch, and the generic entity_patch.go
+// mechanism for publisher/studio/person/license) - not the version-based patchVolume path below,
+// which returns submittedVersionResponse instead.
 type pendingProposalResponse struct {
 	ProposalID string `json:"proposalId"`
 	Status     string `json:"status"`
 	Message    string `json:"message"`
 }
 
-// Edit a volume, or propose an edit for review.
+// submittedVersionResponse is returned when a submitter's PATCH creates a submitted version
+// rather than editing the live record.
+type submittedVersionResponse struct {
+	Version int    `json:"version"`
+	State   string `json:"state"`
+	Message string `json:"message"`
+}
+
+// Edit a volume, or submit an edit for review.
 //
 //	@Summary		Edit a volume
-//	@Description	admin/editor roles apply the change to the live record; submitter-only roles create a proposed change for review instead.
+//	@Description	admin/editor roles create a new version that goes live immediately; submitter-only roles create a submitted version for review instead.
 //	@Tags			volumes
 //	@Accept			json
 //	@Produce		json
 //	@Param			id		path		string				true	"Volume ID"
 //	@Param			request	body		patchVolumeRequest	true	"Fields to change"
 //	@Success		200		{object}	interface{}
-//	@Success		202		{object}	pendingProposalResponse
+//	@Success		202		{object}	submittedVersionResponse
 //	@Failure		400		{object}	apiv.ErrorVO
 //	@Failure		404		{object}	apiv.ErrorVO
 //	@Failure		500		{object}	apiv.ErrorVO
@@ -115,26 +121,23 @@ func patchVolume(c *gin.Context) {
 		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
 		return
 	}
-	for field, change := range diff {
-		change.Old = fieldValue(existing, field)
-		diff[field] = change
-	}
 
 	roles := authz.Roles(c)
-	if authz.HasRole(roles, authz.RoleAdmin) || authz.HasRole(roles, authz.RoleEditor) {
-		applyVolumePatch(c, existing, req)
-		return
-	}
+	isEditor := authz.HasRole(roles, authz.RoleAdmin) || authz.HasRole(roles, authz.RoleEditor)
 
-	if req.hasEditorOnlyFields() {
+	if !isEditor && req.hasEditorOnlyFields() {
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{
 			Error:   "unsupported_field",
-			Message: "properties, publisherIds, and studioIds can't be proposed yet - an editor or admin must make this change directly",
+			Message: "properties, publisherIds, studioIds, credits, format, coverAssetId, and sampleAssetIds can't be submitted - an editor or admin must make this change directly",
 		})
 		return
 	}
 
-	proposeVolumeChange(c, id, diff)
+	state := catalogmodels.VersionStateSubmitted
+	if isEditor {
+		state = catalogmodels.VersionStateLive
+	}
+	applyVolumePatch(c, existing, req, state)
 }
 
 // patchRequestDiff builds the initial diff map from the request's present fields, with New set
@@ -167,24 +170,14 @@ func fieldValue(v *vo.VolumeVO, field string) string {
 	}
 }
 
-// setFieldValue writes value into one of v's patchable fields.
-func setFieldValue(v *vo.VolumeVO, field, value string) {
-	switch field {
-	case "title":
-		v.Title = value
-	case "description":
-		v.Description = value
-	case "notes":
-		v.Notes = value
-	}
-}
-
-// applyVolumePatch merges req's present fields into existing and writes the result directly to
-// the live record - the admin/editor direct-edit path. Returns whether the update succeeded (an
-// HTTP response, success or failure, has always already been written either way) - callers that
-// have follow-up cleanup contingent on success (finalizeVolumeSession deleting the now-applied
+// applyVolumePatch merges req's present fields into existing and creates a new version with the
+// given state - state VersionStateLive is the admin/editor direct-edit path (the new version
+// goes live immediately); VersionStateSubmitted is the submitter path (a new version is created
+// for review, the live record is untouched). Returns whether the update succeeded (an HTTP
+// response, success or failure, has always already been written either way) - callers that have
+// follow-up cleanup contingent on success (finalizeVolumeSession deleting the now-applied
 // session) need to know which happened.
-func applyVolumePatch(c *gin.Context, existing *vo.VolumeVO, req patchVolumeRequest) bool {
+func applyVolumePatch(c *gin.Context, existing *vo.VolumeVO, req patchVolumeRequest, state catalogmodels.VersionState) bool {
 	updated := *existing
 	if req.Title != nil {
 		updated.Title = *req.Title
@@ -242,14 +235,30 @@ func applyVolumePatch(c *gin.Context, existing *vo.VolumeVO, req patchVolumeRequ
 		}
 	}
 
-	result, err := data.UpdateVolume(c.Request.Context(), existing.ID, &updated)
+	version, err := data.UpdateVolume(c.Request.Context(), existing.ID, &updated, state)
 	if err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "update_failed", Message: err.Error()})
 		return false
 	}
-	if result == nil {
+	if version == nil {
 		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
+		return false
+	}
+
+	if state != catalogmodels.VersionStateLive {
+		c.JSON(http.StatusAccepted, submittedVersionResponse{
+			Version: version.Version,
+			State:   string(version.State),
+			Message: "Change submitted for review",
+		})
+		return true
+	}
+
+	result, err := data.GetVolume(c.Request.Context(), existing.ID)
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
 		return false
 	}
 
@@ -305,29 +314,4 @@ func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, 
 		}
 	}
 	return nil
-}
-
-// proposeVolumeChange stores diff as a pending proposed change rather than touching the live
-// record - the submitter-only path.
-func proposeVolumeChange(c *gin.Context, volumeID string, diff map[string]proposedchanges.FieldChange) {
-	proposal := &proposedchanges.ProposedChange{
-		RecordType:  "volume",
-		RecordID:    volumeID,
-		Diff:        diff,
-		SubmittedBy: authz.Subject(c),
-	}
-
-	id, err := proposedchanges.Add(c.Request.Context(), proposal)
-	if err != nil {
-		logging.Logger.Error("Error while storing proposed volume change", "error", err.Error())
-		sentry.CaptureException(err)
-		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "propose_failed", Message: err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusAccepted, pendingProposalResponse{
-		ProposalID: id,
-		Status:     proposedchanges.StatusPending,
-		Message:    "Change proposed for review",
-	})
 }
