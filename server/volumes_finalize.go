@@ -14,6 +14,7 @@ import (
 	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-api/submissioncap"
 	"github.com/sweetrpg/catalog-data.go/data"
+	"github.com/sweetrpg/catalog-objects.go/models"
 )
 
 // recordTypeVolume is the edit-session recordType this endpoint reads (see docs/
@@ -99,7 +100,7 @@ func finalizeVolumeSession(c *gin.Context, assetsClient *assets.Client, editSess
 			req.SampleAssetIds = &liveSampleIds
 		}
 
-		if !applyVolumePatch(c, existing, req) {
+		if !applyVolumePatch(c, existing, req, models.VersionStateLive) {
 			return
 		}
 		if err := editSessions.Delete(c.Request.Context(), userID, recordTypeVolume); err != nil {

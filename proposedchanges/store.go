@@ -67,6 +67,23 @@ func ListPending(ctx context.Context, recordType, recordID string) ([]*ProposedC
 	return results, nil
 }
 
+// ListPendingByType returns every pending proposed change across all records of one type,
+// oldest first - used by the version-model migration (cmd/migrate-volumes) to find every
+// still-pending proposal that needs to become a submitted version, not just one record's.
+func ListPendingByType(ctx context.Context, recordType string) ([]*ProposedChange, error) {
+	filter := bson.D{
+		{Key: "record_type", Value: recordType},
+		{Key: "status", Value: StatusPending},
+	}
+	sort := bson.D{{Key: "submitted_at", Value: 1}}
+
+	results, err := database.Query[ProposedChange](CollectionName, filter, sort, nil, 0, 0)
+	if err != nil {
+		return nil, fmt.Errorf("proposedchanges: list pending by type: %w", err)
+	}
+	return results, nil
+}
+
 // Update persists changes to an existing proposed change (its Diff field statuses, derived
 // Status, and review metadata).
 func Update(ctx context.Context, p *ProposedChange) error {
