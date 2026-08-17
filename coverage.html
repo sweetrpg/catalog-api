@@ -57,9 +57,9 @@
 				
 				<option value="file0">github.com/sweetrpg/catalog-api/assets/client.go (0.0%)</option>
 				
-				<option value="file1">github.com/sweetrpg/catalog-api/authz/client.go (78.3%)</option>
+				<option value="file1">github.com/sweetrpg/catalog-api/authz/client.go (81.5%)</option>
 				
-				<option value="file2">github.com/sweetrpg/catalog-api/authz/middleware.go (91.1%)</option>
+				<option value="file2">github.com/sweetrpg/catalog-api/authz/middleware.go (91.3%)</option>
 				
 				<option value="file3">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
@@ -244,6 +244,8 @@ import (
         "fmt"
         "net/http"
         "time"
+
+        "github.com/sweetrpg/common.go/logging"
 )
 
 // Platform role names, matching auth-api's fixed role model exactly (see
@@ -289,12 +291,15 @@ func NewClient(baseURL string) *Client <span class="cov10" title="9">{
 // Check verifies token against auth-api and returns the caller's allowed/roles/subject for the
 // given service name. Returns InvalidTokenError if auth-api rejects the token itself.
 func (c *Client) Check(ctx context.Context, token, service string) (*CheckResponse, error) <span class="cov9" title="8">{
+        logging.Logger.Debug("authz check", "token", token[:8], "service", service)
+
         body, err := json.Marshal(map[string]string{"service": service})
         if err != nil </span><span class="cov0" title="0">{
                 return nil, fmt.Errorf("authz: marshal request: %w", err)
         }</span>
 
-        <span class="cov9" title="8">req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/authz/check", bytes.NewReader(body))
+        <span class="cov9" title="8">logging.Logger.Debug("authz check", "baseURL", c.baseURL, "body", string(body))
+        req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/authz/check", bytes.NewReader(body))
         if err != nil </span><span class="cov0" title="0">{
                 return nil, fmt.Errorf("authz: build request: %w", err)
         }</span>
@@ -302,6 +307,7 @@ func (c *Client) Check(ctx context.Context, token, service string) (*CheckRespon
         req.Header.Set("Authorization", "Bearer "+token)
 
         resp, err := c.http.Do(req)
+        logging.Logger.Debug("authz check", "resp", resp, "err", err)
         if err != nil </span><span class="cov3" title="2">{
                 return nil, fmt.Errorf("authz: request failed: %w", err)
         }</span>
@@ -318,7 +324,9 @@ func (c *Client) Check(ctx context.Context, token, service string) (*CheckRespon
         if err := json.NewDecoder(resp.Body).Decode(&amp;out); err != nil </span><span class="cov0" title="0">{
                 return nil, fmt.Errorf("authz: decode response: %w", err)
         }</span>
-        <span class="cov7" title="5">return &amp;out, nil</span>
+
+        <span class="cov7" title="5">logging.Logger.Debug("authz check", "out", out)
+        return &amp;out, nil</span>
 }
 </pre>
 		
@@ -349,8 +357,9 @@ func RequireAnyRole(client *Client, service string, allowedRoles ...string) gin.
                         unauthorized(c)
                         return
                 }</span>
+                <span class="cov8" title="4">logging.Logger.Debug("authz check", "token", token[:8], "service", service)
 
-                <span class="cov8" title="4">result, err := client.Check(c.Request.Context(), token, service)
+                result, err := client.Check(c.Request.Context(), token, service)
                 if err != nil </span><span class="cov1" title="1">{
                         if _, ok := err.(InvalidTokenError); ok </span><span class="cov0" title="0">{
                                 unauthorized(c)
