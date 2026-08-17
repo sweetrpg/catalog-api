@@ -1,4 +1,11 @@
 
+## 0.13.0 - 2026-08-17
+
+### Added
+- Add debug logging for authorization checks
+
+
+
 ## 0.12.1 - 2026-08-14
 
 ### Fixed

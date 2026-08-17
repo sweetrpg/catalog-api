@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/sweetrpg/common.go/logging"
 )
 
 // Platform role names, matching auth-api's fixed role model exactly (see
@@ -56,11 +58,14 @@ func NewClient(baseURL string) *Client {
 // Check verifies token against auth-api and returns the caller's allowed/roles/subject for the
 // given service name. Returns InvalidTokenError if auth-api rejects the token itself.
 func (c *Client) Check(ctx context.Context, token, service string) (*CheckResponse, error) {
+	logging.Logger.Debug("authz check", "token", token[:8], "service", service)
+
 	body, err := json.Marshal(map[string]string{"service": service})
 	if err != nil {
 		return nil, fmt.Errorf("authz: marshal request: %w", err)
 	}
 
+	logging.Logger.Debug("authz check", "baseURL", c.baseURL, "body", string(body))
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/authz/check", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("authz: build request: %w", err)
@@ -69,6 +74,7 @@ func (c *Client) Check(ctx context.Context, token, service string) (*CheckRespon
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := c.http.Do(req)
+	logging.Logger.Debug("authz check", "resp", resp, "err", err)
 	if err != nil {
 		return nil, fmt.Errorf("authz: request failed: %w", err)
 	}
@@ -85,5 +91,7 @@ func (c *Client) Check(ctx context.Context, token, service string) (*CheckRespon
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return nil, fmt.Errorf("authz: decode response: %w", err)
 	}
+
+	logging.Logger.Debug("authz check", "out", out)
 	return &out, nil
 }
