@@ -1,4 +1,11 @@
 
+## 0.15.1 - 2026-08-18
+
+### Fixed
+- Bump catalog-data.go to v0.8.2 (QueryVolumes now defaults to title sort, so editing a
+  volume can't push it out of the default-limit browse listing)
+
+
 ## 0.15.0 - 2026-08-18
 
 ### Added
