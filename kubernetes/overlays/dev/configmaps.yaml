@@ -36,3 +36,8 @@ data:
   INGRESS_BASE_PATH: /api/0/catalog
   INGRESS_HOST: dev.sweetrpg.com
   INGRESS_SCHEMES: http,https
+  # Unset until now - authz.NewClient/assets.NewClient fail open to an empty baseURL rather than
+  # refusing to start, so this was silently returning "authz_unavailable" 503s on every request
+  # needing an authz check (e.g. volume-edit's vocabulary fetch) instead of a startup error.
+  AUTH_API_URL: http://api-v1.sweetrpg-auth.svc.cluster.local:8000
+  ASSETS_WEB_URL: http://web-v1.sweetrpg-assets.svc.cluster.local:8081
