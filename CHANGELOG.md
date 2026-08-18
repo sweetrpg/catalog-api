@@ -1,4 +1,11 @@
 
+## 0.14.0 - 2026-08-18
+
+### Added
+- Version model for all entity types, remove proposed_changes mechanism
+
+
+
 ## 0.13.0 - 2026-08-17
 
 ### Added
