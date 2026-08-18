@@ -63,7 +63,7 @@
 				
 				<option value="file3">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
-				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (15.2%)</option>
+				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (19.8%)</option>
 				
 				<option value="file5">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
@@ -632,6 +632,13 @@ func main() <span class="cov0" title="0">{
         }
         <span class="cov0" title="0">cache := setupCache(redisPool)
         ttls := cachettl.Load()
+        // entity_version_patch.go (publishers/studios/persons/licenses) and volumes_patch.go/
+        // volumes_versions.go have no per-route cache invalidation of their own - without this, a
+        // successful write leaves cache.CachePage's cached GET responses stale for up to the
+        // configured TTL (an hour by default), so a save looks like it silently failed until the
+        // TTL expires. See cacheInvalidationMiddleware's own doc comment for why this is a full
+        // Flush() rather than a targeted per-key delete.
+        r.Use(cacheInvalidationMiddleware(cache))
 
         database.SetupDatabase()
         defer database.TeardownDatabase()
@@ -929,6 +936,36 @@ func rateLimitClientKey(c *gin.Context) string <span class="cov0" title="0">{
                 return "key:" + apiKey
         }</span>
         <span class="cov0" title="0">return "ip:" + c.ClientIP()</span>
+}
+
+// cacheInvalidationMiddleware flushes the response cache after any write (POST/PATCH/PUT/
+// DELETE) that succeeds (2xx status). A full Flush() rather than a targeted per-key delete:
+// gin-contrib/cache's page-cache key is derived from the full request URL (including query
+// string), which every read route (list with filters, single-record GET, sub-resource GETs)
+// would need reconstructing to invalidate precisely - not worth the complexity against this
+// service's write volume, which is low (admin/editor entity edits, not a hot path).
+func cacheInvalidationMiddleware(store persistence.CacheStore) gin.HandlerFunc <span class="cov10" title="3">{
+        return func(c *gin.Context) </span><span class="cov10" title="3">{
+                c.Next()
+                if !isCacheInvalidatingMethod(c.Request.Method) </span><span class="cov1" title="1">{
+                        return
+                }</span>
+                <span class="cov6" title="2">if status := c.Writer.Status(); status &lt; 200 || status &gt;= 300 </span><span class="cov1" title="1">{
+                        return
+                }</span>
+                <span class="cov1" title="1">if err := store.Flush(); err != nil </span><span class="cov0" title="0">{
+                        logging.Logger.Warn("failed to flush response cache after write", "error", err.Error())
+                }</span>
+        }
+}
+
+func isCacheInvalidatingMethod(method string) bool <span class="cov10" title="3">{
+        switch method </span>{
+        case http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete:<span class="cov6" title="2">
+                return true</span>
+        default:<span class="cov1" title="1">
+                return false</span>
+        }
 }
 
 // RateLimiter selects between the new Redis-backed per-client limiter and the legacy
