@@ -1,4 +1,11 @@
 
+## 0.14.2 - 2026-08-18
+
+### Fixed
+- Set AUTH_API_URL and ASSETS_WEB_URL in dev
+
+
+
 ## 0.14.1 - 2026-08-18
 
 ### Fixed
