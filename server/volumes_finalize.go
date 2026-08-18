@@ -11,7 +11,6 @@ import (
 	"github.com/sweetrpg/catalog-api/assets"
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/editsession"
-	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-api/submissioncap"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/catalog-objects.go/models"
@@ -25,12 +24,12 @@ const recordTypeVolume = "volume"
 // Finalize a volume's in-flight edit session.
 //
 //	@Summary		Finalize a volume edit session
-//	@Description	Reads the caller's in-flight edit session for this volume. admin/editor roles apply it directly (promoting any staged cover/samples to live); submitter roles create a proposed change referencing the staged assets without promoting them.
+//	@Description	Reads the caller's in-flight edit session for this volume. admin/editor roles apply it directly (promoting any staged cover/samples to live); submitter roles create a submitted version referencing the staged assets without promoting them.
 //	@Tags			volumes
 //	@Produce		json
 //	@Param			id	path		string	true	"Volume ID"
 //	@Success		200	{object}	interface{}
-//	@Success		202	{object}	pendingProposalResponse
+//	@Success		202	{object}	submittedVersionResponse
 //	@Failure		400	{object}	apiv.ErrorVO
 //	@Failure		404	{object}	apiv.ErrorVO
 //	@Failure		500	{object}	apiv.ErrorVO
@@ -118,13 +117,13 @@ func finalizeVolumeSession(c *gin.Context, assetsClient *assets.Client, editSess
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "cap_lookup_failed", Message: err.Error()})
 		return
 	}
-	pendingCount, err := proposedchanges.CountPendingBySubmitter(c.Request.Context(), userID)
+	pendingCount, err := data.CountSubmittedVolumeVersionsBySubmitter(c.Request.Context(), userID)
 	if err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "cap_lookup_failed", Message: err.Error()})
 		return
 	}
-	if pendingCount >= capValue {
+	if int(pendingCount) >= capValue {
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{
 			Error:   "submission_cap_reached",
 			Message: fmt.Sprintf("You have %d pending submissions, at your cap of %d - retract one before finalizing another", pendingCount, capValue),
@@ -132,27 +131,36 @@ func finalizeVolumeSession(c *gin.Context, assetsClient *assets.Client, editSess
 		return
 	}
 
-	// The staged cover/samples ride along on the proposal itself rather than through the
-	// generic Diff map (which can't represent them yet, same limitation as
-	// req.hasEditorOnlyFields' other cases) - see proposedchanges.ProposedChange's doc comment.
-	diff := patchRequestDiff(req)
-	for field, change := range diff {
-		change.Old = fieldValue(existing, field)
-		diff[field] = change
+	// The staged cover/samples ride along on the submitted version as StagedCoverAssetId/
+	// StagedSampleAssetIds rather than being promoted now - see design.md's "Staged edit-session
+	// assets ride on the submitted version as separate staged fields". existing's own
+	// CoverAssetId/SampleAssetIds are left untouched (still the current live values) since
+	// nothing has been promoted yet.
+	updated := *existing
+	if req.Title != nil {
+		updated.Title = *req.Title
+	}
+	if req.Description != nil {
+		updated.Description = *req.Description
+	}
+	if req.Notes != nil {
+		updated.Notes = *req.Notes
+	}
+	updated.UpdatedBy = userID
+
+	var stagedCoverAssetId *string
+	if session.StagedCoverAssetId != "" {
+		stagedCoverAssetId = &session.StagedCoverAssetId
 	}
 
-	proposal := &proposedchanges.ProposedChange{
-		RecordType:           recordTypeVolume,
-		RecordID:             volumeID,
-		Diff:                 diff,
-		SubmittedBy:          userID,
-		StagedCoverAssetId:   session.StagedCoverAssetId,
-		StagedSampleAssetIds: session.SampleAssetIds,
-	}
-	id, err := proposedchanges.Add(c.Request.Context(), proposal)
+	version, err := data.CreateSubmittedVolumeVersionWithStagedAssets(c.Request.Context(), volumeID, &updated, userID, stagedCoverAssetId, session.SampleAssetIds)
 	if err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "propose_failed", Message: err.Error()})
+		return
+	}
+	if version == nil {
+		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
 		return
 	}
 
@@ -160,10 +168,10 @@ func finalizeVolumeSession(c *gin.Context, assetsClient *assets.Client, editSess
 		sentry.CaptureException(err)
 	}
 
-	c.JSON(http.StatusAccepted, pendingProposalResponse{
-		ProposalID: id,
-		Status:     proposedchanges.StatusPending,
-		Message:    "Change proposed for review",
+	c.JSON(http.StatusAccepted, submittedVersionResponse{
+		Version: version.Version,
+		State:   string(version.State),
+		Message: "Change submitted for review",
 	})
 }
 

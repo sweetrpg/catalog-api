@@ -15,6 +15,7 @@ import (
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-data.go/data"
+	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
 	"github.com/sweetrpg/common.go/logging"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -23,15 +24,34 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-var licensePatchConfig = entityPatchConfig[vo.LicenseVO]{
+var licenseVersionConfig = entityVersionAPIConfig[vo.LicenseVO, vo.LicenseVersionVO]{
 	recordType: "license",
 	get: func(c *gin.Context, id string) (*vo.LicenseVO, error) {
 		return data.GetLicense(c.Request.Context(), id)
 	},
-	update: func(c *gin.Context, id string, entity *vo.LicenseVO) (*vo.LicenseVO, error) {
-		return data.UpdateLicense(c.Request.Context(), id, entity)
+	createVersion: func(c *gin.Context, id string, entity *vo.LicenseVO, state catalogmodels.VersionState) (*vo.LicenseVersionVO, error) {
+		return data.UpdateLicense(c.Request.Context(), id, entity, state)
 	},
-	setUpdatedBy: func(v *vo.LicenseVO, by string) { v.UpdatedBy = by },
+	listVersions: func(c *gin.Context, id string) ([]*vo.LicenseVersionVO, error) {
+		return data.ListLicenseVersions(c.Request.Context(), id)
+	},
+	getVersion: func(c *gin.Context, id string, version int) (*vo.LicenseVersionVO, error) {
+		return data.GetLicenseVersion(c.Request.Context(), id, version)
+	},
+	acceptVersion: func(c *gin.Context, id string, version int, selectedFields []string, reviewedBy string, reviewNote *string) (*vo.LicenseVersionVO, []string, error) {
+		return data.AcceptLicenseVersion(c.Request.Context(), id, version, selectedFields, reviewedBy, reviewNote)
+	},
+	rejectVersion: func(c *gin.Context, id string, version int, reviewedBy string, reviewNote *string) error {
+		return data.RejectLicenseVersion(c.Request.Context(), id, version, reviewedBy, reviewNote)
+	},
+	retractVersion: func(c *gin.Context, id string, version int, submitterID string) (*vo.LicenseVersionVO, error) {
+		return data.RetractLicenseVersion(c.Request.Context(), id, version, submitterID)
+	},
+	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.LicenseVersionVO, error) {
+		return data.SetCurrentLicenseVersion(c.Request.Context(), id, version)
+	},
+	versionState:  func(v *vo.LicenseVersionVO) string { return string(v.State) },
+	versionNumber: func(v *vo.LicenseVersionVO) int { return v.Version },
 	fields: map[string]entityFieldAccessor[vo.LicenseVO]{
 		"title": {
 			get: func(v *vo.LicenseVO) string { return v.Title },
@@ -82,14 +102,19 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cach
 	g.GET("/licenses", cache.CachePage(store, ttl, listLicenses))
 	g.GET("/licenses/:id", cache.CachePage(store, ttl, getLicense))
 	g.GET("/licenses/:id/volumes", cache.CachePage(store, ttl, getLicenseVolumes))
+	g.GET("/licenses/:id/versions", listEntityVersions(licenseVersionConfig))
+	g.GET("/licenses/:id/versions/:version", getEntityVersion(licenseVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
-	g.PATCH("/licenses/:id", writeRoles, patchEntity(licensePatchConfig))
+	g.PATCH("/licenses/:id", writeRoles, patchEntityVersion(licenseVersionConfig))
+	g.POST("/licenses/:id/versions/:version/retract", writeRoles, retractEntityVersion(licenseVersionConfig))
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
-	g.GET("/licenses/:id/proposed-changes", reviewRoles, listEntityProposedChanges("license"))
-	g.POST("/licenses/:id/proposed-changes/:proposalId/accept", reviewRoles, acceptEntityProposedChange(licensePatchConfig))
-	g.POST("/licenses/:id/proposed-changes/:proposalId/reject", reviewRoles, rejectEntityProposedChange("license"))
+	g.POST("/licenses/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(licenseVersionConfig))
+	g.POST("/licenses/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(licenseVersionConfig))
+
+	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
+	g.POST("/licenses/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(licenseVersionConfig))
 }
 
 // List licenses.

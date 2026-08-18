@@ -1,12 +1,13 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/editsession"
-	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-data.go/data"
 )
 
@@ -24,15 +25,14 @@ func TestAcceptPromotesStagedCover(t *testing.T) {
 	if finalizeRec.Code != http.StatusAccepted {
 		t.Fatalf("finalize status = %d, want %d, body: %s", finalizeRec.Code, http.StatusAccepted, finalizeRec.Body.String())
 	}
+	var finalized submittedVersionResponse
+	if err := json.Unmarshal(finalizeRec.Body.Bytes(), &finalized); err != nil {
+		t.Fatalf("unmarshal finalize response: %v", err)
+	}
 
 	editorDeps := newTestDepsWithAssets(t, []string{authz.RoleEditor}, deps.AssetsURL)
-	pending, err := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
-	if err != nil || len(pending) == 0 {
-		t.Fatalf("ListPending() = %v, %v", pending, err)
-	}
-	proposalID := pending[0].ID.Hex()
-
-	acceptRec := doPost(t, editorDeps.Router, "/volumes/"+seed.ID+"/proposed-changes/"+proposalID+"/accept", nil)
+	acceptPath := "/volumes/" + seed.ID + "/versions/" + strconv.Itoa(finalized.Version) + "/accept"
+	acceptRec := doPost(t, editorDeps.Router, acceptPath, nil)
 	if acceptRec.Code != http.StatusOK {
 		t.Fatalf("accept status = %d, want %d, body: %s", acceptRec.Code, http.StatusOK, acceptRec.Body.String())
 	}
@@ -60,15 +60,14 @@ func TestRejectReclaimsStagedCoverWithoutPromoting(t *testing.T) {
 	if finalizeRec.Code != http.StatusAccepted {
 		t.Fatalf("finalize status = %d, want %d, body: %s", finalizeRec.Code, http.StatusAccepted, finalizeRec.Body.String())
 	}
+	var finalized submittedVersionResponse
+	if err := json.Unmarshal(finalizeRec.Body.Bytes(), &finalized); err != nil {
+		t.Fatalf("unmarshal finalize response: %v", err)
+	}
 
 	editorDeps := newTestDepsWithAssets(t, []string{authz.RoleEditor}, deps.AssetsURL)
-	pending, err := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
-	if err != nil || len(pending) == 0 {
-		t.Fatalf("ListPending() = %v, %v", pending, err)
-	}
-	proposalID := pending[0].ID.Hex()
-
-	rejectRec := doPost(t, editorDeps.Router, "/volumes/"+seed.ID+"/proposed-changes/"+proposalID+"/reject", nil)
+	rejectPath := "/volumes/" + seed.ID + "/versions/" + strconv.Itoa(finalized.Version) + "/reject"
+	rejectRec := doPost(t, editorDeps.Router, rejectPath, nil)
 	if rejectRec.Code != http.StatusOK {
 		t.Fatalf("reject status = %d, want %d, body: %s", rejectRec.Code, http.StatusOK, rejectRec.Body.String())
 	}
@@ -78,6 +77,6 @@ func TestRejectReclaimsStagedCoverWithoutPromoting(t *testing.T) {
 		t.Fatalf("GetVolume() error = %v", err)
 	}
 	if got.CoverAssetId != "" {
-		t.Errorf("CoverAssetId = %q, want unset - a rejected proposal must not promote its staged cover", got.CoverAssetId)
+		t.Errorf("CoverAssetId = %q, want unset - a rejected submission must not promote its staged cover", got.CoverAssetId)
 	}
 }

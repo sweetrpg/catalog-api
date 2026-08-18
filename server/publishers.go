@@ -15,6 +15,7 @@ import (
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-data.go/data"
+	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -22,15 +23,34 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-var publisherPatchConfig = entityPatchConfig[vo.PublisherVO]{
+var publisherVersionConfig = entityVersionAPIConfig[vo.PublisherVO, vo.PublisherVersionVO]{
 	recordType: "publisher",
 	get: func(c *gin.Context, id string) (*vo.PublisherVO, error) {
 		return data.GetPublisher(c.Request.Context(), id)
 	},
-	update: func(c *gin.Context, id string, entity *vo.PublisherVO) (*vo.PublisherVO, error) {
-		return data.UpdatePublisher(c.Request.Context(), id, entity)
+	createVersion: func(c *gin.Context, id string, entity *vo.PublisherVO, state catalogmodels.VersionState) (*vo.PublisherVersionVO, error) {
+		return data.UpdatePublisher(c.Request.Context(), id, entity, state)
 	},
-	setUpdatedBy: func(v *vo.PublisherVO, by string) { v.UpdatedBy = by },
+	listVersions: func(c *gin.Context, id string) ([]*vo.PublisherVersionVO, error) {
+		return data.ListPublisherVersions(c.Request.Context(), id)
+	},
+	getVersion: func(c *gin.Context, id string, version int) (*vo.PublisherVersionVO, error) {
+		return data.GetPublisherVersion(c.Request.Context(), id, version)
+	},
+	acceptVersion: func(c *gin.Context, id string, version int, selectedFields []string, reviewedBy string, reviewNote *string) (*vo.PublisherVersionVO, []string, error) {
+		return data.AcceptPublisherVersion(c.Request.Context(), id, version, selectedFields, reviewedBy, reviewNote)
+	},
+	rejectVersion: func(c *gin.Context, id string, version int, reviewedBy string, reviewNote *string) error {
+		return data.RejectPublisherVersion(c.Request.Context(), id, version, reviewedBy, reviewNote)
+	},
+	retractVersion: func(c *gin.Context, id string, version int, submitterID string) (*vo.PublisherVersionVO, error) {
+		return data.RetractPublisherVersion(c.Request.Context(), id, version, submitterID)
+	},
+	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.PublisherVersionVO, error) {
+		return data.SetCurrentPublisherVersion(c.Request.Context(), id, version)
+	},
+	versionState:  func(v *vo.PublisherVersionVO) string { return string(v.State) },
+	versionNumber: func(v *vo.PublisherVersionVO) int { return v.Version },
 	fields: map[string]entityFieldAccessor[vo.PublisherVO]{
 		"name": {
 			get: func(v *vo.PublisherVO) string { return v.Name },
@@ -61,14 +81,19 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls ca
 	g.GET("/publishers", cache.CachePage(store, ttl, listPublishers))
 	g.GET("/publishers/:id", cache.CachePage(store, ttl, getPublisher))
 	g.GET("/publishers/:id/volumes", cache.CachePage(store, ttl, getPublisherVolumes))
+	g.GET("/publishers/:id/versions", listEntityVersions(publisherVersionConfig))
+	g.GET("/publishers/:id/versions/:version", getEntityVersion(publisherVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
-	g.PATCH("/publishers/:id", writeRoles, patchEntity(publisherPatchConfig))
+	g.PATCH("/publishers/:id", writeRoles, patchEntityVersion(publisherVersionConfig))
+	g.POST("/publishers/:id/versions/:version/retract", writeRoles, retractEntityVersion(publisherVersionConfig))
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
-	g.GET("/publishers/:id/proposed-changes", reviewRoles, listEntityProposedChanges("publisher"))
-	g.POST("/publishers/:id/proposed-changes/:proposalId/accept", reviewRoles, acceptEntityProposedChange(publisherPatchConfig))
-	g.POST("/publishers/:id/proposed-changes/:proposalId/reject", reviewRoles, rejectEntityProposedChange("publisher"))
+	g.POST("/publishers/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(publisherVersionConfig))
+	g.POST("/publishers/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(publisherVersionConfig))
+
+	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
+	g.POST("/publishers/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(publisherVersionConfig))
 }
 
 // List publishers.

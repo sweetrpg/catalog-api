@@ -19,9 +19,7 @@ import (
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/editsession"
-	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-data.go/data"
-	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
 	"github.com/sweetrpg/common.go/logging"
 	"github.com/sweetrpg/mongodb.go/constants"
@@ -199,24 +197,35 @@ func seedVolume(t *testing.T, title string) *vo.VolumeVO {
 	return got
 }
 
-// seedStudio/seedPerson insert a minimal Studio/Person document directly - catalog-data.go
-// has no Add function for either (read-only entities, per AGENTS.md), so tests that need one to
-// exist go straight through the mongodb.go database package instead of the data package.
-// seedPublisher's own copy of this pattern lives in entity_patch_test.go (with a t.Cleanup this
-// file's version didn't have) - kept there instead of duplicated here now that both files are
-// in the same package.
-func seedStudio(t *testing.T, id, name string) {
+// seedPublisher/seedStudio/seedPerson create a record via its Add function (meta+version model,
+// task group 7) rather than a raw flat-collection insert - all four generic types moved off the
+// flat collections these used to write to directly. Each returns the generated id, since Add
+// generates it rather than accepting a caller-supplied one.
+func seedPublisher(t *testing.T, name string) string {
 	t.Helper()
-	if _, err := database.Insert("studios", catalogmodels.Studio{ID: id, Name: name}); err != nil {
-		t.Fatalf("seed studio: %v", err)
+	id, err := data.AddPublisher(t.Context(), &vo.PublisherVO{Name: name})
+	if err != nil {
+		t.Fatalf("seed publisher: %v", err)
 	}
+	return *id
 }
 
-func seedPerson(t *testing.T, id, name string) {
+func seedStudio(t *testing.T, name string) string {
 	t.Helper()
-	if _, err := database.Insert("persons", catalogmodels.Person{ID: id, Name: name}); err != nil {
+	id, err := data.AddStudio(t.Context(), &vo.StudioVO{Name: name})
+	if err != nil {
+		t.Fatalf("seed studio: %v", err)
+	}
+	return *id
+}
+
+func seedPerson(t *testing.T, name string) string {
+	t.Helper()
+	id, err := data.AddPerson(t.Context(), &vo.PersonVO{Name: name})
+	if err != nil {
 		t.Fatalf("seed person: %v", err)
 	}
+	return *id
 }
 
 func doPatch(t *testing.T, r *gin.Engine, path string, body any) *httptest.ResponseRecorder {
@@ -299,14 +308,14 @@ func TestPatchVolumeEditorAppliesProperties(t *testing.T) {
 }
 
 func TestPatchVolumeEditorAppliesPublisherAndStudioIDs(t *testing.T) {
-	seedPublisher(t, "pub-1", "Test Publisher")
-	seedStudio(t, "studio-1", "Test Studio")
+	publisherID := seedPublisher(t, "Test Publisher")
+	studioID := seedStudio(t, "Test Studio")
 	seed := seedVolume(t, "Original Title")
 	r := newTestRouter(t, []string{authz.RoleEditor})
 
 	rec := doPatch(t, r, "/volumes/"+seed.ID, map[string]any{
-		"publisherIds": []string{"pub-1"},
-		"studioIds":    []string{"studio-1"},
+		"publisherIds": []string{publisherID},
+		"studioIds":    []string{studioID},
 	})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
@@ -316,11 +325,11 @@ func TestPatchVolumeEditorAppliesPublisherAndStudioIDs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetVolume() error = %v", err)
 	}
-	if len(got.Publishers) != 1 || got.Publishers[0].ID != "pub-1" {
-		t.Errorf("Publishers = %+v, want [pub-1]", got.Publishers)
+	if len(got.Publishers) != 1 || got.Publishers[0].ID != publisherID {
+		t.Errorf("Publishers = %+v, want [%s]", got.Publishers, publisherID)
 	}
-	if len(got.Studios) != 1 || got.Studios[0].ID != "studio-1" {
-		t.Errorf("Studios = %+v, want [studio-1]", got.Studios)
+	if len(got.Studios) != 1 || got.Studios[0].ID != studioID {
+		t.Errorf("Studios = %+v, want [%s]", got.Studios, studioID)
 	}
 }
 
@@ -343,12 +352,12 @@ func TestPatchVolumeEditorAppliesFormat(t *testing.T) {
 }
 
 func TestPatchVolumeEditorAppliesCredits(t *testing.T) {
-	seedPerson(t, "person-1", "Test Author")
+	personID := seedPerson(t, "Test Author")
 	seed := seedVolume(t, "Original Title")
 	r := newTestRouter(t, []string{authz.RoleEditor})
 
 	rec := doPatch(t, r, "/volumes/"+seed.ID, map[string]any{
-		"credits": []map[string]string{{"personId": "person-1", "contributionType": "Author"}},
+		"credits": []map[string]string{{"personId": personID, "contributionType": "Author"}},
 	})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
@@ -358,8 +367,8 @@ func TestPatchVolumeEditorAppliesCredits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("QueryContributionsByVolume() error = %v", err)
 	}
-	if len(credits) != 1 || credits[0].Person.ID != "person-1" || len(credits[0].Roles) != 1 || credits[0].Roles[0] != "Author" {
-		t.Fatalf("credits = %+v, want one person-1/Author credit", credits)
+	if len(credits) != 1 || credits[0].Person.ID != personID || len(credits[0].Roles) != 1 || credits[0].Roles[0] != "Author" {
+		t.Fatalf("credits = %+v, want one %s/Author credit", credits, personID)
 	}
 
 	// A second PATCH with an empty credits list removes the previously added credit.
@@ -412,12 +421,12 @@ func TestPatchVolumeSubmitterCannotSetEditorOnlyFields(t *testing.T) {
 	if got.Title != "Original Title" {
 		t.Errorf("live Title = %q, want unchanged - the whole request should be rejected, not partially applied", got.Title)
 	}
-	pending, err := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
+	versions, err := data.ListVolumeVersions(t.Context(), seed.ID)
 	if err != nil {
-		t.Fatalf("ListPending() error = %v", err)
+		t.Fatalf("ListVolumeVersions() error = %v", err)
 	}
-	if len(pending) != 0 {
-		t.Errorf("ListPending() returned %d, want 0 - no proposal should be created either", len(pending))
+	if len(versions) != 1 {
+		t.Errorf("ListVolumeVersions() returned %d, want 1 - no submitted version should be created either", len(versions))
 	}
 }
 
