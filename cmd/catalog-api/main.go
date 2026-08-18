@@ -33,7 +33,6 @@ import (
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/docs"
 	"github.com/sweetrpg/catalog-api/editsession"
-	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-api/ratelimit"
 	"github.com/sweetrpg/catalog-api/readiness"
 	"github.com/sweetrpg/catalog-api/server"
@@ -98,9 +97,6 @@ func main() {
 
 	database.SetupDatabase()
 	defer database.TeardownDatabase()
-	if err := proposedchanges.EnsureIndexes(context.Background()); err != nil {
-		logging.Logger.Error("Error while ensuring proposed_changes indexes", "error", err.Error())
-	}
 	if err := vocabularies.EnsureIndexes(context.Background()); err != nil {
 		logging.Logger.Error("Error while ensuring vocabularies indexes", "error", err.Error())
 	}

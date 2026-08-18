@@ -1,13 +1,17 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	apiv "github.com/sweetrpg/api-core.go/vo"
+	"github.com/sweetrpg/catalog-api/assets"
 	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-data.go/data"
 )
 
@@ -111,7 +115,7 @@ func getVolumeVersion(c *gin.Context) {
 //	@Failure		404		{object}	apiv.ErrorVO
 //	@Failure		500		{object}	apiv.ErrorVO
 //	@Router			/volumes/{id}/versions/{version}/accept [post]
-func acceptVolumeVersion(c *gin.Context) {
+func acceptVolumeVersion(c *gin.Context, assetsClient *assets.Client) {
 	id := c.Param("id")
 	version, ok := versionParam(c)
 	if !ok {
@@ -129,7 +133,47 @@ func acceptVolumeVersion(c *gin.Context) {
 		selectedFields = *req.Fields
 	}
 
-	accepted, conflicts, err := data.AcceptVolumeVersion(c.Request.Context(), id, version, selectedFields, authz.Subject(c), nil)
+	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version)
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
+		return
+	}
+	if submitted == nil {
+		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
+		return
+	}
+
+	// Staged edit-session assets ride along with the submission as a whole rather than being a
+	// selectable field - see design.md's "Staged edit-session assets ride on the submitted
+	// version as separate staged fields". Promoting them here (rather than in AcceptVolumeVersion
+	// itself, which stays Mongo-only) mirrors finalizeVolumeSession's editor/admin promote-then-
+	// patch pattern.
+	var liveCoverAssetId *string
+	var liveSampleAssetIds []string
+	if submitted.StagedCoverAssetId != nil {
+		if err := assetsClient.Promote(c.Request.Context(), "cover-staged", *submitted.StagedCoverAssetId, "cover", id); err != nil {
+			sentry.CaptureException(err)
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "cover_promote_failed", Message: err.Error()})
+			return
+		}
+		coverID := id
+		liveCoverAssetId = &coverID
+	}
+	if len(submitted.StagedSampleAssetIds) > 0 {
+		liveSampleAssetIds = make([]string, len(submitted.StagedSampleAssetIds))
+		for i, stagedID := range submitted.StagedSampleAssetIds {
+			liveID := fmt.Sprintf("%s-%d", id, i)
+			if err := assetsClient.Promote(c.Request.Context(), "sample-staged", stagedID, "sample", liveID); err != nil {
+				sentry.CaptureException(err)
+				c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "sample_promote_failed", Message: err.Error()})
+				return
+			}
+			liveSampleAssetIds[i] = liveID
+		}
+	}
+
+	accepted, conflicts, err := data.AcceptVolumeVersion(c.Request.Context(), id, version, selectedFields, authz.Subject(c), nil, liveCoverAssetId, liveSampleAssetIds)
 	if err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "accept_failed", Message: err.Error()})
@@ -183,6 +227,129 @@ func rejectVolumeVersion(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, reviewVersionResponse{Version: version, State: "rejected"})
+}
+
+// Retract a pending submitted version.
+//
+//	@Summary		Retract a submitted volume version
+//	@Description	submitter only, and only their own submissions.
+//	@Tags			volumes
+//	@Produce		json
+//	@Param			id		path		string	true	"Volume ID"
+//	@Param			version	path		int		true	"Submitted version number"
+//	@Success		200		{object}	reviewVersionResponse
+//	@Failure		400		{object}	apiv.ErrorVO
+//	@Failure		404		{object}	apiv.ErrorVO
+//	@Failure		500		{object}	apiv.ErrorVO
+//	@Router			/volumes/{id}/versions/{version}/retract [post]
+func retractVolumeVersion(c *gin.Context) {
+	id := c.Param("id")
+	version, ok := versionParam(c)
+	if !ok {
+		return
+	}
+
+	retracted, err := data.RetractVolumeVersion(c.Request.Context(), id, version, authz.Subject(c))
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "retract_failed", Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, reviewVersionResponse{Version: retracted.Version, State: string(retracted.State)})
+}
+
+// pullBackVersionResponse is the response for a successful pull-back.
+type pullBackVersionResponse struct {
+	RecordID string `json:"recordId"`
+	Status   string `json:"status"`
+}
+
+// Pull a pending submitted version back into a fresh edit session, retracting it in the process.
+//
+//	@Summary		Pull a submitted volume version back into an edit session
+//	@Description	submitter only, and only their own submissions. Fails with 409 if the caller already has an in-flight session for this record type.
+//	@Tags			volumes
+//	@Produce		json
+//	@Param			id		path		string	true	"Volume ID"
+//	@Param			version	path		int		true	"Submitted version number"
+//	@Success		200		{object}	pullBackVersionResponse
+//	@Failure		400		{object}	apiv.ErrorVO
+//	@Failure		404		{object}	apiv.ErrorVO
+//	@Failure		409		{object}	apiv.ErrorVO
+//	@Failure		500		{object}	apiv.ErrorVO
+//	@Router			/volumes/{id}/versions/{version}/pull-back [post]
+func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
+	id := c.Param("id")
+	version, ok := versionParam(c)
+	if !ok {
+		return
+	}
+	userID := authz.Subject(c)
+
+	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version)
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
+		return
+	}
+	if submitted == nil {
+		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
+		return
+	}
+
+	existingSession, err := editSessions.Get(c.Request.Context(), userID, recordTypeVolume)
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "session_lookup_failed", Message: err.Error()})
+		return
+	}
+	if existingSession != nil {
+		c.JSON(http.StatusConflict, apiv.ErrorVO{
+			Error:   "session_exists",
+			Message: "You already have an in-flight edit session for this record type - finish or discard it before pulling back a submission",
+		})
+		return
+	}
+
+	var stagedCoverAssetId string
+	if submitted.StagedCoverAssetId != nil {
+		stagedCoverAssetId = *submitted.StagedCoverAssetId
+	}
+	now := time.Now()
+	session := editsession.Session{
+		RecordID: submitted.RecordID,
+		Fields: map[string]any{
+			"title":       submitted.Title,
+			"description": submitted.Description,
+			"notes":       submitted.Notes,
+		},
+		StagedCoverAssetId: stagedCoverAssetId,
+		SampleAssetIds:     submitted.StagedSampleAssetIds,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
+	if err := editSessions.Set(c.Request.Context(), userID, recordTypeVolume, session); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "session_create_failed", Message: err.Error()})
+		return
+	}
+
+	retracted, err := data.RetractVolumeVersion(c.Request.Context(), id, version, userID)
+	if err != nil {
+		// Compensate: the session was created but the source version couldn't be retracted -
+		// "creates the session and retracts the source, or does neither", same pattern as
+		// pullBackVolumeProposedChange. Roll the session back out rather than leaving one
+		// without the other.
+		if delErr := editSessions.Delete(c.Request.Context(), userID, recordTypeVolume); delErr != nil {
+			sentry.CaptureException(delErr)
+		}
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "pull_back_failed", Message: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, pullBackVersionResponse{RecordID: retracted.RecordID, Status: string(retracted.State)})
 }
 
 // Roll a volume back (or forward) to an arbitrary existing version.

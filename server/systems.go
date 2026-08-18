@@ -10,20 +10,80 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
+	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-data.go/data"
+	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
+	"github.com/sweetrpg/catalog-objects.go/vo"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
+var systemVersionConfig = entityVersionAPIConfig[vo.SystemVO, vo.SystemVersionVO]{
+	recordType: "system",
+	get: func(c *gin.Context, id string) (*vo.SystemVO, error) {
+		return data.GetSystem(c.Request.Context(), id)
+	},
+	createVersion: func(c *gin.Context, id string, entity *vo.SystemVO, state catalogmodels.VersionState) (*vo.SystemVersionVO, error) {
+		return data.UpdateSystem(c.Request.Context(), id, entity, state)
+	},
+	listVersions: func(c *gin.Context, id string) ([]*vo.SystemVersionVO, error) {
+		return data.ListSystemVersions(c.Request.Context(), id)
+	},
+	getVersion: func(c *gin.Context, id string, version int) (*vo.SystemVersionVO, error) {
+		return data.GetSystemVersion(c.Request.Context(), id, version)
+	},
+	acceptVersion: func(c *gin.Context, id string, version int, selectedFields []string, reviewedBy string, reviewNote *string) (*vo.SystemVersionVO, []string, error) {
+		return data.AcceptSystemVersion(c.Request.Context(), id, version, selectedFields, reviewedBy, reviewNote)
+	},
+	rejectVersion: func(c *gin.Context, id string, version int, reviewedBy string, reviewNote *string) error {
+		return data.RejectSystemVersion(c.Request.Context(), id, version, reviewedBy, reviewNote)
+	},
+	retractVersion: func(c *gin.Context, id string, version int, submitterID string) (*vo.SystemVersionVO, error) {
+		return data.RetractSystemVersion(c.Request.Context(), id, version, submitterID)
+	},
+	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.SystemVersionVO, error) {
+		return data.SetCurrentSystemVersion(c.Request.Context(), id, version)
+	},
+	versionState:  func(v *vo.SystemVersionVO) string { return string(v.State) },
+	versionNumber: func(v *vo.SystemVersionVO) int { return v.Version },
+	fields: map[string]entityFieldAccessor[vo.SystemVO]{
+		"game_system": {
+			get: func(v *vo.SystemVO) string { return v.GameSystem },
+			set: func(v *vo.SystemVO, s string) { v.GameSystem = s },
+		},
+		"edition": {
+			get: func(v *vo.SystemVO) string { return v.Edition },
+			set: func(v *vo.SystemVO, s string) { v.Edition = s },
+		},
+		"notes": {
+			get: func(v *vo.SystemVO) string { return v.Notes },
+			set: func(v *vo.SystemVO, s string) { v.Notes = s },
+		},
+	},
+}
+
+func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client) {
 	logging.Logger.Info("Setting up system endpoint handlers...")
 	ttl := ttls.TTL("systems")
 	g.GET("/systems", cache.CachePage(store, ttl, listSystems))
 	g.GET("/systems/:id", cache.CachePage(store, ttl, getSystem))
-	// g.GET("/systems/:id/systems", cache.CachePage(store, ttl, getSystemSystems))
+	g.GET("/systems/:id/versions", listEntityVersions(systemVersionConfig))
+	g.GET("/systems/:id/versions/:version", getEntityVersion(systemVersionConfig))
+
+	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
+	g.PATCH("/systems/:id", writeRoles, patchEntityVersion(systemVersionConfig))
+	g.POST("/systems/:id/versions/:version/retract", writeRoles, retractEntityVersion(systemVersionConfig))
+
+	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
+	g.POST("/systems/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(systemVersionConfig))
+	g.POST("/systems/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(systemVersionConfig))
+
+	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
+	g.POST("/systems/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(systemVersionConfig))
 }
 
 // List systems.

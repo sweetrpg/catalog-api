@@ -14,6 +14,7 @@ import (
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-data.go/data"
+	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -21,15 +22,34 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-var personPatchConfig = entityPatchConfig[vo.PersonVO]{
+var personVersionConfig = entityVersionAPIConfig[vo.PersonVO, vo.PersonVersionVO]{
 	recordType: "person",
 	get: func(c *gin.Context, id string) (*vo.PersonVO, error) {
 		return data.GetPerson(c.Request.Context(), id)
 	},
-	update: func(c *gin.Context, id string, entity *vo.PersonVO) (*vo.PersonVO, error) {
-		return data.UpdatePerson(c.Request.Context(), id, entity)
+	createVersion: func(c *gin.Context, id string, entity *vo.PersonVO, state catalogmodels.VersionState) (*vo.PersonVersionVO, error) {
+		return data.UpdatePerson(c.Request.Context(), id, entity, state)
 	},
-	setUpdatedBy: func(v *vo.PersonVO, by string) { v.UpdatedBy = by },
+	listVersions: func(c *gin.Context, id string) ([]*vo.PersonVersionVO, error) {
+		return data.ListPersonVersions(c.Request.Context(), id)
+	},
+	getVersion: func(c *gin.Context, id string, version int) (*vo.PersonVersionVO, error) {
+		return data.GetPersonVersion(c.Request.Context(), id, version)
+	},
+	acceptVersion: func(c *gin.Context, id string, version int, selectedFields []string, reviewedBy string, reviewNote *string) (*vo.PersonVersionVO, []string, error) {
+		return data.AcceptPersonVersion(c.Request.Context(), id, version, selectedFields, reviewedBy, reviewNote)
+	},
+	rejectVersion: func(c *gin.Context, id string, version int, reviewedBy string, reviewNote *string) error {
+		return data.RejectPersonVersion(c.Request.Context(), id, version, reviewedBy, reviewNote)
+	},
+	retractVersion: func(c *gin.Context, id string, version int, submitterID string) (*vo.PersonVersionVO, error) {
+		return data.RetractPersonVersion(c.Request.Context(), id, version, submitterID)
+	},
+	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.PersonVersionVO, error) {
+		return data.SetCurrentPersonVersion(c.Request.Context(), id, version)
+	},
+	versionState:  func(v *vo.PersonVersionVO) string { return string(v.State) },
+	versionNumber: func(v *vo.PersonVersionVO) int { return v.Version },
 	fields: map[string]entityFieldAccessor[vo.PersonVO]{
 		"name": {
 			get: func(v *vo.PersonVO) string { return v.Name },
@@ -48,14 +68,19 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.GET("/persons", cache.CachePage(store, ttl, listPersons))
 	g.GET("/persons/:id", cache.CachePage(store, ttl, getPerson))
 	g.GET("/persons/:id/volumes", cache.CachePage(store, ttl, getPersonVolumes))
+	g.GET("/persons/:id/versions", listEntityVersions(personVersionConfig))
+	g.GET("/persons/:id/versions/:version", getEntityVersion(personVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
-	g.PATCH("/persons/:id", writeRoles, patchEntity(personPatchConfig))
+	g.PATCH("/persons/:id", writeRoles, patchEntityVersion(personVersionConfig))
+	g.POST("/persons/:id/versions/:version/retract", writeRoles, retractEntityVersion(personVersionConfig))
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
-	g.GET("/persons/:id/proposed-changes", reviewRoles, listEntityProposedChanges("person"))
-	g.POST("/persons/:id/proposed-changes/:proposalId/accept", reviewRoles, acceptEntityProposedChange(personPatchConfig))
-	g.POST("/persons/:id/proposed-changes/:proposalId/reject", reviewRoles, rejectEntityProposedChange("person"))
+	g.POST("/persons/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(personVersionConfig))
+	g.POST("/persons/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(personVersionConfig))
+
+	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
+	g.POST("/persons/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(personVersionConfig))
 }
 
 // List persons.

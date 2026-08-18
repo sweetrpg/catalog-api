@@ -38,20 +38,15 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	})
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
-	g.GET("/volumes/:id/proposed-changes", reviewRoles, listVolumeProposedChanges)
-	g.POST("/volumes/:id/proposed-changes/:proposalId/accept", reviewRoles, func(c *gin.Context) {
-		acceptVolumeProposedChange(c, assetsClient)
-	})
-	g.POST("/volumes/:id/proposed-changes/:proposalId/reject", reviewRoles, func(c *gin.Context) {
-		rejectVolumeProposedChange(c, assetsClient)
-	})
-	g.POST("/volumes/:id/proposed-changes/:proposalId/retract", writeRoles, retractVolumeProposedChange)
-	g.POST("/volumes/:id/proposed-changes/:proposalId/pull-back", writeRoles, func(c *gin.Context) {
-		pullBackVolumeProposedChange(c, editSessions)
-	})
 
-	g.POST("/volumes/:id/versions/:version/accept", reviewRoles, acceptVolumeVersion)
+	g.POST("/volumes/:id/versions/:version/accept", reviewRoles, func(c *gin.Context) {
+		acceptVolumeVersion(c, assetsClient)
+	})
 	g.POST("/volumes/:id/versions/:version/reject", reviewRoles, rejectVolumeVersion)
+	g.POST("/volumes/:id/versions/:version/retract", writeRoles, retractVolumeVersion)
+	g.POST("/volumes/:id/versions/:version/pull-back", writeRoles, func(c *gin.Context) {
+		pullBackVolumeVersion(c, editSessions)
+	})
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/volumes/:id/versions/:version/current", rollbackRoles, setCurrentVolumeVersion)
