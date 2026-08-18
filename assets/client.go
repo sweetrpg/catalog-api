@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"net/textproto"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // Client calls assets-web's asset store endpoints.
@@ -25,7 +27,13 @@ type Client struct {
 // service can still start when ASSETS_WEB_URL isn't configured; every call will then fail with
 // a transport error.
 func NewClient(baseURL string) *Client {
-	return &Client{baseURL: baseURL, http: &http.Client{Timeout: 10 * time.Second}}
+	return &Client{
+		baseURL: baseURL,
+		http: &http.Client{
+			Timeout:   10 * time.Second,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		},
+	}
 }
 
 // NotFoundError means assets-web has no asset at the given kind/id.

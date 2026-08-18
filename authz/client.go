@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/sweetrpg/common.go/logging"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // Platform role names, matching auth-api's fixed role model exactly (see
@@ -52,7 +53,13 @@ type Client struct {
 // service can still start when AUTH_API_URL isn't configured; every Check call will then fail
 // with a transport error, which RequireAnyRole surfaces as a 503.
 func NewClient(baseURL string) *Client {
-	return &Client{baseURL: baseURL, http: &http.Client{Timeout: 5 * time.Second}}
+	return &Client{
+		baseURL: baseURL,
+		http: &http.Client{
+			Timeout:   5 * time.Second,
+			Transport: otelhttp.NewTransport(http.DefaultTransport),
+		},
+	}
 }
 
 // Check verifies token against auth-api and returns the caller's allowed/roles/subject for the
