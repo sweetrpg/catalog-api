@@ -109,6 +109,8 @@ import (
         "net/http"
         "net/textproto"
         "time"
+
+        "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // Client calls assets-web's asset store endpoints.
@@ -121,7 +123,13 @@ type Client struct {
 // service can still start when ASSETS_WEB_URL isn't configured; every call will then fail with
 // a transport error.
 func NewClient(baseURL string) *Client <span class="cov0" title="0">{
-        return &amp;Client{baseURL: baseURL, http: &amp;http.Client{Timeout: 10 * time.Second}}
+        return &amp;Client{
+                baseURL: baseURL,
+                http: &amp;http.Client{
+                        Timeout:   10 * time.Second,
+                        Transport: otelhttp.NewTransport(http.DefaultTransport),
+                },
+        }
 }</span>
 
 // NotFoundError means assets-web has no asset at the given kind/id.
@@ -244,6 +252,7 @@ import (
         "time"
 
         "github.com/sweetrpg/common.go/logging"
+        "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // Platform role names, matching auth-api's fixed role model exactly (see
@@ -283,7 +292,13 @@ type Client struct {
 // service can still start when AUTH_API_URL isn't configured; every Check call will then fail
 // with a transport error, which RequireAnyRole surfaces as a 503.
 func NewClient(baseURL string) *Client <span class="cov10" title="9">{
-        return &amp;Client{baseURL: baseURL, http: &amp;http.Client{Timeout: 5 * time.Second}}
+        return &amp;Client{
+                baseURL: baseURL,
+                http: &amp;http.Client{
+                        Timeout:   5 * time.Second,
+                        Transport: otelhttp.NewTransport(http.DefaultTransport),
+                },
+        }
 }</span>
 
 // Check verifies token against auth-api and returns the caller's allowed/roles/subject for the
