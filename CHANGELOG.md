@@ -1,4 +1,12 @@
 
+## 0.14.1 - 2026-08-18
+
+### Fixed
+- Propagate trace context to auth-api and assets-web
+- Bump api-core.go to v0.1.1
+
+
+
 ## 0.14.0 - 2026-08-18
 
 ### Added
