@@ -1,4 +1,11 @@
 
+## 0.15.2 - 2026-08-18
+
+### Fixed
+- Invalidate response cache after a successful write
+
+
+
 ## 0.15.1 - 2026-08-18
 
 ### Fixed
