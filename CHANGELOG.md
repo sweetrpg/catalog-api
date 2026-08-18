@@ -1,4 +1,29 @@
 
+## 0.13.0 - 2026-08-17
+
+### Added
+- Add debug logging for authorization checks
+
+
+
+## 0.12.1 - 2026-08-14
+
+### Fixed
+- Filename and date of license
+
+
+
+## 0.12.0 - 2026-08-14
+
+
+## 0.12.0 - 2026-08-14
+
+### Added
+- Rewrite volume PATCH/accept/reject against the version model
+- Add migrate-volumes command for the version-model cutover
+
+
+
 ## 0.11.0 - 2026-08-13
 
 ### Added

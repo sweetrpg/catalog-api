@@ -25,6 +25,7 @@ func RequireAnyRole(client *Client, service string, allowedRoles ...string) gin.
 			unauthorized(c)
 			return
 		}
+		logging.Logger.Debug("authz check", "token", token[:8], "service", service)
 
 		result, err := client.Check(c.Request.Context(), token, service)
 		if err != nil {
