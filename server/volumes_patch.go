@@ -9,7 +9,6 @@ import (
 	"github.com/google/jsonapi"
 	apiv "github.com/sweetrpg/api-core.go/vo"
 	"github.com/sweetrpg/catalog-api/authz"
-	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-data.go/data"
 	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
@@ -60,16 +59,6 @@ func (req patchVolumeRequest) hasEditorOnlyFields() bool {
 		req.Credits != nil || req.Format != nil || req.CoverAssetId != nil || req.SampleAssetIds != nil
 }
 
-// pendingProposalResponse is returned by the proposed_changes-based submission paths that are
-// still in use (finalizeVolumeSession's submitter branch, and the generic entity_patch.go
-// mechanism for publisher/studio/person/license) - not the version-based patchVolume path below,
-// which returns submittedVersionResponse instead.
-type pendingProposalResponse struct {
-	ProposalID string `json:"proposalId"`
-	Status     string `json:"status"`
-	Message    string `json:"message"`
-}
-
 // submittedVersionResponse is returned when a submitter's PATCH creates a submitted version
 // rather than editing the live record.
 type submittedVersionResponse struct {
@@ -102,11 +91,10 @@ func patchVolume(c *gin.Context) {
 		return
 	}
 
-	diff := patchRequestDiff(req)
-	// Properties/PublisherIDs/StudioIDs never populate diff (see hasEditorOnlyFields' doc
+	// Properties/PublisherIDs/StudioIDs never count as submittable (see hasEditorOnlyFields' doc
 	// comment) - without this, an editor's request touching only those fields would 400 here
 	// before ever reaching the role check below that's supposed to allow it.
-	if len(diff) == 0 && !req.hasEditorOnlyFields() {
+	if !req.hasSubmittableFields() && !req.hasEditorOnlyFields() {
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: "no recognized fields to change"})
 		return
 	}
@@ -140,34 +128,11 @@ func patchVolume(c *gin.Context) {
 	applyVolumePatch(c, existing, req, state)
 }
 
-// patchRequestDiff builds the initial diff map from the request's present fields, with New set
-// and Old left for the caller to fill in from the live record.
-func patchRequestDiff(req patchVolumeRequest) map[string]proposedchanges.FieldChange {
-	diff := make(map[string]proposedchanges.FieldChange)
-	if req.Title != nil {
-		diff["title"] = proposedchanges.FieldChange{New: *req.Title, Status: proposedchanges.StatusPending}
-	}
-	if req.Description != nil {
-		diff["description"] = proposedchanges.FieldChange{New: *req.Description, Status: proposedchanges.StatusPending}
-	}
-	if req.Notes != nil {
-		diff["notes"] = proposedchanges.FieldChange{New: *req.Notes, Status: proposedchanges.StatusPending}
-	}
-	return diff
-}
-
-// fieldValue returns the live volume's current value for one of the patchable fields.
-func fieldValue(v *vo.VolumeVO, field string) string {
-	switch field {
-	case "title":
-		return v.Title
-	case "description":
-		return v.Description
-	case "notes":
-		return v.Notes
-	default:
-		return ""
-	}
+// hasSubmittableFields reports whether req touches a field a submitter is allowed to change
+// directly (title/description/notes) - the fields patchRequestDiff used to diff before the
+// version model made per-field diffing unnecessary.
+func (req patchVolumeRequest) hasSubmittableFields() bool {
+	return req.Title != nil || req.Description != nil || req.Notes != nil
 }
 
 // applyVolumePatch merges req's present fields into existing and creates a new version with the

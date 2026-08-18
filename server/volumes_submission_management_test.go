@@ -1,25 +1,26 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"testing"
 
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/editsession"
-	"github.com/sweetrpg/catalog-api/proposedchanges"
 	"github.com/sweetrpg/catalog-api/submissioncap"
+	"github.com/sweetrpg/catalog-data.go/data"
 )
 
 func TestFinalizeBlocksAtCapAndUnblocksAfterRetraction(t *testing.T) {
 	// Other tests in this package share the same fake subject ("auth0|test-reviewer") and may
-	// leave pending proposals of their own behind - the cap is per-user, not per-volume, so it
+	// leave submitted versions of their own behind - the cap is per-user, not per-volume, so it
 	// must be set relative to whatever's already pending, not a hardcoded number.
-	baseline, err := proposedchanges.CountPendingBySubmitter(t.Context(), "auth0|test-reviewer")
+	baseline, err := data.CountSubmittedVolumeVersionsBySubmitter(t.Context(), "auth0|test-reviewer")
 	if err != nil {
-		t.Fatalf("CountPendingBySubmitter() error = %v", err)
+		t.Fatalf("CountSubmittedVolumeVersionsBySubmitter() error = %v", err)
 	}
-	t.Setenv(submissioncap.DefaultCapEnvVar, strconv.Itoa(baseline+1))
+	t.Setenv(submissioncap.DefaultCapEnvVar, strconv.Itoa(int(baseline)+1))
 
 	seed := seedVolume(t, "Original Title")
 	deps := newTestDeps(t, []string{authz.RoleSubmitter})
@@ -31,6 +32,10 @@ func TestFinalizeBlocksAtCapAndUnblocksAfterRetraction(t *testing.T) {
 	first := doPost(t, deps.Router, "/volumes/"+seed.ID+"/finalize-session", nil)
 	if first.Code != http.StatusAccepted {
 		t.Fatalf("first finalize status = %d, want %d, body: %s", first.Code, http.StatusAccepted, first.Body.String())
+	}
+	var firstVersion submittedVersionResponse
+	if err := json.Unmarshal(first.Body.Bytes(), &firstVersion); err != nil {
+		t.Fatalf("unmarshal first finalize response: %v", err)
 	}
 
 	seedEditSession(t, deps, "auth0|test-reviewer", "volume", editsession.Session{
@@ -51,11 +56,8 @@ func TestFinalizeBlocksAtCapAndUnblocksAfterRetraction(t *testing.T) {
 		t.Fatal("session deleted after a cap-rejected finalize, want preserved")
 	}
 
-	pending, err := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
-	if err != nil || len(pending) == 0 {
-		t.Fatalf("ListPending() = %v, %v", pending, err)
-	}
-	retractRec := doPost(t, deps.Router, "/volumes/"+seed.ID+"/proposed-changes/"+pending[0].ID.Hex()+"/retract", nil)
+	retractPath := "/volumes/" + seed.ID + "/versions/" + strconv.Itoa(firstVersion.Version) + "/retract"
+	retractRec := doPost(t, deps.Router, retractPath, nil)
 	if retractRec.Code != http.StatusOK {
 		t.Fatalf("retract status = %d, want %d, body: %s", retractRec.Code, http.StatusOK, retractRec.Body.String())
 	}
@@ -111,23 +113,23 @@ func TestRetractChangesStatusWithoutAffectingLiveRecord(t *testing.T) {
 	if finalize.Code != http.StatusAccepted {
 		t.Fatalf("finalize status = %d, want %d, body: %s", finalize.Code, http.StatusAccepted, finalize.Body.String())
 	}
-
-	pending, err := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
-	if err != nil || len(pending) == 0 {
-		t.Fatalf("ListPending() = %v, %v", pending, err)
+	var finalized submittedVersionResponse
+	if err := json.Unmarshal(finalize.Body.Bytes(), &finalized); err != nil {
+		t.Fatalf("unmarshal finalize response: %v", err)
 	}
 
-	rec := doPost(t, deps.Router, "/volumes/"+seed.ID+"/proposed-changes/"+pending[0].ID.Hex()+"/retract", nil)
+	retractPath := "/volumes/" + seed.ID + "/versions/" + strconv.Itoa(finalized.Version) + "/retract"
+	rec := doPost(t, deps.Router, retractPath, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
 	}
 
-	proposal, err := proposedchanges.Get(t.Context(), pending[0].ID.Hex())
+	version, err := data.GetVolumeVersion(t.Context(), seed.ID, finalized.Version)
 	if err != nil {
-		t.Fatalf("Get() error = %v", err)
+		t.Fatalf("GetVolumeVersion() error = %v", err)
 	}
-	if proposal.Status != proposedchanges.StatusRetracted {
-		t.Errorf("Status = %q, want %q", proposal.Status, proposedchanges.StatusRetracted)
+	if string(version.State) != "withdrawn" {
+		t.Errorf("State = %q, want %q", version.State, "withdrawn")
 	}
 }
 
@@ -142,24 +144,23 @@ func TestPullBackCreatesSessionAndRetractsSource(t *testing.T) {
 	if finalize.Code != http.StatusAccepted {
 		t.Fatalf("finalize status = %d, want %d, body: %s", finalize.Code, http.StatusAccepted, finalize.Body.String())
 	}
-
-	pending, err := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
-	if err != nil || len(pending) == 0 {
-		t.Fatalf("ListPending() = %v, %v", pending, err)
+	var finalized submittedVersionResponse
+	if err := json.Unmarshal(finalize.Body.Bytes(), &finalized); err != nil {
+		t.Fatalf("unmarshal finalize response: %v", err)
 	}
-	proposalID := pending[0].ID.Hex()
 
-	rec := doPost(t, deps.Router, "/volumes/"+seed.ID+"/proposed-changes/"+proposalID+"/pull-back", nil)
+	pullBackPath := "/volumes/" + seed.ID + "/versions/" + strconv.Itoa(finalized.Version) + "/pull-back"
+	rec := doPost(t, deps.Router, pullBackPath, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
 	}
 
-	proposal, err := proposedchanges.Get(t.Context(), proposalID)
+	version, err := data.GetVolumeVersion(t.Context(), seed.ID, finalized.Version)
 	if err != nil {
-		t.Fatalf("Get() error = %v", err)
+		t.Fatalf("GetVolumeVersion() error = %v", err)
 	}
-	if proposal.Status != proposedchanges.StatusRetracted {
-		t.Errorf("proposal Status = %q, want %q", proposal.Status, proposedchanges.StatusRetracted)
+	if string(version.State) != "withdrawn" {
+		t.Errorf("State = %q, want %q", version.State, "withdrawn")
 	}
 
 	session, err := editsession.NewStore(deps.RedisPool).Get(t.Context(), "auth0|test-reviewer", "volume")
@@ -189,12 +190,10 @@ func TestPullBackConflictsWithExistingSession(t *testing.T) {
 	if finalize.Code != http.StatusAccepted {
 		t.Fatalf("finalize status = %d, want %d, body: %s", finalize.Code, http.StatusAccepted, finalize.Body.String())
 	}
-
-	pending, err := proposedchanges.ListPending(t.Context(), "volume", seed.ID)
-	if err != nil || len(pending) == 0 {
-		t.Fatalf("ListPending() = %v, %v", pending, err)
+	var finalized submittedVersionResponse
+	if err := json.Unmarshal(finalize.Body.Bytes(), &finalized); err != nil {
+		t.Fatalf("unmarshal finalize response: %v", err)
 	}
-	proposalID := pending[0].ID.Hex()
 
 	// A different in-flight session (for a different volume) is already open.
 	seedEditSession(t, deps, "auth0|test-reviewer", "volume", editsession.Session{
@@ -202,18 +201,19 @@ func TestPullBackConflictsWithExistingSession(t *testing.T) {
 		Fields:   map[string]any{"title": "Unrelated in-flight edit"},
 	})
 
-	rec := doPost(t, deps.Router, "/volumes/"+seed.ID+"/proposed-changes/"+proposalID+"/pull-back", nil)
+	pullBackPath := "/volumes/" + seed.ID + "/versions/" + strconv.Itoa(finalized.Version) + "/pull-back"
+	rec := doPost(t, deps.Router, pullBackPath, nil)
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusConflict, rec.Body.String())
 	}
 
-	// The proposal must be untouched - "creates the session and retracts the source, or does
+	// The version must be untouched - "creates the session and retracts the source, or does
 	// neither".
-	proposal, err := proposedchanges.Get(t.Context(), proposalID)
+	version, err := data.GetVolumeVersion(t.Context(), seed.ID, finalized.Version)
 	if err != nil {
-		t.Fatalf("Get() error = %v", err)
+		t.Fatalf("GetVolumeVersion() error = %v", err)
 	}
-	if proposal.Status != proposedchanges.StatusPending {
-		t.Errorf("proposal Status = %q, want still %q after a conflicting pull-back", proposal.Status, proposedchanges.StatusPending)
+	if string(version.State) != "submitted" {
+		t.Errorf("State = %q, want still %q after a conflicting pull-back", version.State, "submitted")
 	}
 }
