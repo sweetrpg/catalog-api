@@ -10,7 +10,7 @@ require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/gomodule/redigo v1.9.3
 	github.com/google/jsonapi v1.0.0
-	github.com/grafana/pyroscope-go v1.4.1
+	github.com/grafana/pyroscope-go v1.4.2
 	github.com/joho/godotenv v1.5.1
 	github.com/penglongli/gin-metrics v0.1.13
 	github.com/samber/slog-gin v1.21.1
@@ -79,7 +79,7 @@ require (
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.18.6 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/leodido/go-urn v1.5.0 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
