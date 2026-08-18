@@ -55,6 +55,8 @@ var studioVersionConfig = entityVersionAPIConfig[vo.StudioVO, vo.StudioVersionVO
 			get: func(v *vo.StudioVO) string { return v.Name },
 			set: func(v *vo.StudioVO, s string) { v.Name = s },
 		},
+		// Website is a plain string on the VO (catalog-objects.go v0.4.1+) - no url.Parse
+		// round-trip needed here anymore.
 		"website": {
 			get: func(v *vo.StudioVO) string { return v.Website },
 			set: func(v *vo.StudioVO, s string) { v.Website = s },

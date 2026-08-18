@@ -72,6 +72,8 @@ var licenseVersionConfig = entityVersionAPIConfig[vo.LicenseVO, vo.LicenseVersio
 			get: func(v *vo.LicenseVO) string { return v.LegalCode },
 			set: func(v *vo.LicenseVO, s string) { v.LegalCode = s },
 		},
+		// Website is a plain string on the VO (catalog-objects.go v0.4.1+) - no url.Parse
+		// round-trip needed here anymore.
 		"website": {
 			get: func(v *vo.LicenseVO) string { return v.Website },
 			set: func(v *vo.LicenseVO, s string) { v.Website = s },

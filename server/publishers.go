@@ -59,6 +59,8 @@ var publisherVersionConfig = entityVersionAPIConfig[vo.PublisherVO, vo.Publisher
 			get: func(v *vo.PublisherVO) string { return v.Address },
 			set: func(v *vo.PublisherVO, s string) { v.Address = s },
 		},
+		// Website is a plain string on the VO (catalog-objects.go v0.4.1+) - no url.Parse
+		// round-trip needed here anymore.
 		"website": {
 			get: func(v *vo.PublisherVO) string { return v.Website },
 			set: func(v *vo.PublisherVO, s string) { v.Website = s },
