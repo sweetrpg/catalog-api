@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"net/url"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -61,12 +60,8 @@ var publisherVersionConfig = entityVersionAPIConfig[vo.PublisherVO, vo.Publisher
 			set: func(v *vo.PublisherVO, s string) { v.Address = s },
 		},
 		"website": {
-			get: func(v *vo.PublisherVO) string { return v.Website.String() },
-			set: func(v *vo.PublisherVO, s string) {
-				if u, err := url.Parse(s); err == nil && u != nil {
-					v.Website = *u
-				}
-			},
+			get: func(v *vo.PublisherVO) string { return v.Website },
+			set: func(v *vo.PublisherVO, s string) { v.Website = s },
 		},
 		"notes": {
 			get: func(v *vo.PublisherVO) string { return v.Notes },
