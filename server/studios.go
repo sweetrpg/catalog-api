@@ -2,7 +2,6 @@ package server
 
 import (
 	"net/http"
-	"net/url"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gin-contrib/cache"
@@ -56,13 +55,11 @@ var studioVersionConfig = entityVersionAPIConfig[vo.StudioVO, vo.StudioVersionVO
 			get: func(v *vo.StudioVO) string { return v.Name },
 			set: func(v *vo.StudioVO, s string) { v.Name = s },
 		},
+		// Website is a plain string on the VO (catalog-objects.go v0.4.1+) - no url.Parse
+		// round-trip needed here anymore.
 		"website": {
-			get: func(v *vo.StudioVO) string { return v.Website.String() },
-			set: func(v *vo.StudioVO, s string) {
-				if u, err := url.Parse(s); err == nil && u != nil {
-					v.Website = *u
-				}
-			},
+			get: func(v *vo.StudioVO) string { return v.Website },
+			set: func(v *vo.StudioVO, s string) { v.Website = s },
 		},
 		"notes": {
 			get: func(v *vo.StudioVO) string { return v.Notes },

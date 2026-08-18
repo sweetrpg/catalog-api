@@ -1,4 +1,19 @@
 
+## 0.15.0 - 2026-08-18
+
+### Added
+- Add GET /staged-assets/pending for the reclaim job cross-check
+
+
+### Documentation
+- Note why website field accessors dropped url.Parse
+
+
+### Fixed
+- Drop url.Parse round-trip for publisher/studio/license website
+
+
+
 ## 0.14.2 - 2026-08-18
 
 ### Fixed
