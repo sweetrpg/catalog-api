@@ -94,6 +94,13 @@ func main() {
 	}
 	cache := setupCache(redisPool)
 	ttls := cachettl.Load()
+	// entity_version_patch.go (publishers/studios/persons/licenses) and volumes_patch.go/
+	// volumes_versions.go have no per-route cache invalidation of their own - without this, a
+	// successful write leaves cache.CachePage's cached GET responses stale for up to the
+	// configured TTL (an hour by default), so a save looks like it silently failed until the
+	// TTL expires. See cacheInvalidationMiddleware's own doc comment for why this is a full
+	// Flush() rather than a targeted per-key delete.
+	r.Use(cacheInvalidationMiddleware(cache))
 
 	database.SetupDatabase()
 	defer database.TeardownDatabase()
@@ -391,6 +398,36 @@ func rateLimitClientKey(c *gin.Context) string {
 		return "key:" + apiKey
 	}
 	return "ip:" + c.ClientIP()
+}
+
+// cacheInvalidationMiddleware flushes the response cache after any write (POST/PATCH/PUT/
+// DELETE) that succeeds (2xx status). A full Flush() rather than a targeted per-key delete:
+// gin-contrib/cache's page-cache key is derived from the full request URL (including query
+// string), which every read route (list with filters, single-record GET, sub-resource GETs)
+// would need reconstructing to invalidate precisely - not worth the complexity against this
+// service's write volume, which is low (admin/editor entity edits, not a hot path).
+func cacheInvalidationMiddleware(store persistence.CacheStore) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+		if !isCacheInvalidatingMethod(c.Request.Method) {
+			return
+		}
+		if status := c.Writer.Status(); status < 200 || status >= 300 {
+			return
+		}
+		if err := store.Flush(); err != nil {
+			logging.Logger.Warn("failed to flush response cache after write", "error", err.Error())
+		}
+	}
+}
+
+func isCacheInvalidatingMethod(method string) bool {
+	switch method {
+	case http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete:
+		return true
+	default:
+		return false
+	}
 }
 
 // RateLimiter selects between the new Redis-backed per-client limiter and the legacy
