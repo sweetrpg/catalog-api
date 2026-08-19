@@ -52,6 +52,83 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/volumes/:id/versions/:version/current", rollbackRoles, setCurrentVolumeVersion)
+	g.DELETE("/volumes/:id", rollbackRoles, deleteVolume)
+	g.POST("/volumes/:id/restore", rollbackRoles, restoreVolume)
+}
+
+// Soft-delete a volume - admin only.
+//
+//	@Summary		Delete a volume
+//	@Description	Soft-deletes a volume, hiding it from list/browse/picker reads without removing it.
+//	@Tags			volumes
+//	@Param			id		path		string			true	"Volume ID"
+//	@Success		204		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/volumes/{id} [delete]
+func deleteVolume(c *gin.Context) {
+	id := c.Param("id")
+
+	existing, err := data.GetVolume(c.Request.Context(), id)
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if existing == nil {
+		c.JSON(http.StatusNotFound, gin.H{})
+		return
+	}
+
+	if err := data.SoftDeleteVolume(c.Request.Context(), id, authz.Subject(c)); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// Restore a soft-deleted volume - admin only.
+//
+//	@Summary		Restore a volume
+//	@Description	Clears a soft-deleted volume's deletion, returning it to normal read paths.
+//	@Tags			volumes
+//	@Produce		json
+//	@Param			id		path		string			true	"Volume ID"
+//	@Success		200		{object}	interface{}
+//	@Failure		404		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/volumes/{id}/restore [post]
+func restoreVolume(c *gin.Context) {
+	id := c.Param("id")
+
+	existing, err := data.GetVolume(c.Request.Context(), id)
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if existing == nil {
+		c.JSON(http.StatusNotFound, gin.H{})
+		return
+	}
+
+	if err := data.RestoreVolume(c.Request.Context(), id); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	result, err := data.GetVolume(c.Request.Context(), id)
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+	if err := jsonapi.MarshalPayload(c.Writer, result); err != nil {
+		sentry.CaptureException(err)
+	}
 }
 
 // List volumes.

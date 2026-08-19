@@ -55,6 +55,12 @@ var licenseVersionConfig = entityVersionAPIConfig[vo.LicenseVO, vo.LicenseVersio
 	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.LicenseVersionVO, error) {
 		return data.SetCurrentLicenseVersion(c.Request.Context(), id, version)
 	},
+	softDelete: func(c *gin.Context, id string, deletedBy string) error {
+		return data.SoftDeleteLicense(c.Request.Context(), id, deletedBy)
+	},
+	restore: func(c *gin.Context, id string) error {
+		return data.RestoreLicense(c.Request.Context(), id)
+	},
 	versionState:  func(v *vo.LicenseVersionVO) string { return string(v.State) },
 	versionNumber: func(v *vo.LicenseVersionVO) int { return v.Version },
 	fields: map[string]entityFieldAccessor[vo.LicenseVO]{
@@ -143,6 +149,8 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cach
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/licenses/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(licenseVersionConfig))
+	g.DELETE("/licenses/:id", rollbackRoles, deleteEntity(licenseVersionConfig))
+	g.POST("/licenses/:id/restore", rollbackRoles, restoreEntity(licenseVersionConfig))
 }
 
 // List licenses.

@@ -53,6 +53,12 @@ var publisherVersionConfig = entityVersionAPIConfig[vo.PublisherVO, vo.Publisher
 	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.PublisherVersionVO, error) {
 		return data.SetCurrentPublisherVersion(c.Request.Context(), id, version)
 	},
+	softDelete: func(c *gin.Context, id string, deletedBy string) error {
+		return data.SoftDeletePublisher(c.Request.Context(), id, deletedBy)
+	},
+	restore: func(c *gin.Context, id string) error {
+		return data.RestorePublisher(c.Request.Context(), id)
+	},
 	versionState:  func(v *vo.PublisherVersionVO) string { return string(v.State) },
 	versionNumber: func(v *vo.PublisherVersionVO) int { return v.Version },
 	fields: map[string]entityFieldAccessor[vo.PublisherVO]{
@@ -97,6 +103,8 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls ca
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/publishers/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(publisherVersionConfig))
+	g.DELETE("/publishers/:id", rollbackRoles, deleteEntity(publisherVersionConfig))
+	g.POST("/publishers/:id/restore", rollbackRoles, restoreEntity(publisherVersionConfig))
 }
 
 // List publishers.

@@ -56,6 +56,8 @@ type entityVersionAPIConfig[T any, V any] struct {
 	rejectVersion     func(c *gin.Context, id string, version int, reviewedBy string, reviewNote *string) error
 	retractVersion    func(c *gin.Context, id string, version int, submitterID string) (*V, error)
 	setCurrentVersion func(c *gin.Context, id string, version int) (*V, error)
+	softDelete        func(c *gin.Context, id string, deletedBy string) error
+	restore           func(c *gin.Context, id string) error
 	versionState      func(*V) string
 	versionNumber     func(*V) int
 }
@@ -190,6 +192,64 @@ func patchEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store pe
 		}
 		invalidateCachedPaths(store, cfg.listPath, cfg.listPath+"/"+id)
 
+		result, err := cfg.get(c, id)
+		if err != nil {
+			sentry.CaptureException(err)
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
+			return
+		}
+		c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+		c.Writer.WriteHeader(http.StatusOK)
+		if err := jsonapi.MarshalPayload(c.Writer, result); err != nil {
+			sentry.CaptureException(err)
+		}
+	}
+}
+
+// deleteEntity soft-deletes a record - admin only (see rollbackRoles' gate on the caller's
+// route registration). Idempotent: deleting an already-deleted record just re-stamps
+// deleted_at/deleted_by, matching data.softDelete's own idempotent behavior.
+func deleteEntity[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		existing, err := cfg.get(c, id)
+		if err != nil {
+			sentry.CaptureException(err)
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
+			return
+		}
+		if existing == nil {
+			c.JSON(http.StatusNotFound, apiv.ErrorVO{})
+			return
+		}
+		if err := cfg.softDelete(c, id, authz.Subject(c)); err != nil {
+			sentry.CaptureException(err)
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "delete_failed", Message: err.Error()})
+			return
+		}
+		c.Status(http.StatusNoContent)
+	}
+}
+
+// restoreEntity clears a soft-deleted record's deletion - admin only.
+func restoreEntity[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.Param("id")
+		existing, err := cfg.get(c, id)
+		if err != nil {
+			sentry.CaptureException(err)
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
+			return
+		}
+		if existing == nil {
+			c.JSON(http.StatusNotFound, apiv.ErrorVO{})
+			return
+		}
+		if err := cfg.restore(c, id); err != nil {
+			sentry.CaptureException(err)
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "restore_failed", Message: err.Error()})
+			return
+		}
 		result, err := cfg.get(c, id)
 		if err != nil {
 			sentry.CaptureException(err)
