@@ -136,7 +136,9 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cach
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
 	g.POST("/licenses/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(licenseVersionConfig))
 	g.POST("/licenses/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(licenseVersionConfig))
-	g.PATCH("/licenses/:id/volumes", reviewRoles, patchLicenseVolumes)
+	g.PATCH("/licenses/:id/volumes", reviewRoles, func(c *gin.Context) {
+		patchLicenseVolumes(c, store)
+	})
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/licenses/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(licenseVersionConfig))

@@ -89,6 +89,9 @@ func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
 	g.POST("/studios/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(studioVersionConfig))
 	g.POST("/studios/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(studioVersionConfig))
+	g.PATCH("/studios/:id/volumes", reviewRoles, func(c *gin.Context) {
+		patchStudioVolumes(c, store)
+	})
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/studios/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(studioVersionConfig))

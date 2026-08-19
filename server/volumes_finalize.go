@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	apiv "github.com/sweetrpg/api-core.go/vo"
 	"github.com/sweetrpg/catalog-api/assets"
@@ -34,7 +35,10 @@ const recordTypeVolume = "volume"
 //	@Failure		404	{object}	apiv.ErrorVO
 //	@Failure		500	{object}	apiv.ErrorVO
 //	@Router			/volumes/{id}/finalize-session [post]
-func finalizeVolumeSession(c *gin.Context, assetsClient *assets.Client, editSessions *editsession.Store) {
+func finalizeVolumeSession(
+	c *gin.Context, assetsClient *assets.Client, editSessions *editsession.Store,
+	store persistence.CacheStore,
+) {
 	volumeID := c.Param("id")
 	userID := authz.Subject(c)
 
@@ -99,7 +103,7 @@ func finalizeVolumeSession(c *gin.Context, assetsClient *assets.Client, editSess
 			req.SampleAssetIds = &liveSampleIds
 		}
 
-		if !applyVolumePatch(c, existing, req, models.VersionStateLive) {
+		if !applyVolumePatch(c, existing, req, models.VersionStateLive, store) {
 			return
 		}
 		if err := editSessions.Delete(c.Request.Context(), userID, recordTypeVolume); err != nil {

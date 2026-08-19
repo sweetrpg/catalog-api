@@ -14,10 +14,11 @@ const (
 	TypeContributionType = "contribution-type"
 	TypePropertyName     = "property-name"
 	TypeFormat           = "format"
+	TypeTag              = "tag"
 )
 
 // ValidTypes lists every recognized :type path value.
-var ValidTypes = []string{TypeContributionType, TypePropertyName, TypeFormat}
+var ValidTypes = []string{TypeContributionType, TypePropertyName, TypeFormat, TypeTag}
 
 // IsValidType reports whether t is a recognized vocabulary type.
 func IsValidType(t string) bool {
