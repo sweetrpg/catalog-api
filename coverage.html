@@ -63,7 +63,7 @@
 				
 				<option value="file3">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
-				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (19.8%)</option>
+				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (22.3%)</option>
 				
 				<option value="file5">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
@@ -638,7 +638,7 @@ func main() <span class="cov0" title="0">{
         // configured TTL (an hour by default), so a save looks like it silently failed until the
         // TTL expires. See cacheInvalidationMiddleware's own doc comment for why this is a full
         // Flush() rather than a targeted per-key delete.
-        r.Use(cacheInvalidationMiddleware(cache))
+        r.Use(cacheInvalidationMiddleware(cache, redisPool))
 
         database.SetupDatabase()
         defer database.TeardownDatabase()
@@ -798,22 +798,22 @@ func setupAcuator(r *gin.Engine) <span class="cov0" title="0">{
 // setupRedisPool builds a shared redigo connection pool for both the rate limiter's counters
 // and the cache's startup connectivity check, when REDIS_HOST is configured. Returns nil when
 // no Redis is configured, so the service runs entirely without an external dependency.
-func setupRedisPool() *redis.Pool <span class="cov6" title="2">{
+func setupRedisPool() *redis.Pool <span class="cov5" title="2">{
         redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
         if !found </span><span class="cov0" title="0">{
                 return nil
         }</span>
 
-        <span class="cov6" title="2">redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
+        <span class="cov5" title="2">redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
         redisPass := os.Getenv(apiconstants.REDIS_PASS)
         addr := fmt.Sprintf("%s:%s", redisHost, redisPort)
 
         return &amp;redis.Pool{
                 MaxIdle:     5,
                 IdleTimeout: 240 * time.Second,
-                Dial: func() (redis.Conn, error) </span><span class="cov10" title="3">{
+                Dial: func() (redis.Conn, error) </span><span class="cov8" title="3">{
                         c, err := redis.Dial("tcp", addr, redis.DialConnectTimeout(redisConnectTimeout))
-                        if err != nil </span><span class="cov6" title="2">{
+                        if err != nil </span><span class="cov5" title="2">{
                                 return nil, err
                         }</span>
                         <span class="cov1" title="1">if redisPass != "" </span><span class="cov0" title="0">{
@@ -873,7 +873,7 @@ func setupEditSessionPool() *redis.Pool <span class="cov0" title="0">{
 // on its own then lets readiness recover without a pod restart. Also does one startup ping
 // purely to log early if Redis is unreachable at boot; that ping no longer determines
 // readiness by itself.
-func setupCache(redisPool *redis.Pool) persistence.CacheStore <span class="cov10" title="3">{
+func setupCache(redisPool *redis.Pool) persistence.CacheStore <span class="cov8" title="3">{
         logging.Logger.Info("Setting up query cache...")
 
         redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
@@ -882,7 +882,7 @@ func setupCache(redisPool *redis.Pool) persistence.CacheStore <span class="cov10
                 return persistence.NewInMemoryStore(time.Hour)
         }</span>
 
-        <span class="cov6" title="2">redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
+        <span class="cov5" title="2">redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
         redisPass := os.Getenv(apiconstants.REDIS_PASS)
         cache := persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), redisPass, time.Hour)
 
@@ -895,7 +895,7 @@ func setupCache(redisPool *redis.Pool) persistence.CacheStore <span class="cov10
                         "redis_host", redisHost, "error", err.Error())
         }</span>
 
-        <span class="cov6" title="2">return cache</span>
+        <span class="cov5" title="2">return cache</span>
 }
 
 func setupTracing(r *gin.Engine) <span class="cov0" title="0">{
@@ -939,29 +939,46 @@ func rateLimitClientKey(c *gin.Context) string <span class="cov0" title="0">{
 }
 
 // cacheInvalidationMiddleware flushes the response cache after any write (POST/PATCH/PUT/
-// DELETE) that succeeds (2xx status). A full Flush() rather than a targeted per-key delete:
+// DELETE) that succeeds (2xx status). A full flush rather than a targeted per-key delete:
 // gin-contrib/cache's page-cache key is derived from the full request URL (including query
 // string), which every read route (list with filters, single-record GET, sub-resource GETs)
 // would need reconstructing to invalidate precisely - not worth the complexity against this
 // service's write volume, which is low (admin/editor entity edits, not a hot path).
-func cacheInvalidationMiddleware(store persistence.CacheStore) gin.HandlerFunc <span class="cov10" title="3">{
-        return func(c *gin.Context) </span><span class="cov10" title="3">{
+//
+// This does NOT call persistence.RedisStore's own Flush() - that issues Redis FLUSHALL, which
+// wipes every logical DB on the server, not just the cache's own (DB 0). This service shares
+// its Redis instance with the edit-session store (DB 2, see setupEditSessionPool) specifically
+// so cache/rate-limit and edit-session data can't collide - a FLUSHALL from here would erase
+// every in-flight edit session on every write, platform-wide. When Redis is configured, this
+// issues FLUSHDB directly against redisPool (which, like the cache, is never SELECTed off DB
+// 0), scoped to only the response cache. When Redis isn't configured (in-memory fallback),
+// store.Flush() is safe - persistence.MemoryStore's Flush() only clears its own local map.
+func cacheInvalidationMiddleware(store persistence.CacheStore, redisPool *redis.Pool) gin.HandlerFunc <span class="cov10" title="4">{
+        return func(c *gin.Context) </span><span class="cov10" title="4">{
                 c.Next()
                 if !isCacheInvalidatingMethod(c.Request.Method) </span><span class="cov1" title="1">{
                         return
                 }</span>
-                <span class="cov6" title="2">if status := c.Writer.Status(); status &lt; 200 || status &gt;= 300 </span><span class="cov1" title="1">{
+                <span class="cov8" title="3">if status := c.Writer.Status(); status &lt; 200 || status &gt;= 300 </span><span class="cov1" title="1">{
                         return
                 }</span>
-                <span class="cov1" title="1">if err := store.Flush(); err != nil </span><span class="cov0" title="0">{
+                <span class="cov5" title="2">if redisPool == nil </span><span class="cov1" title="1">{
+                        if err := store.Flush(); err != nil </span><span class="cov0" title="0">{
+                                logging.Logger.Warn("failed to flush response cache after write", "error", err.Error())
+                        }</span>
+                        <span class="cov1" title="1">return</span>
+                }
+                <span class="cov1" title="1">conn := redisPool.Get()
+                defer func() </span><span class="cov1" title="1">{ _ = conn.Close() }</span>()
+                <span class="cov1" title="1">if _, err := conn.Do("FLUSHDB"); err != nil </span><span class="cov0" title="0">{
                         logging.Logger.Warn("failed to flush response cache after write", "error", err.Error())
                 }</span>
         }
 }
 
-func isCacheInvalidatingMethod(method string) bool <span class="cov10" title="3">{
+func isCacheInvalidatingMethod(method string) bool <span class="cov10" title="4">{
         switch method </span>{
-        case http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete:<span class="cov6" title="2">
+        case http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete:<span class="cov8" title="3">
                 return true</span>
         default:<span class="cov1" title="1">
                 return false</span>
