@@ -83,6 +83,9 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
 	g.POST("/persons/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(personVersionConfig))
 	g.POST("/persons/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(personVersionConfig))
+	// Bulk-create is narrower than single-entity create (writeRoles, above) - editor/admin only,
+	// no submitter path, per catalog-entity-bulk-add's spec (matches reviewRoles' tier).
+	g.POST("/persons/bulk", reviewRoles, bulkCreateEntityVersion(personVersionConfig))
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/persons/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(personVersionConfig))
