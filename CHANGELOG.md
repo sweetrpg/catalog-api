@@ -1,4 +1,11 @@
 
+## 0.16.0 - 2026-08-19
+
+### Added
+- Add GET /stats endpoint for catalog-wide summary
+
+
+
 ## 0.15.3 - 2026-08-19
 
 ### Fixed
