@@ -1,4 +1,11 @@
 
+## 0.17.0 - 2026-08-19
+
+### Added
+- Add create route, license tags field, license-volumes association
+
+
+
 ## 0.16.0 - 2026-08-19
 
 ### Added
