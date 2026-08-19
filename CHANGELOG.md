@@ -1,4 +1,14 @@
 
+## 0.15.3 - 2026-08-19
+
+### Fixed
+- Scope write-invalidation flush to the response cache DB only
+
+
+
+## 0.15.2 - 2026-08-18
+
+
 ## 0.15.2 - 2026-08-18
 
 ### Fixed
