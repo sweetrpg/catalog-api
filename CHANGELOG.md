@@ -1,4 +1,11 @@
 
+## 0.18.0 - 2026-08-19
+
+### Added
+- Extend /stats to per-entity-type count/most-recent cards
+
+
+
 ## 0.17.1 - 2026-08-19
 
 ### Fixed
