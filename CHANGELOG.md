@@ -1,4 +1,11 @@
 
+## 0.17.1 - 2026-08-19
+
+### Fixed
+- Fix Deployment fields that never matched ArgoCD's applied manifest
+
+
+
 ## 0.17.0 - 2026-08-19
 
 ### Added
