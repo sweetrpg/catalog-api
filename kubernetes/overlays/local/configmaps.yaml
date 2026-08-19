@@ -18,7 +18,7 @@ data:
   BUILD_INFO_PATH: /app/config/build-info.json
   # OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo-distributor.observability.svc.cluster.local:4318/
   SENTRY_RELEASE: "1"
-  REDIS_HOST: redis.sweetrpg-catalog.svc.cluster.local
+  REDIS_HOST: cache.sweetrpg-catalog.svc.cluster.local
   REDIS_PORT: "6379"
   # Traefik strips /api/0/catalog (or /1) before the request reaches this app (see
   # middlewares.yaml) - every self-referencing link this app generates needs the full prefix
