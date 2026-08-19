@@ -100,7 +100,7 @@ func main() {
 	// configured TTL (an hour by default), so a save looks like it silently failed until the
 	// TTL expires. See cacheInvalidationMiddleware's own doc comment for why this is a full
 	// Flush() rather than a targeted per-key delete.
-	r.Use(cacheInvalidationMiddleware(cache))
+	r.Use(cacheInvalidationMiddleware(cache, redisPool))
 
 	database.SetupDatabase()
 	defer database.TeardownDatabase()
@@ -401,12 +401,21 @@ func rateLimitClientKey(c *gin.Context) string {
 }
 
 // cacheInvalidationMiddleware flushes the response cache after any write (POST/PATCH/PUT/
-// DELETE) that succeeds (2xx status). A full Flush() rather than a targeted per-key delete:
+// DELETE) that succeeds (2xx status). A full flush rather than a targeted per-key delete:
 // gin-contrib/cache's page-cache key is derived from the full request URL (including query
 // string), which every read route (list with filters, single-record GET, sub-resource GETs)
 // would need reconstructing to invalidate precisely - not worth the complexity against this
 // service's write volume, which is low (admin/editor entity edits, not a hot path).
-func cacheInvalidationMiddleware(store persistence.CacheStore) gin.HandlerFunc {
+//
+// This does NOT call persistence.RedisStore's own Flush() - that issues Redis FLUSHALL, which
+// wipes every logical DB on the server, not just the cache's own (DB 0). This service shares
+// its Redis instance with the edit-session store (DB 2, see setupEditSessionPool) specifically
+// so cache/rate-limit and edit-session data can't collide - a FLUSHALL from here would erase
+// every in-flight edit session on every write, platform-wide. When Redis is configured, this
+// issues FLUSHDB directly against redisPool (which, like the cache, is never SELECTed off DB
+// 0), scoped to only the response cache. When Redis isn't configured (in-memory fallback),
+// store.Flush() is safe - persistence.MemoryStore's Flush() only clears its own local map.
+func cacheInvalidationMiddleware(store persistence.CacheStore, redisPool *redis.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
 		if !isCacheInvalidatingMethod(c.Request.Method) {
@@ -415,7 +424,15 @@ func cacheInvalidationMiddleware(store persistence.CacheStore) gin.HandlerFunc {
 		if status := c.Writer.Status(); status < 200 || status >= 300 {
 			return
 		}
-		if err := store.Flush(); err != nil {
+		if redisPool == nil {
+			if err := store.Flush(); err != nil {
+				logging.Logger.Warn("failed to flush response cache after write", "error", err.Error())
+			}
+			return
+		}
+		conn := redisPool.Get()
+		defer func() { _ = conn.Close() }()
+		if _, err := conn.Do("FLUSHDB"); err != nil {
 			logging.Logger.Warn("failed to flush response cache after write", "error", err.Error())
 		}
 	}
