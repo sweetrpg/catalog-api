@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -19,6 +20,15 @@ type entityFieldAccessor[T any] struct {
 	set func(*T, string)
 }
 
+// entityArrayFieldAccessor is entityFieldAccessor's counterpart for a patchable []string field
+// (e.g. license tags) - a separate map rather than widening entityFieldAccessor itself, since
+// every existing field on every entity is a plain string and this keeps that common case
+// untyped-any-free.
+type entityArrayFieldAccessor[T any] struct {
+	get func(*T) []string
+	set func(*T, []string)
+}
+
 // entityVersionAPIConfig wires the generic version-based patch/review/rollback flow below (shared
 // across publisher, studio, person, license, and system - the meta+version model
 // volumes_patch.go/volumes_versions.go implement bespoke for volumes, predating this shared
@@ -28,7 +38,9 @@ type entityFieldAccessor[T any] struct {
 type entityVersionAPIConfig[T any, V any] struct {
 	recordType        string
 	fields            map[string]entityFieldAccessor[T]
+	arrayFields       map[string]entityArrayFieldAccessor[T]
 	get               func(c *gin.Context, id string) (*T, error)
+	create            func(c *gin.Context, entity *T, createdBy string) (*string, error)
 	createVersion     func(c *gin.Context, id string, entity *T, state catalogmodels.VersionState) (*V, error)
 	listVersions      func(c *gin.Context, id string) ([]*V, error)
 	getVersion        func(c *gin.Context, id string, version int) (*V, error)
@@ -40,22 +52,83 @@ type entityVersionAPIConfig[T any, V any] struct {
 	versionNumber     func(*V) int
 }
 
+// createEntityVersion creates a brand-new record, always live - unlike patchEntityVersion, there
+// is no "submitted for review" state for a record that doesn't exist yet to compare a submission
+// against, so every role able to reach this route (writeRoles - admin/editor/submitter, same as
+// patchEntityVersion's own gate) creates the record directly.
+func createEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var entity T
+		if err := c.ShouldBindJSON(&entity); err != nil {
+			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: err.Error()})
+			return
+		}
+
+		id, err := cfg.create(c, &entity, authz.Subject(c))
+		if err != nil {
+			sentry.CaptureException(err)
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "create_failed", Message: err.Error()})
+			return
+		}
+		if id == nil {
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "create_failed", Message: "no id returned"})
+			return
+		}
+
+		result, err := cfg.get(c, *id)
+		if err != nil {
+			sentry.CaptureException(err)
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
+			return
+		}
+		c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+		c.Writer.WriteHeader(http.StatusCreated)
+		if err := jsonapi.MarshalPayload(c.Writer, result); err != nil {
+			sentry.CaptureException(err)
+		}
+	}
+}
+
 // patchEntityVersion edits an entity, or submits an edit for review, creating a version either
 // way - the version-model counterpart of patchEntity.
 func patchEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 
-		var req map[string]*string
+		// Bound to json.RawMessage rather than *string so a field can be either a string
+		// (cfg.fields) or an array (cfg.arrayFields, e.g. license tags) - each raw value is
+		// unmarshaled against whichever map recognizes its key below.
+		var req map[string]json.RawMessage
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: err.Error()})
 			return
 		}
+
+		stringValues := make(map[string]string, len(req))
+		arrayValues := make(map[string][]string, len(req))
 		hasKnownField := false
-		for field, value := range req {
-			if _, known := cfg.fields[field]; known && value != nil {
+		for field, raw := range req {
+			if len(raw) == 0 || string(raw) == "null" {
+				continue
+			}
+			if _, known := cfg.fields[field]; known {
+				var s string
+				if err := json.Unmarshal(raw, &s); err != nil {
+					c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: field + ": " + err.Error()})
+					return
+				}
+				stringValues[field] = s
 				hasKnownField = true
-				break
+				continue
+			}
+			if _, known := cfg.arrayFields[field]; known {
+				var a []string
+				if err := json.Unmarshal(raw, &a); err != nil {
+					c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: field + ": " + err.Error()})
+					return
+				}
+				arrayValues[field] = a
+				hasKnownField = true
 			}
 		}
 		if !hasKnownField {
@@ -75,12 +148,11 @@ func patchEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.Hand
 		}
 
 		updated := *existing
-		for field, value := range req {
-			accessor, known := cfg.fields[field]
-			if !known || value == nil {
-				continue
-			}
-			accessor.set(&updated, *value)
+		for field, value := range stringValues {
+			cfg.fields[field].set(&updated, value)
+		}
+		for field, value := range arrayValues {
+			cfg.arrayFields[field].set(&updated, value)
 		}
 
 		roles := authz.Roles(c)

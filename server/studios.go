@@ -27,6 +27,10 @@ var studioVersionConfig = entityVersionAPIConfig[vo.StudioVO, vo.StudioVersionVO
 	get: func(c *gin.Context, id string) (*vo.StudioVO, error) {
 		return data.GetStudio(c.Request.Context(), id)
 	},
+	create: func(c *gin.Context, entity *vo.StudioVO, createdBy string) (*string, error) {
+		entity.CreatedBy = createdBy
+		return data.AddStudio(c.Request.Context(), entity)
+	},
 	createVersion: func(c *gin.Context, id string, entity *vo.StudioVO, state catalogmodels.VersionState) (*vo.StudioVersionVO, error) {
 		return data.UpdateStudio(c.Request.Context(), id, entity, state)
 	},
@@ -78,6 +82,7 @@ func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.GET("/studios/:id/versions/:version", getEntityVersion(studioVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
+	g.POST("/studios", writeRoles, createEntityVersion(studioVersionConfig))
 	g.PATCH("/studios/:id", writeRoles, patchEntityVersion(studioVersionConfig))
 	g.POST("/studios/:id/versions/:version/retract", writeRoles, retractEntityVersion(studioVersionConfig))
 
