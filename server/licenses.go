@@ -17,6 +17,7 @@ import (
 	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
 	"github.com/sweetrpg/common.go/logging"
+	modelcore "github.com/sweetrpg/model-core.go/vo"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -27,6 +28,10 @@ var licenseVersionConfig = entityVersionAPIConfig[vo.LicenseVO, vo.LicenseVersio
 	recordType: "license",
 	get: func(c *gin.Context, id string) (*vo.LicenseVO, error) {
 		return data.GetLicense(c.Request.Context(), id)
+	},
+	create: func(c *gin.Context, entity *vo.LicenseVO, createdBy string) (*string, error) {
+		entity.CreatedBy = createdBy
+		return data.AddLicense(c.Request.Context(), entity)
 	},
 	createVersion: func(c *gin.Context, id string, entity *vo.LicenseVO, state catalogmodels.VersionState) (*vo.LicenseVersionVO, error) {
 		return data.UpdateLicense(c.Request.Context(), id, entity, state)
@@ -91,6 +96,27 @@ var licenseVersionConfig = entityVersionAPIConfig[vo.LicenseVO, vo.LicenseVersio
 			set: func(v *vo.LicenseVO, s string) { v.Notes = s },
 		},
 	},
+	// Tags are a plain free-text label here (Name only, Value unused) - not a linked vocabulary
+	// with stable IDs like publisher/studio. Publisher/studio/person tags editing isn't part of
+	// this - only license needed it (sweetrpg/catalog-web#121).
+	arrayFields: map[string]entityArrayFieldAccessor[vo.LicenseVO]{
+		"tags": {
+			get: func(v *vo.LicenseVO) []string {
+				names := make([]string, len(v.Tags))
+				for i, t := range v.Tags {
+					names[i] = t.Name
+				}
+				return names
+			},
+			set: func(v *vo.LicenseVO, names []string) {
+				tags := make([]modelcore.TagVO, len(names))
+				for i, n := range names {
+					tags[i] = modelcore.TagVO{Name: n}
+				}
+				v.Tags = tags
+			},
+		},
+	},
 }
 
 func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client) {
@@ -103,12 +129,14 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cach
 	g.GET("/licenses/:id/versions/:version", getEntityVersion(licenseVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
+	g.POST("/licenses", writeRoles, createEntityVersion(licenseVersionConfig))
 	g.PATCH("/licenses/:id", writeRoles, patchEntityVersion(licenseVersionConfig))
 	g.POST("/licenses/:id/versions/:version/retract", writeRoles, retractEntityVersion(licenseVersionConfig))
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
 	g.POST("/licenses/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(licenseVersionConfig))
 	g.POST("/licenses/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(licenseVersionConfig))
+	g.PATCH("/licenses/:id/volumes", reviewRoles, patchLicenseVolumes)
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/licenses/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(licenseVersionConfig))

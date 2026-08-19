@@ -27,6 +27,10 @@ var personVersionConfig = entityVersionAPIConfig[vo.PersonVO, vo.PersonVersionVO
 	get: func(c *gin.Context, id string) (*vo.PersonVO, error) {
 		return data.GetPerson(c.Request.Context(), id)
 	},
+	create: func(c *gin.Context, entity *vo.PersonVO, createdBy string) (*string, error) {
+		entity.CreatedBy = createdBy
+		return data.AddPerson(c.Request.Context(), entity)
+	},
 	createVersion: func(c *gin.Context, id string, entity *vo.PersonVO, state catalogmodels.VersionState) (*vo.PersonVersionVO, error) {
 		return data.UpdatePerson(c.Request.Context(), id, entity, state)
 	},
@@ -72,6 +76,7 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.GET("/persons/:id/versions/:version", getEntityVersion(personVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
+	g.POST("/persons", writeRoles, createEntityVersion(personVersionConfig))
 	g.PATCH("/persons/:id", writeRoles, patchEntityVersion(personVersionConfig))
 	g.POST("/persons/:id/versions/:version/retract", writeRoles, retractEntityVersion(personVersionConfig))
 

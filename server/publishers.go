@@ -27,6 +27,10 @@ var publisherVersionConfig = entityVersionAPIConfig[vo.PublisherVO, vo.Publisher
 	get: func(c *gin.Context, id string) (*vo.PublisherVO, error) {
 		return data.GetPublisher(c.Request.Context(), id)
 	},
+	create: func(c *gin.Context, entity *vo.PublisherVO, createdBy string) (*string, error) {
+		entity.CreatedBy = createdBy
+		return data.AddPublisher(c.Request.Context(), entity)
+	},
 	createVersion: func(c *gin.Context, id string, entity *vo.PublisherVO, state catalogmodels.VersionState) (*vo.PublisherVersionVO, error) {
 		return data.UpdatePublisher(c.Request.Context(), id, entity, state)
 	},
@@ -82,6 +86,7 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls ca
 	g.GET("/publishers/:id/versions/:version", getEntityVersion(publisherVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
+	g.POST("/publishers", writeRoles, createEntityVersion(publisherVersionConfig))
 	g.PATCH("/publishers/:id", writeRoles, patchEntityVersion(publisherVersionConfig))
 	g.POST("/publishers/:id/versions/:version/retract", writeRoles, retractEntityVersion(publisherVersionConfig))
 
