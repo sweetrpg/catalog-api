@@ -21,10 +21,10 @@ data:
   PYROSCOPE_TENANT_ID: psw
   SENTRY_RELEASE: "1"
   # The infra repo's catalog/cache chart migrated from Bitnami's redis chart (which used a
-  # "<release>-master" Service name) to the Valkey chart with fullnameOverride: redis - the
-  # Service is just "redis" now. "redis-master" never resolved, which is part of why this was
+  # "<release>-master" Service name) to the Valkey chart with fullnameOverride: cache - the
+  # Service is just "cache" now. "redis-master" never resolved, which is part of why this was
   # never exercised end-to-end. See openspec/changes/catalog-api-caching-rate-limiting.
-  REDIS_HOST: redis.sweetrpg-catalog.svc.cluster.local
+  REDIS_HOST: cache.sweetrpg-catalog.svc.cluster.local
   REDIS_PORT: "6379"
   CACHE_TTLS: "licenses=30m,volumes=30m,systems=2h,publishers=2h,studios=2h,persons=1h,contributions=1h,reviews=15m"
   CACHE_DEFAULT_TTL: 1h
