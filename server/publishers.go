@@ -100,6 +100,9 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls ca
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
 	g.POST("/publishers/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(publisherVersionConfig, store))
 	g.POST("/publishers/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(publisherVersionConfig))
+	g.PATCH("/publishers/:id/volumes", reviewRoles, func(c *gin.Context) {
+		patchPublisherVolumes(c, store)
+	})
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/publishers/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(publisherVersionConfig))
