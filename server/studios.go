@@ -24,6 +24,7 @@ import (
 
 var studioVersionConfig = entityVersionAPIConfig[vo.StudioVO, vo.StudioVersionVO]{
 	recordType: "studio",
+	listPath:   "/studios",
 	get: func(c *gin.Context, id string) (*vo.StudioVO, error) {
 		return data.GetStudio(c.Request.Context(), id)
 	},
@@ -82,12 +83,12 @@ func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.GET("/studios/:id/versions/:version", getEntityVersion(studioVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
-	g.POST("/studios", writeRoles, createEntityVersion(studioVersionConfig))
-	g.PATCH("/studios/:id", writeRoles, patchEntityVersion(studioVersionConfig))
+	g.POST("/studios", writeRoles, createEntityVersion(studioVersionConfig, store))
+	g.PATCH("/studios/:id", writeRoles, patchEntityVersion(studioVersionConfig, store))
 	g.POST("/studios/:id/versions/:version/retract", writeRoles, retractEntityVersion(studioVersionConfig))
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
-	g.POST("/studios/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(studioVersionConfig))
+	g.POST("/studios/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(studioVersionConfig, store))
 	g.POST("/studios/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(studioVersionConfig))
 	g.PATCH("/studios/:id/volumes", reviewRoles, func(c *gin.Context) {
 		patchStudioVolumes(c, store)

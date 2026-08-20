@@ -24,6 +24,7 @@ import (
 
 var publisherVersionConfig = entityVersionAPIConfig[vo.PublisherVO, vo.PublisherVersionVO]{
 	recordType: "publisher",
+	listPath:   "/publishers",
 	get: func(c *gin.Context, id string) (*vo.PublisherVO, error) {
 		return data.GetPublisher(c.Request.Context(), id)
 	},
@@ -86,12 +87,12 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls ca
 	g.GET("/publishers/:id/versions/:version", getEntityVersion(publisherVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
-	g.POST("/publishers", writeRoles, createEntityVersion(publisherVersionConfig))
-	g.PATCH("/publishers/:id", writeRoles, patchEntityVersion(publisherVersionConfig))
+	g.POST("/publishers", writeRoles, createEntityVersion(publisherVersionConfig, store))
+	g.PATCH("/publishers/:id", writeRoles, patchEntityVersion(publisherVersionConfig, store))
 	g.POST("/publishers/:id/versions/:version/retract", writeRoles, retractEntityVersion(publisherVersionConfig))
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
-	g.POST("/publishers/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(publisherVersionConfig))
+	g.POST("/publishers/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(publisherVersionConfig, store))
 	g.POST("/publishers/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(publisherVersionConfig))
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)

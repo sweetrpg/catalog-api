@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	apiv "github.com/sweetrpg/api-core.go/vo"
@@ -36,7 +37,14 @@ type entityArrayFieldAccessor[T any] struct {
 // the former entity_patch.go's proposed_changes-based generic mechanism once every type using it
 // migrated onto the version model (task group 7).
 type entityVersionAPIConfig[T any, V any] struct {
-	recordType        string
+	recordType string
+	// listPath is this type's top-level list route (e.g. "/persons") - invalidated, along with
+	// the affected record's own "<listPath>/<id>", whenever create/patch/accept changes what a
+	// GET to either would return. Response caching (cache.CachePage) predates the version model;
+	// nothing in this generic flow invalidated it before, so a newly created record (or an
+	// applied/accepted edit) stayed invisible in list/detail responses for the rest of
+	// CACHE_TTLS' window.
+	listPath          string
 	fields            map[string]entityFieldAccessor[T]
 	arrayFields       map[string]entityArrayFieldAccessor[T]
 	get               func(c *gin.Context, id string) (*T, error)
@@ -56,7 +64,7 @@ type entityVersionAPIConfig[T any, V any] struct {
 // is no "submitted for review" state for a record that doesn't exist yet to compare a submission
 // against, so every role able to reach this route (writeRoles - admin/editor/submitter, same as
 // patchEntityVersion's own gate) creates the record directly.
-func createEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFunc {
+func createEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store persistence.CacheStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var entity T
 		if err := c.ShouldBindJSON(&entity); err != nil {
@@ -74,6 +82,7 @@ func createEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.Han
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "create_failed", Message: "no id returned"})
 			return
 		}
+		invalidateCachedPaths(store, cfg.listPath, cfg.listPath+"/"+*id)
 
 		result, err := cfg.get(c, *id)
 		if err != nil {
@@ -91,7 +100,7 @@ func createEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.Han
 
 // patchEntityVersion edits an entity, or submits an edit for review, creating a version either
 // way - the version-model counterpart of patchEntity.
-func patchEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFunc {
+func patchEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store persistence.CacheStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 
@@ -179,6 +188,7 @@ func patchEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.Hand
 			})
 			return
 		}
+		invalidateCachedPaths(store, cfg.listPath, cfg.listPath+"/"+id)
 
 		result, err := cfg.get(c, id)
 		if err != nil {
@@ -238,7 +248,7 @@ func getEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.Handle
 }
 
 // acceptEntityVersion accepts a submitted version, in full or in part.
-func acceptEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFunc {
+func acceptEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store persistence.CacheStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		version, ok := entityVersionParam(c)
@@ -260,6 +270,7 @@ func acceptEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.Han
 			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "accept_failed", Message: err.Error()})
 			return
 		}
+		invalidateCachedPaths(store, cfg.listPath, cfg.listPath+"/"+id)
 		c.JSON(http.StatusOK, reviewVersionResponse{
 			Version: cfg.versionNumber(accepted), State: cfg.versionState(accepted), Conflicts: conflicts,
 		})

@@ -26,6 +26,7 @@ import (
 
 var licenseVersionConfig = entityVersionAPIConfig[vo.LicenseVO, vo.LicenseVersionVO]{
 	recordType: "license",
+	listPath:   "/licenses",
 	get: func(c *gin.Context, id string) (*vo.LicenseVO, error) {
 		return data.GetLicense(c.Request.Context(), id)
 	},
@@ -129,12 +130,12 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cach
 	g.GET("/licenses/:id/versions/:version", getEntityVersion(licenseVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
-	g.POST("/licenses", writeRoles, createEntityVersion(licenseVersionConfig))
-	g.PATCH("/licenses/:id", writeRoles, patchEntityVersion(licenseVersionConfig))
+	g.POST("/licenses", writeRoles, createEntityVersion(licenseVersionConfig, store))
+	g.PATCH("/licenses/:id", writeRoles, patchEntityVersion(licenseVersionConfig, store))
 	g.POST("/licenses/:id/versions/:version/retract", writeRoles, retractEntityVersion(licenseVersionConfig))
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
-	g.POST("/licenses/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(licenseVersionConfig))
+	g.POST("/licenses/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(licenseVersionConfig, store))
 	g.POST("/licenses/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(licenseVersionConfig))
 	g.PATCH("/licenses/:id/volumes", reviewRoles, func(c *gin.Context) {
 		patchLicenseVolumes(c, store)

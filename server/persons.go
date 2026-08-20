@@ -24,6 +24,7 @@ import (
 
 var personVersionConfig = entityVersionAPIConfig[vo.PersonVO, vo.PersonVersionVO]{
 	recordType: "person",
+	listPath:   "/persons",
 	get: func(c *gin.Context, id string) (*vo.PersonVO, error) {
 		return data.GetPerson(c.Request.Context(), id)
 	},
@@ -76,12 +77,12 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.GET("/persons/:id/versions/:version", getEntityVersion(personVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
-	g.POST("/persons", writeRoles, createEntityVersion(personVersionConfig))
-	g.PATCH("/persons/:id", writeRoles, patchEntityVersion(personVersionConfig))
+	g.POST("/persons", writeRoles, createEntityVersion(personVersionConfig, store))
+	g.PATCH("/persons/:id", writeRoles, patchEntityVersion(personVersionConfig, store))
 	g.POST("/persons/:id/versions/:version/retract", writeRoles, retractEntityVersion(personVersionConfig))
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
-	g.POST("/persons/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(personVersionConfig))
+	g.POST("/persons/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(personVersionConfig, store))
 	g.POST("/persons/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(personVersionConfig))
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
