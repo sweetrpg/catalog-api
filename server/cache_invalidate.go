@@ -88,6 +88,18 @@ func invalidateStudioVolumesCache(store persistence.CacheStore, studioID string,
 	invalidateCachedPaths(store, paths...)
 }
 
+// invalidatePublisherVolumesCache is invalidateLicenseVolumesCache's publisher counterpart.
+func invalidatePublisherVolumesCache(store persistence.CacheStore, publisherID string, before, after []string) {
+	paths := []string{
+		"/publishers", "/publishers/" + publisherID, "/publishers/" + publisherID + "/volumes",
+		"/volumes",
+	}
+	for _, vid := range unionStrings(before, after) {
+		paths = append(paths, "/volumes/"+vid)
+	}
+	invalidateCachedPaths(store, paths...)
+}
+
 func unionStrings(a, b []string) []string {
 	seen := map[string]bool{}
 	var out []string
