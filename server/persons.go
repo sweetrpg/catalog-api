@@ -93,8 +93,8 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/persons/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(personVersionConfig))
-	g.DELETE("/persons/:id", rollbackRoles, deleteEntity(personVersionConfig))
-	g.POST("/persons/:id/restore", rollbackRoles, restoreEntity(personVersionConfig))
+	g.DELETE("/persons/:id", rollbackRoles, deleteEntity(personVersionConfig, store))
+	g.POST("/persons/:id/restore", rollbackRoles, restoreEntity(personVersionConfig, store))
 }
 
 // List persons.

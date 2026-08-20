@@ -103,8 +103,8 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls ca
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/publishers/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(publisherVersionConfig))
-	g.DELETE("/publishers/:id", rollbackRoles, deleteEntity(publisherVersionConfig))
-	g.POST("/publishers/:id/restore", rollbackRoles, restoreEntity(publisherVersionConfig))
+	g.DELETE("/publishers/:id", rollbackRoles, deleteEntity(publisherVersionConfig, store))
+	g.POST("/publishers/:id/restore", rollbackRoles, restoreEntity(publisherVersionConfig, store))
 }
 
 // List publishers.

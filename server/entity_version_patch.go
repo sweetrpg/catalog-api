@@ -209,7 +209,7 @@ func patchEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store pe
 // deleteEntity soft-deletes a record - admin only (see rollbackRoles' gate on the caller's
 // route registration). Idempotent: deleting an already-deleted record just re-stamps
 // deleted_at/deleted_by, matching data.softDelete's own idempotent behavior.
-func deleteEntity[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFunc {
+func deleteEntity[T any, V any](cfg entityVersionAPIConfig[T, V], store persistence.CacheStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		existing, err := cfg.get(c, id)
@@ -227,12 +227,13 @@ func deleteEntity[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFun
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "delete_failed", Message: err.Error()})
 			return
 		}
+		invalidateCachedPaths(store, cfg.listPath, cfg.listPath+"/"+id)
 		c.Status(http.StatusNoContent)
 	}
 }
 
 // restoreEntity clears a soft-deleted record's deletion - admin only.
-func restoreEntity[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFunc {
+func restoreEntity[T any, V any](cfg entityVersionAPIConfig[T, V], store persistence.CacheStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		existing, err := cfg.get(c, id)
@@ -250,6 +251,7 @@ func restoreEntity[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFu
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "restore_failed", Message: err.Error()})
 			return
 		}
+		invalidateCachedPaths(store, cfg.listPath, cfg.listPath+"/"+id)
 		result, err := cfg.get(c, id)
 		if err != nil {
 			sentry.CaptureException(err)

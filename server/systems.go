@@ -91,8 +91,8 @@ func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/systems/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(systemVersionConfig))
-	g.DELETE("/systems/:id", rollbackRoles, deleteEntity(systemVersionConfig))
-	g.POST("/systems/:id/restore", rollbackRoles, restoreEntity(systemVersionConfig))
+	g.DELETE("/systems/:id", rollbackRoles, deleteEntity(systemVersionConfig, store))
+	g.POST("/systems/:id/restore", rollbackRoles, restoreEntity(systemVersionConfig, store))
 }
 
 // List systems.

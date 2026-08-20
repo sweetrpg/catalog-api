@@ -102,8 +102,8 @@ func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/studios/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(studioVersionConfig))
-	g.DELETE("/studios/:id", rollbackRoles, deleteEntity(studioVersionConfig))
-	g.POST("/studios/:id/restore", rollbackRoles, restoreEntity(studioVersionConfig))
+	g.DELETE("/studios/:id", rollbackRoles, deleteEntity(studioVersionConfig, store))
+	g.POST("/studios/:id/restore", rollbackRoles, restoreEntity(studioVersionConfig, store))
 }
 
 // List studios.

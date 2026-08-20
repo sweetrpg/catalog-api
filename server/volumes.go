@@ -52,8 +52,12 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/volumes/:id/versions/:version/current", rollbackRoles, setCurrentVolumeVersion)
-	g.DELETE("/volumes/:id", rollbackRoles, deleteVolume)
-	g.POST("/volumes/:id/restore", rollbackRoles, restoreVolume)
+	g.DELETE("/volumes/:id", rollbackRoles, func(c *gin.Context) {
+		deleteVolume(c, store)
+	})
+	g.POST("/volumes/:id/restore", rollbackRoles, func(c *gin.Context) {
+		restoreVolume(c, store)
+	})
 }
 
 // Soft-delete a volume - admin only.
@@ -66,7 +70,7 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 //	@Failure		404		{object}	interface{}
 //	@Failure		500		{object}	interface{}
 //	@Router			/volumes/{id} [delete]
-func deleteVolume(c *gin.Context) {
+func deleteVolume(c *gin.Context, store persistence.CacheStore) {
 	id := c.Param("id")
 
 	existing, err := data.GetVolume(c.Request.Context(), id)
@@ -85,6 +89,7 @@ func deleteVolume(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	invalidateCachedPaths(store, "/volumes", "/volumes/"+id)
 	c.Status(http.StatusNoContent)
 }
 
@@ -99,7 +104,7 @@ func deleteVolume(c *gin.Context) {
 //	@Failure		404		{object}	interface{}
 //	@Failure		500		{object}	interface{}
 //	@Router			/volumes/{id}/restore [post]
-func restoreVolume(c *gin.Context) {
+func restoreVolume(c *gin.Context, store persistence.CacheStore) {
 	id := c.Param("id")
 
 	existing, err := data.GetVolume(c.Request.Context(), id)
@@ -118,6 +123,7 @@ func restoreVolume(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	invalidateCachedPaths(store, "/volumes", "/volumes/"+id)
 
 	result, err := data.GetVolume(c.Request.Context(), id)
 	if err != nil {

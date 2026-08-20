@@ -149,8 +149,8 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cach
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/licenses/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(licenseVersionConfig))
-	g.DELETE("/licenses/:id", rollbackRoles, deleteEntity(licenseVersionConfig))
-	g.POST("/licenses/:id/restore", rollbackRoles, restoreEntity(licenseVersionConfig))
+	g.DELETE("/licenses/:id", rollbackRoles, deleteEntity(licenseVersionConfig, store))
+	g.POST("/licenses/:id/restore", rollbackRoles, restoreEntity(licenseVersionConfig, store))
 }
 
 // List licenses.
