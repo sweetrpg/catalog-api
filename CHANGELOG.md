@@ -1,4 +1,11 @@
 
+## 0.21.0 - 2026-08-20
+
+### Added
+- Resolve volume system references via gamesystems-api
+
+
+
 ## 0.20.0 - 2026-08-20
 
 ### Added
