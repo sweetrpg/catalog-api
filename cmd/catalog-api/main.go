@@ -38,6 +38,7 @@ import (
 	"github.com/sweetrpg/catalog-api/server"
 	"github.com/sweetrpg/catalog-api/vocabularies"
 	"github.com/sweetrpg/catalog-data.go/data"
+	"github.com/sweetrpg/catalog-data.go/gamesystems"
 	"github.com/sweetrpg/common.go/logging"
 	"github.com/sweetrpg/common.go/util"
 	"github.com/sweetrpg/mongodb.go/database"
@@ -104,6 +105,7 @@ func main() {
 
 	database.SetupDatabase()
 	defer database.TeardownDatabase()
+	data.GameSystemsClient = gamesystems.NewClient(util.GetEnv(constants.GAMESYSTEMS_API_URL, ""))
 	if err := vocabularies.EnsureIndexes(context.Background()); err != nil {
 		logging.Logger.Error("Error while ensuring vocabularies indexes", "error", err.Error())
 	}

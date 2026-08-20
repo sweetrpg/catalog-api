@@ -66,6 +66,8 @@ github.com/ebitengine/purego v0.10.0 h1:QIw4xfpWT6GWTzaW5XEKy3HXoqrJGx1ijYHzTF0/
 github.com/ebitengine/purego v0.10.0/go.mod h1:iIjxzd6CiRiOG0UyXP+V1+jWqUXVjPKLAI0mRfJZTmQ=
 github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2Wg=
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
+github.com/felixge/httpsnoop v1.1.0 h1:3YtUj32ZZkqZtt3sZZsClsymw/QDuVfpNhoA31zeORc=
+github.com/felixge/httpsnoop v1.1.0/go.mod h1:Zqxgdd+1Rkcz8euOqdr7lqgCRJztwr5hp9vDSi5UZCE=
 github.com/fsnotify/fsnotify v1.9.0 h1:2Ml+OJNzbYCTzsxtv8vKSFD9PbJjmhYF14k/jKC7S9k=
 github.com/fsnotify/fsnotify v1.9.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
 github.com/gabriel-vasile/mimetype v1.4.15 h1:05iP/CYtZ/w455R/KZM6rZ5ieAdh99UPtd+d3YzLmaI=
@@ -289,6 +291,8 @@ github.com/sweetrpg/api-core.go v0.1.1 h1:qqr5Rgiaw7n2RtDZ7fdoy5vw8RT3L42orhJ/x+
 github.com/sweetrpg/api-core.go v0.1.1/go.mod h1:ka2gLYUlukRaBXiaaohfRSHoNH77oSrTkkik07Z+lj0=
 github.com/sweetrpg/catalog-data.go v0.11.0 h1:tijHPw7fZEF2P+2ATfBVW/iS/rP8iD2Vxyeka7dTOPI=
 github.com/sweetrpg/catalog-data.go v0.11.0/go.mod h1:j34n5HvdgzM5j+tp0J8GSzx+of60iGbZEWmSj9Tfuac=
+github.com/sweetrpg/catalog-data.go v0.11.1-0.20260820151018-ac61927fc2be h1:+E4c0+473M37oTFMn9eYNzTnqecYMOkHz+bOHW+SiNE=
+github.com/sweetrpg/catalog-data.go v0.11.1-0.20260820151018-ac61927fc2be/go.mod h1:PsjQ375oFP3vELIeCj6iQYorf6SlMcGVoPXqzW0XpdI=
 github.com/sweetrpg/catalog-objects.go v0.4.1 h1:nCWdCXptAeIb99BAiK5w+OpDu4ZXstqaIzvQCka3CVI=
 github.com/sweetrpg/catalog-objects.go v0.4.1/go.mod h1:94LMLsDebNMb629Nv+FHkKq+FI6H8CeCbeDl9RWs2O0=
 github.com/sweetrpg/common.go v0.0.16 h1:XT8PwUXz0BOMIITXLjw3G6rEjjRUEs0Xs4+R9o2fVBk=
@@ -336,6 +340,8 @@ go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.
 go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.70.0/go.mod h1:Zwk515MbVWCK2WOgeYBNIf8CyZGbAgkoJ6VKSGkd6aQ=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.62.0 h1:Hf9xI/XLML9ElpiHVDNwvqI0hIFlzV8dgIr35kV1kRU=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.62.0/go.mod h1:NfchwuyNoMcZ5MLHwPrODwUF1HWCXWrL31s8gSAdIKY=
+go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.70.0 h1:LMuyCAyfalSjDyjdC65nK6N0zoTT63+E/u95X0JovZI=
+go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.70.0/go.mod h1:085m8qbm4hgc8rZWGDEa4vmyyo2c3nPxUslYUKUIU04=
 go.opentelemetry.io/contrib/propagators/b3 v1.45.0 h1:audI5r8RmWVSORhzA5Y57yGvEA1358PvGk0u0sMOTDA=
 go.opentelemetry.io/contrib/propagators/b3 v1.45.0/go.mod h1:SiENIek0FnzLni3/jSCiumyCA2mwP8uGaE1686SOJug=
 go.opentelemetry.io/otel v1.45.0 h1:pdrWmLHofpubmArBv1LgFSv1Z0Ie/ppdZzu+kUN5EeU=
