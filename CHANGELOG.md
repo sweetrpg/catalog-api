@@ -1,4 +1,11 @@
 
+## 0.20.0 - 2026-08-20
+
+### Added
+- Add PATCH /publishers/:id/volumes
+
+
+
 ## 0.19.0 - 2026-08-20
 
 ### Added
