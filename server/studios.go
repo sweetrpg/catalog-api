@@ -53,6 +53,12 @@ var studioVersionConfig = entityVersionAPIConfig[vo.StudioVO, vo.StudioVersionVO
 	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.StudioVersionVO, error) {
 		return data.SetCurrentStudioVersion(c.Request.Context(), id, version)
 	},
+	softDelete: func(c *gin.Context, id string, deletedBy string) error {
+		return data.SoftDeleteStudio(c.Request.Context(), id, deletedBy)
+	},
+	restore: func(c *gin.Context, id string) error {
+		return data.RestoreStudio(c.Request.Context(), id)
+	},
 	versionState:  func(v *vo.StudioVersionVO) string { return string(v.State) },
 	versionNumber: func(v *vo.StudioVersionVO) int { return v.Version },
 	fields: map[string]entityFieldAccessor[vo.StudioVO]{
@@ -96,6 +102,8 @@ func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/studios/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(studioVersionConfig))
+	g.DELETE("/studios/:id", rollbackRoles, deleteEntity(studioVersionConfig, store))
+	g.POST("/studios/:id/restore", rollbackRoles, restoreEntity(studioVersionConfig, store))
 }
 
 // List studios.

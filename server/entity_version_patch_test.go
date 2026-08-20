@@ -112,6 +112,49 @@ func TestAcceptAndRejectStudioVersion(t *testing.T) {
 	}
 }
 
+// TestDeleteAndRestoreStudio exercises deleteEntity/restoreEntity - generic and shared across
+// publisher/studio/person/license/system, so exercising studio covers the shared code path.
+func TestDeleteAndRestoreStudio(t *testing.T) {
+	studioID := seedStudio(t, "Deletable Studio")
+	admin := newStudioTestRouter(t, []string{authz.RoleAdmin})
+
+	delRec := doRequest(t, admin, http.MethodDelete, "/studios/"+studioID, nil)
+	if delRec.Code != http.StatusNoContent {
+		t.Fatalf("delete status = %d, want %d, body: %s", delRec.Code, http.StatusNoContent, delRec.Body.String())
+	}
+
+	deleted, err := data.GetStudio(t.Context(), studioID)
+	if err != nil {
+		t.Fatalf("GetStudio() error = %v", err)
+	}
+	if deleted.DeletedAt == nil {
+		t.Error("DeletedAt = nil, want set after delete")
+	}
+
+	restoreRec := doPost(t, admin, "/studios/"+studioID+"/restore", nil)
+	if restoreRec.Code != http.StatusOK {
+		t.Fatalf("restore status = %d, want %d, body: %s", restoreRec.Code, http.StatusOK, restoreRec.Body.String())
+	}
+
+	restored, err := data.GetStudio(t.Context(), studioID)
+	if err != nil {
+		t.Fatalf("GetStudio() error = %v", err)
+	}
+	if restored.DeletedAt != nil {
+		t.Error("DeletedAt != nil, want cleared after restore")
+	}
+}
+
+func TestDeleteStudioNonAdminForbidden(t *testing.T) {
+	studioID := seedStudio(t, "Not Deletable By Editor")
+	editor := newStudioTestRouter(t, []string{authz.RoleEditor})
+
+	rec := doRequest(t, editor, http.MethodDelete, "/studios/"+studioID, nil)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusForbidden)
+	}
+}
+
 func TestAddStudioThenListAndGetVersions(t *testing.T) {
 	studioID := seedStudio(t, "Original Name")
 	r := newStudioTestRouter(t, []string{authz.RoleEditor})

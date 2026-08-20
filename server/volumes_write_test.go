@@ -285,6 +285,47 @@ func TestPatchVolumeEditorAppliesDirectly(t *testing.T) {
 	}
 }
 
+func TestDeleteAndRestoreVolume(t *testing.T) {
+	seed := seedVolume(t, "Deletable Volume")
+	admin := newTestRouter(t, []string{authz.RoleAdmin})
+
+	delRec := doRequest(t, admin, http.MethodDelete, "/volumes/"+seed.ID, nil)
+	if delRec.Code != http.StatusNoContent {
+		t.Fatalf("delete status = %d, want %d, body: %s", delRec.Code, http.StatusNoContent, delRec.Body.String())
+	}
+
+	deleted, err := data.GetVolume(t.Context(), seed.ID)
+	if err != nil {
+		t.Fatalf("GetVolume() error = %v", err)
+	}
+	if deleted.DeletedAt == nil {
+		t.Error("DeletedAt = nil, want set after delete")
+	}
+
+	restoreRec := doPost(t, admin, "/volumes/"+seed.ID+"/restore", nil)
+	if restoreRec.Code != http.StatusOK {
+		t.Fatalf("restore status = %d, want %d, body: %s", restoreRec.Code, http.StatusOK, restoreRec.Body.String())
+	}
+
+	restored, err := data.GetVolume(t.Context(), seed.ID)
+	if err != nil {
+		t.Fatalf("GetVolume() error = %v", err)
+	}
+	if restored.DeletedAt != nil {
+		t.Error("DeletedAt != nil, want cleared after restore")
+	}
+}
+
+func TestDeleteVolumeNonAdminForbidden(t *testing.T) {
+	seed := seedVolume(t, "Not Deletable By Editor")
+	editor := newTestRouter(t, []string{authz.RoleEditor})
+
+	rec := doRequest(t, editor, http.MethodDelete, "/volumes/"+seed.ID, nil)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusForbidden)
+	}
+}
+
 func TestPatchVolumeEditorAppliesProperties(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	r := newTestRouter(t, []string{authz.RoleEditor})
