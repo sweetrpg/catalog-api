@@ -24,6 +24,7 @@ import (
 
 var systemVersionConfig = entityVersionAPIConfig[vo.SystemVO, vo.SystemVersionVO]{
 	recordType: "system",
+	listPath:   "/systems",
 	get: func(c *gin.Context, id string) (*vo.SystemVO, error) {
 		return data.GetSystem(c.Request.Context(), id)
 	},
@@ -75,11 +76,11 @@ func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.GET("/systems/:id/versions/:version", getEntityVersion(systemVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
-	g.PATCH("/systems/:id", writeRoles, patchEntityVersion(systemVersionConfig))
+	g.PATCH("/systems/:id", writeRoles, patchEntityVersion(systemVersionConfig, store))
 	g.POST("/systems/:id/versions/:version/retract", writeRoles, retractEntityVersion(systemVersionConfig))
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
-	g.POST("/systems/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(systemVersionConfig))
+	g.POST("/systems/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(systemVersionConfig, store))
 	g.POST("/systems/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(systemVersionConfig))
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
