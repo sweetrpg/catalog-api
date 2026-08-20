@@ -1,4 +1,17 @@
 
+## 0.19.0 - 2026-08-20
+
+### Added
+- Add admin-only DELETE/restore routes for catalog entities
+- Invalidate GET response cache on delete/restore
+
+
+### Fixed
+- Add game system association, cache invalidation, studio volume patching
+- Invalidate response cache on entity create/patch/accept
+
+
+
 ## 0.18.0 - 2026-08-19
 
 ### Added

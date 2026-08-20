@@ -15,23 +15,23 @@ import (
 	"github.com/sweetrpg/catalog-objects.go/vo"
 )
 
-type patchLicenseVolumesRequest struct {
+type patchStudioVolumesRequest struct {
 	VolumeIDs []string `json:"volumeIds"`
 }
 
-// fetchLicenseVolumes returns every volume currently referencing a license - mirrors
-// getLicenseVolumes' own query (license_ids $in [id]), factored out here since this handler
-// needs to call it twice (before and after the diff below).
-func fetchLicenseVolumes(c *gin.Context, licenseID string) ([]*vo.VolumeVO, error) {
+// fetchStudioVolumesForPatch returns every volume currently referencing a studio - mirrors
+// getStudioVolumes' own query (studio_ids $in [id]), factored out here since this handler needs
+// to call it twice (before and after the diff below).
+func fetchStudioVolumesForPatch(c *gin.Context, studioID string) ([]*vo.VolumeVO, error) {
 	inOp := "$in"
 	params := apiutil.QueryParams{
-		Filter: []apiutil.Filter{{Field: "license_ids", Operation: &inOp, Value: []string{licenseID}}},
+		Filter: []apiutil.Filter{{Field: "studio_ids", Operation: &inOp, Value: []string{studioID}}},
 	}
 	return data.QueryVolumes(c.Request.Context(), params)
 }
 
-func fetchLicenseVolumeIDs(c *gin.Context, licenseID string) ([]string, error) {
-	volumes, err := fetchLicenseVolumes(c, licenseID)
+func fetchStudioVolumeIDs(c *gin.Context, studioID string) ([]string, error) {
+	volumes, err := fetchStudioVolumesForPatch(c, studioID)
 	if err != nil {
 		return nil, err
 	}
@@ -42,37 +42,33 @@ func fetchLicenseVolumeIDs(c *gin.Context, licenseID string) ([]string, error) {
 	return ids, nil
 }
 
-// patchLicenseVolumes sets the complete list of volumes a license is associated with - full
-// replace semantics, same convention volumes_patch.go's own PublisherIDs/StudioIDs already use.
-// License<->volume association is volume-owned data (vo.VolumeVO.Licenses), not license-owned -
-// getLicenseVolumes/fetchLicenseVolumeIDs above read it via a reverse query for exactly that
-// reason. So this diffs the requested set against the current one and, for each added/removed
-// volume, updates that volume's own Licenses field directly (editor/admin only - this route
-// writes to records other than the one named in the URL, same tier as accept/reject, not open to
-// submitters). Not transactional - matches this codebase's existing multi-entity fetch/update
-// loops (e.g. applyVolumePatch's own Publisher/Studio ID resolution), which don't use Mongo
-// transactions either.
-func patchLicenseVolumes(c *gin.Context, store persistence.CacheStore) {
+// patchStudioVolumes sets the complete list of volumes a studio is associated with - full
+// replace semantics, same convention patchLicenseVolumes uses (see license_volumes.go's own
+// comment for the rationale: studio<->volume association is volume-owned data, not
+// studio-owned, so this diffs the requested set against the current one and updates each
+// added/removed volume's own Studios field directly). Editor/admin only, same tier as
+// patchLicenseVolumes - this route writes to records other than the one named in the URL.
+func patchStudioVolumes(c *gin.Context, store persistence.CacheStore) {
 	id := c.Param("id")
 
-	license, err := data.GetLicense(c.Request.Context(), id)
+	studio, err := data.GetStudio(c.Request.Context(), id)
 	if err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
 		return
 	}
-	if license == nil {
+	if studio == nil {
 		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
 		return
 	}
 
-	var req patchLicenseVolumesRequest
+	var req patchStudioVolumesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: err.Error()})
 		return
 	}
 
-	currentIDs, err := fetchLicenseVolumeIDs(c, id)
+	currentIDs, err := fetchStudioVolumeIDs(c, id)
 	if err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
@@ -94,7 +90,7 @@ func patchLicenseVolumes(c *gin.Context, store persistence.CacheStore) {
 		if current[vid] {
 			continue
 		}
-		if err := setVolumeHasLicense(c, vid, id, true, updatedBy); err != nil {
+		if err := setVolumeHasStudio(c, vid, id, true, updatedBy); err != nil {
 			sentry.CaptureException(err)
 		}
 	}
@@ -102,14 +98,14 @@ func patchLicenseVolumes(c *gin.Context, store persistence.CacheStore) {
 		if requested[vid] {
 			continue
 		}
-		if err := setVolumeHasLicense(c, vid, id, false, updatedBy); err != nil {
+		if err := setVolumeHasStudio(c, vid, id, false, updatedBy); err != nil {
 			sentry.CaptureException(err)
 		}
 	}
 
-	invalidateLicenseVolumesCache(store, id, currentIDs, req.VolumeIDs)
+	invalidateStudioVolumesCache(store, id, currentIDs, req.VolumeIDs)
 
-	volumes, err := fetchLicenseVolumes(c, id)
+	volumes, err := fetchStudioVolumesForPatch(c, id)
 	if err != nil {
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
@@ -123,11 +119,10 @@ func patchLicenseVolumes(c *gin.Context, store persistence.CacheStore) {
 	}
 }
 
-// setVolumeHasLicense adds or removes one license ID from a volume's Licenses relation and saves
+// setVolumeHasStudio adds or removes one studio ID from a volume's Studios relation and saves
 // the volume live - a full-record UpdateVolume, since that's the only write path this data layer
-// exposes for volume (matches PublisherIDs/StudioIDs' own "id-only stub is enough, UpdateVolume
-// re-resolves the full relation" convention in applyVolumePatch).
-func setVolumeHasLicense(c *gin.Context, volumeID, licenseID string, add bool, updatedBy string) error {
+// exposes for volume (mirrors setVolumeHasLicense).
+func setVolumeHasStudio(c *gin.Context, volumeID, studioID string, add bool, updatedBy string) error {
 	volume, err := data.GetVolume(c.Request.Context(), volumeID)
 	if err != nil {
 		return err
@@ -136,21 +131,21 @@ func setVolumeHasLicense(c *gin.Context, volumeID, licenseID string, add bool, u
 		return nil
 	}
 
-	licenses := make([]*vo.LicenseVO, 0, len(volume.Licenses)+1)
+	studios := make([]*vo.StudioVO, 0, len(volume.Studios)+1)
 	found := false
-	for _, l := range volume.Licenses {
-		if l.ID == licenseID {
+	for _, s := range volume.Studios {
+		if s.ID == studioID {
 			found = true
 			if !add {
 				continue
 			}
 		}
-		licenses = append(licenses, l)
+		studios = append(studios, s)
 	}
 	if add && !found {
-		licenses = append(licenses, &vo.LicenseVO{ID: licenseID})
+		studios = append(studios, &vo.StudioVO{ID: studioID})
 	}
-	volume.Licenses = licenses
+	volume.Studios = studios
 	volume.UpdatedBy = updatedBy
 
 	_, err = data.UpdateVolume(c.Request.Context(), volumeID, volume, catalogmodels.VersionStateLive)

@@ -24,6 +24,7 @@ import (
 
 var studioVersionConfig = entityVersionAPIConfig[vo.StudioVO, vo.StudioVersionVO]{
 	recordType: "studio",
+	listPath:   "/studios",
 	get: func(c *gin.Context, id string) (*vo.StudioVO, error) {
 		return data.GetStudio(c.Request.Context(), id)
 	},
@@ -51,6 +52,12 @@ var studioVersionConfig = entityVersionAPIConfig[vo.StudioVO, vo.StudioVersionVO
 	},
 	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.StudioVersionVO, error) {
 		return data.SetCurrentStudioVersion(c.Request.Context(), id, version)
+	},
+	softDelete: func(c *gin.Context, id string, deletedBy string) error {
+		return data.SoftDeleteStudio(c.Request.Context(), id, deletedBy)
+	},
+	restore: func(c *gin.Context, id string) error {
+		return data.RestoreStudio(c.Request.Context(), id)
 	},
 	versionState:  func(v *vo.StudioVersionVO) string { return string(v.State) },
 	versionNumber: func(v *vo.StudioVersionVO) int { return v.Version },
@@ -82,16 +89,21 @@ func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.GET("/studios/:id/versions/:version", getEntityVersion(studioVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
-	g.POST("/studios", writeRoles, createEntityVersion(studioVersionConfig))
-	g.PATCH("/studios/:id", writeRoles, patchEntityVersion(studioVersionConfig))
+	g.POST("/studios", writeRoles, createEntityVersion(studioVersionConfig, store))
+	g.PATCH("/studios/:id", writeRoles, patchEntityVersion(studioVersionConfig, store))
 	g.POST("/studios/:id/versions/:version/retract", writeRoles, retractEntityVersion(studioVersionConfig))
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
-	g.POST("/studios/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(studioVersionConfig))
+	g.POST("/studios/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(studioVersionConfig, store))
 	g.POST("/studios/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(studioVersionConfig))
+	g.PATCH("/studios/:id/volumes", reviewRoles, func(c *gin.Context) {
+		patchStudioVolumes(c, store)
+	})
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/studios/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(studioVersionConfig))
+	g.DELETE("/studios/:id", rollbackRoles, deleteEntity(studioVersionConfig, store))
+	g.POST("/studios/:id/restore", rollbackRoles, restoreEntity(studioVersionConfig, store))
 }
 
 // List studios.

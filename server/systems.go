@@ -24,6 +24,7 @@ import (
 
 var systemVersionConfig = entityVersionAPIConfig[vo.SystemVO, vo.SystemVersionVO]{
 	recordType: "system",
+	listPath:   "/systems",
 	get: func(c *gin.Context, id string) (*vo.SystemVO, error) {
 		return data.GetSystem(c.Request.Context(), id)
 	},
@@ -47,6 +48,12 @@ var systemVersionConfig = entityVersionAPIConfig[vo.SystemVO, vo.SystemVersionVO
 	},
 	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.SystemVersionVO, error) {
 		return data.SetCurrentSystemVersion(c.Request.Context(), id, version)
+	},
+	softDelete: func(c *gin.Context, id string, deletedBy string) error {
+		return data.SoftDeleteSystem(c.Request.Context(), id, deletedBy)
+	},
+	restore: func(c *gin.Context, id string) error {
+		return data.RestoreSystem(c.Request.Context(), id)
 	},
 	versionState:  func(v *vo.SystemVersionVO) string { return string(v.State) },
 	versionNumber: func(v *vo.SystemVersionVO) int { return v.Version },
@@ -75,15 +82,17 @@ func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.GET("/systems/:id/versions/:version", getEntityVersion(systemVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
-	g.PATCH("/systems/:id", writeRoles, patchEntityVersion(systemVersionConfig))
+	g.PATCH("/systems/:id", writeRoles, patchEntityVersion(systemVersionConfig, store))
 	g.POST("/systems/:id/versions/:version/retract", writeRoles, retractEntityVersion(systemVersionConfig))
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
-	g.POST("/systems/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(systemVersionConfig))
+	g.POST("/systems/:id/versions/:version/accept", reviewRoles, acceptEntityVersion(systemVersionConfig, store))
 	g.POST("/systems/:id/versions/:version/reject", reviewRoles, rejectEntityVersion(systemVersionConfig))
 
 	rollbackRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin)
 	g.POST("/systems/:id/versions/:version/current", rollbackRoles, setCurrentEntityVersion(systemVersionConfig))
+	g.DELETE("/systems/:id", rollbackRoles, deleteEntity(systemVersionConfig, store))
+	g.POST("/systems/:id/restore", rollbackRoles, restoreEntity(systemVersionConfig, store))
 }
 
 // List systems.
