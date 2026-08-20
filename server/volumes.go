@@ -32,9 +32,11 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	// g.GET("/volumes/:id/volumes", cache.CachePage(store, ttl, getVolumeVolumes))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
-	g.PATCH("/volumes/:id", writeRoles, patchVolume)
+	g.PATCH("/volumes/:id", writeRoles, func(c *gin.Context) {
+		patchVolume(c, store)
+	})
 	g.POST("/volumes/:id/finalize-session", writeRoles, func(c *gin.Context) {
-		finalizeVolumeSession(c, assetsClient, editSessions)
+		finalizeVolumeSession(c, assetsClient, editSessions, store)
 	})
 
 	reviewRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor)
