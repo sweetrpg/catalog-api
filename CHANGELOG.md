@@ -1,6 +1,9 @@
 
 ## 0.19.0 - 2026-08-20
 
+
+## 0.19.0 - 2026-08-20
+
 ### Added
 - Add admin-only DELETE/restore routes for catalog entities
 - Invalidate GET response cache on delete/restore
