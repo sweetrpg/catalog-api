@@ -1,4 +1,11 @@
 
+## 0.23.1 - 2026-08-21
+
+### Fixed
+- Enable distributed rate limiter, raise standard tier limit
+
+
+
 ## 0.23.0 - 2026-08-21
 
 ### Added
