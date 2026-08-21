@@ -28,10 +28,16 @@ data:
   REDIS_PORT: "6379"
   CACHE_TTLS: "licenses=30m,volumes=30m,systems=2h,publishers=2h,studios=2h,persons=1h,contributions=1h,reviews=15m"
   CACHE_DEFAULT_TTL: 1h
-  DISTRIBUTED_RATE_LIMIT_ENABLED: "false"
+  # Switched on 2026-08-21: the legacy process-wide limiter (burst 10, refill 1/s, shared across
+  # every caller hitting the pod) was 429ing catalog-web's own server-to-server calls - a single
+  # volume detail/edit page render fans out to 10-15+ requests (per-entity full-list fetches for
+  # name maps, contributions, reviews, vocabularies) since the pagination work, which blows the
+  # burst instantly. Per-client keying plus a window sized to that fan-out fixes it; see
+  # AGENTS.md's "Known gaps" - this is that validation.
+  DISTRIBUTED_RATE_LIMIT_ENABLED: "true"
   RATE_LIMIT_CHEAP: "120"
   RATE_LIMIT_CHEAP_WINDOW_SECONDS: "60"
-  RATE_LIMIT_STANDARD: "30"
+  RATE_LIMIT_STANDARD: "300"
   RATE_LIMIT_STANDARD_WINDOW_SECONDS: "60"
   INGRESS_BASE_PATH: /api/0/catalog
   INGRESS_HOST: dev.sweetrpg.com
