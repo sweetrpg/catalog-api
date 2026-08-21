@@ -23,6 +23,7 @@ func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	logging.Logger.Info("Setting up system endpoint handlers...")
 	ttl := ttls.TTL("systems")
 	g.GET("/systems", cache.CachePage(store, ttl, listSystems))
+	g.GET("/systems/search", cache.CachePage(store, ttl, searchSystems))
 	g.GET("/systems/:id", cache.CachePage(store, ttl, getSystem))
 }
 
@@ -38,6 +39,40 @@ func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 func listSystems(c *gin.Context) {
 	_, span := otel.Tracer("systems").Start(c.Request.Context(), "list-systems")
 	vos, err := data.QuerySystems(c.Request.Context())
+	span.End()
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
+// Search systems.
+//
+//	@Summary		Search systems
+//	@Description	Finds game systems whose name contains the query string - backs autocomplete/picker inputs.
+//	@Tags			systems
+//	@Produce		json
+//	@Param			q		query		string			true	"Search query"
+//	@Success		200		{object}	interface{}
+//	@Failure		400		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/systems/search [get]
+func searchSystems(c *gin.Context) {
+	q := c.Query("q")
+	if q == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "q is required"})
+		return
+	}
+
+	_, span := otel.Tracer("systems").Start(c.Request.Context(), "search-systems", oteltrace.WithAttributes(attribute.String("q", q)))
+	vos, err := data.SearchSystems(c.Request.Context(), q)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)

@@ -130,6 +130,7 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cach
 	logging.Logger.Info("Setting up license endpoint handlers...")
 	ttl := ttls.TTL("licenses")
 	g.GET("/licenses", cache.CachePage(store, ttl, listLicenses))
+	g.GET("/licenses/search", cache.CachePage(store, ttl, searchLicenses))
 	g.GET("/licenses/:id", cache.CachePage(store, ttl, getLicense))
 	g.GET("/licenses/:id/volumes", cache.CachePage(store, ttl, getLicenseVolumes))
 	g.GET("/licenses/:id/versions", listEntityVersions(licenseVersionConfig))
@@ -167,6 +168,40 @@ func listLicenses(c *gin.Context) {
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "licenses", "list-licenses", params)
 	vos, err := data.QueryLicenses(c.Request.Context(), params)
+	span.End()
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
+// Search licenses.
+//
+//	@Summary		Search licenses
+//	@Description	Finds licenses whose title contains the query string - backs autocomplete/picker inputs.
+//	@Tags			licenses
+//	@Produce		json
+//	@Param			q		query		string			true	"Search query"
+//	@Success		200		{object}	interface{}
+//	@Failure		400		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/licenses/search [get]
+func searchLicenses(c *gin.Context) {
+	q := c.Query("q")
+	if q == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "q is required"})
+		return
+	}
+
+	_, span := otel.Tracer("licenses").Start(c.Request.Context(), "search-licenses", oteltrace.WithAttributes(attribute.String("q", q)))
+	vos, err := data.SearchLicenses(c.Request.Context(), q)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)

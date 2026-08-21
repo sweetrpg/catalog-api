@@ -83,6 +83,7 @@ func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	logging.Logger.Info("Setting up studio endpoint handlers...")
 	ttl := ttls.TTL("studios")
 	g.GET("/studios", cache.CachePage(store, ttl, listStudios))
+	g.GET("/studios/search", cache.CachePage(store, ttl, searchStudios))
 	g.GET("/studios/:id", cache.CachePage(store, ttl, getStudio))
 	g.GET("/studios/:id/volumes", cache.CachePage(store, ttl, getStudioVolumes))
 	g.GET("/studios/:id/versions", listEntityVersions(studioVersionConfig))
@@ -120,6 +121,40 @@ func listStudios(c *gin.Context) {
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "studios", "list-studios", params)
 	vos, err := data.QueryStudios(c.Request.Context(), params)
+	span.End()
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
+// Search studios.
+//
+//	@Summary		Search studios
+//	@Description	Finds studios whose name contains the query string - backs autocomplete/picker inputs.
+//	@Tags			studios
+//	@Produce		json
+//	@Param			q		query		string			true	"Search query"
+//	@Success		200		{object}	interface{}
+//	@Failure		400		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/studios/search [get]
+func searchStudios(c *gin.Context) {
+	q := c.Query("q")
+	if q == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "q is required"})
+		return
+	}
+
+	_, span := otel.Tracer("studios").Start(c.Request.Context(), "search-studios", oteltrace.WithAttributes(attribute.String("q", q)))
+	vos, err := data.SearchStudios(c.Request.Context(), q)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
