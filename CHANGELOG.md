@@ -1,4 +1,12 @@
 
+## 0.22.0 - 2026-08-21
+
+### Added
+- Add bulk-create endpoint (POST /persons/bulk)
+- Add missing GET /systems and GET /systems/:id routes
+
+
+
 ## 0.21.0 - 2026-08-20
 
 ### Added
