@@ -1,4 +1,11 @@
 
+## 0.23.0 - 2026-08-21
+
+### Added
+- Add GET /<entity>/search routes for persons, publishers, studios, licenses, systems
+
+
+
 ## 0.22.0 - 2026-08-21
 
 ### Added
