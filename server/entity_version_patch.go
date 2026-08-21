@@ -100,6 +100,65 @@ func createEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store p
 	}
 }
 
+// bulkCreateResult is one entry's outcome in a bulkCreateEntityVersion response - success/id for
+// a created record, or an error message, never both.
+type bulkCreateResult struct {
+	Success bool    `json:"success"`
+	ID      *string `json:"id,omitempty"`
+	Error   *string `json:"error,omitempty"`
+}
+
+// bulkCreateEntityVersion creates N brand-new records from a single request, mirroring
+// createEntityVersion per entry rather than reusing it directly (createEntityVersion writes its
+// own response per call; this needs to collect N outcomes into one response instead). Each entry
+// succeeds or fails independently - one bad entry (e.g. a blank required field) does not block
+// the rest of the batch, per catalog-entity-bulk-add's spec. If cfg.fields has a "name" field
+// (every current bulk-create consumer, e.g. Person, keys its required display name that way),
+// a blank value fails that entry before ever reaching cfg.create - this generic engine has no
+// other validation of its own.
+func bulkCreateEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var rawEntries []json.RawMessage
+		if err := c.ShouldBindJSON(&rawEntries); err != nil {
+			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: err.Error()})
+			return
+		}
+
+		createdBy := authz.Subject(c)
+		results := make([]bulkCreateResult, len(rawEntries))
+		for i, raw := range rawEntries {
+			var entity T
+			if err := json.Unmarshal(raw, &entity); err != nil {
+				msg := err.Error()
+				results[i] = bulkCreateResult{Error: &msg}
+				continue
+			}
+
+			if nameField, ok := cfg.fields["name"]; ok && nameField.get(&entity) == "" {
+				msg := "name is required"
+				results[i] = bulkCreateResult{Error: &msg}
+				continue
+			}
+
+			id, err := cfg.create(c, &entity, createdBy)
+			if err != nil {
+				sentry.CaptureException(err)
+				msg := err.Error()
+				results[i] = bulkCreateResult{Error: &msg}
+				continue
+			}
+			if id == nil {
+				msg := "no id returned"
+				results[i] = bulkCreateResult{Error: &msg}
+				continue
+			}
+			results[i] = bulkCreateResult{Success: true, ID: id}
+		}
+
+		c.JSON(http.StatusOK, gin.H{"results": results})
+	}
+}
+
 // patchEntityVersion edits an entity, or submits an edit for review, creating a version either
 // way - the version-model counterpart of patchEntity.
 func patchEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store persistence.CacheStore) gin.HandlerFunc {

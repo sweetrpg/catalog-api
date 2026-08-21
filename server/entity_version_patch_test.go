@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
+	apiutil "github.com/sweetrpg/api-core.go/util"
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-data.go/data"
@@ -166,5 +167,121 @@ func TestAddStudioThenListAndGetVersions(t *testing.T) {
 	}
 	if len(versions) != 2 {
 		t.Fatalf("len(versions) = %d, want 2", len(versions))
+	}
+}
+
+// newPersonBulkTestRouter mirrors newStudioTestRouter, against setupPersonHandlers -
+// bulkCreateEntityVersion (server/entity_version_patch.go) is generic like the rest of this
+// engine, but bulk-add-persons only wires it up for Person (catalog-entity-bulk-add's scope),
+// so it's exercised here rather than against studio.
+func newPersonBulkTestRouter(t *testing.T, roles []string) *gin.Engine {
+	t.Helper()
+
+	authAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(authz.CheckResponse{Allowed: true, Roles: roles, Sub: "auth0|test-reviewer"})
+	}))
+	t.Cleanup(authAPI.Close)
+
+	r := gin.New()
+	setupPersonHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authz.NewClient(authAPI.URL))
+	return r
+}
+
+func TestBulkCreatePersonsAllValid(t *testing.T) {
+	r := newPersonBulkTestRouter(t, []string{authz.RoleEditor})
+
+	rec := doPost(t, r, "/persons/bulk", []map[string]string{
+		{"name": "Ann Leckie"},
+		{"name": "N.K. Jemisin"},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	var resp struct {
+		Results []bulkCreateResult `json:"results"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if len(resp.Results) != 2 {
+		t.Fatalf("len(results) = %d, want 2", len(resp.Results))
+	}
+	for i, result := range resp.Results {
+		if !result.Success || result.ID == nil {
+			t.Errorf("results[%d] = %+v, want success with an id", i, result)
+		}
+	}
+}
+
+func TestBulkCreatePersonsMixedValidAndInvalid(t *testing.T) {
+	r := newPersonBulkTestRouter(t, []string{authz.RoleEditor})
+
+	rec := doPost(t, r, "/persons/bulk", []map[string]string{
+		{"name": "Valid One"},
+		{"name": ""},
+		{"name": "Valid Two"},
+	})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	var resp struct {
+		Results []bulkCreateResult `json:"results"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if len(resp.Results) != 3 {
+		t.Fatalf("len(results) = %d, want 3", len(resp.Results))
+	}
+	if !resp.Results[0].Success {
+		t.Errorf("results[0] = %+v, want success", resp.Results[0])
+	}
+	if resp.Results[1].Success || resp.Results[1].Error == nil {
+		t.Errorf("results[1] = %+v, want a failure with an error message", resp.Results[1])
+	}
+	if !resp.Results[2].Success {
+		t.Errorf("results[2] = %+v, want success (a bad entry must not block later entries)", resp.Results[2])
+	}
+
+	all, err := data.QueryPersons(t.Context(), apiutil.QueryParams{})
+	if err != nil {
+		t.Fatalf("QueryPersons() error = %v", err)
+	}
+	names := make(map[string]bool, len(all))
+	for _, p := range all {
+		names[p.Name] = true
+	}
+	if !names["Valid One"] || !names["Valid Two"] {
+		t.Errorf("expected both valid entries to be persisted, got names: %v", names)
+	}
+}
+
+func TestBulkCreatePersonsEmptyBatch(t *testing.T) {
+	r := newPersonBulkTestRouter(t, []string{authz.RoleEditor})
+
+	rec := doPost(t, r, "/persons/bulk", []map[string]string{})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+
+	var resp struct {
+		Results []bulkCreateResult `json:"results"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if len(resp.Results) != 0 {
+		t.Fatalf("len(results) = %d, want 0", len(resp.Results))
+	}
+}
+
+func TestBulkCreatePersonsSubmitterForbidden(t *testing.T) {
+	r := newPersonBulkTestRouter(t, []string{authz.RoleSubmitter})
+
+	rec := doPost(t, r, "/persons/bulk", []map[string]string{{"name": "Should Not Be Created"}})
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusForbidden)
 	}
 }
