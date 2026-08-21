@@ -77,6 +77,7 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	logging.Logger.Info("Setting up person endpoint handlers...")
 	ttl := ttls.TTL("persons")
 	g.GET("/persons", cache.CachePage(store, ttl, listPersons))
+	g.GET("/persons/search", cache.CachePage(store, ttl, searchPersons))
 	g.GET("/persons/:id", cache.CachePage(store, ttl, getPerson))
 	g.GET("/persons/:id/volumes", cache.CachePage(store, ttl, getPersonVolumes))
 	g.GET("/persons/:id/versions", listEntityVersions(personVersionConfig))
@@ -123,6 +124,40 @@ func listPersons(c *gin.Context) {
 
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
 	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
+// Search persons.
+//
+//	@Summary		Search persons
+//	@Description	Finds persons whose name contains the query string - backs autocomplete/picker inputs.
+//	@Tags			persons
+//	@Produce		json
+//	@Param			q		query		string			true	"Search query"
+//	@Success		200		{object}	interface{}
+//	@Failure		400		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/persons/search [get]
+func searchPersons(c *gin.Context) {
+	q := c.Query("q")
+	if q == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "q is required"})
+		return
+	}
+
+	_, span := otel.Tracer("persons").Start(c.Request.Context(), "search-persons", oteltrace.WithAttributes(attribute.String("q", q)))
+	vos, err := data.SearchPersons(c.Request.Context(), q)
+	span.End()
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 }

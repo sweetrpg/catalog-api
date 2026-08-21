@@ -87,6 +87,7 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls ca
 	logging.Logger.Info("Setting up publisher endpoint handlers...")
 	ttl := ttls.TTL("publishers")
 	g.GET("/publishers", cache.CachePage(store, ttl, listPublishers))
+	g.GET("/publishers/search", cache.CachePage(store, ttl, searchPublishers))
 	g.GET("/publishers/:id", cache.CachePage(store, ttl, getPublisher))
 	g.GET("/publishers/:id/volumes", cache.CachePage(store, ttl, getPublisherVolumes))
 	g.GET("/publishers/:id/versions", listEntityVersions(publisherVersionConfig))
@@ -124,6 +125,40 @@ func listPublishers(c *gin.Context) {
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "publishers", "list-publishers", params)
 	vos, err := data.QueryPublishers(c.Request.Context(), params)
+	span.End()
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
+// Search publishers.
+//
+//	@Summary		Search publishers
+//	@Description	Finds publishers whose name contains the query string - backs autocomplete/picker inputs.
+//	@Tags			publishers
+//	@Produce		json
+//	@Param			q		query		string			true	"Search query"
+//	@Success		200		{object}	interface{}
+//	@Failure		400		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/publishers/search [get]
+func searchPublishers(c *gin.Context) {
+	q := c.Query("q")
+	if q == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "q is required"})
+		return
+	}
+
+	_, span := otel.Tracer("publishers").Start(c.Request.Context(), "search-publishers", oteltrace.WithAttributes(attribute.String("q", q)))
+	vos, err := data.SearchPublishers(c.Request.Context(), q)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
