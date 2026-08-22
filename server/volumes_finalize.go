@@ -81,7 +81,7 @@ func finalizeVolumeSession(
 	roles := authz.Roles(c)
 	if authz.HasRole(roles, authz.RoleAdmin) || authz.HasRole(roles, authz.RoleEditor) {
 		if session.StagedCoverAssetId != "" {
-			if err := assetsClient.Promote(c.Request.Context(), "cover-staged", session.StagedCoverAssetId, "cover", volumeID); err != nil {
+			if err := assetsClient.Promote(c.Request.Context(), authz.Token(c), "cover-staged", session.StagedCoverAssetId, "cover", volumeID); err != nil {
 				sentry.CaptureException(err)
 				c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "cover_promote_failed", Message: err.Error()})
 				return
@@ -93,7 +93,7 @@ func finalizeVolumeSession(
 			liveSampleIds := make([]string, len(session.SampleAssetIds))
 			for i, stagedID := range session.SampleAssetIds {
 				liveID := fmt.Sprintf("%s-%d", volumeID, i)
-				if err := assetsClient.Promote(c.Request.Context(), "sample-staged", stagedID, "sample", liveID); err != nil {
+				if err := assetsClient.Promote(c.Request.Context(), authz.Token(c), "sample-staged", stagedID, "sample", liveID); err != nil {
 					sentry.CaptureException(err)
 					c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "sample_promote_failed", Message: err.Error()})
 					return
