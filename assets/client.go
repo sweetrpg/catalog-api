@@ -42,11 +42,12 @@ type NotFoundError struct{ Kind, ID string }
 func (e NotFoundError) Error() string { return fmt.Sprintf("assets: %s/%s not found", e.Kind, e.ID) }
 
 // Get downloads an asset's bytes and content type.
-func (c *Client) Get(ctx context.Context, kind, id string) ([]byte, string, error) {
+func (c *Client) Get(ctx context.Context, token, kind, id string) ([]byte, string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/asset/"+kind+"/"+id, nil)
 	if err != nil {
 		return nil, "", fmt.Errorf("assets: build get request: %w", err)
 	}
+	setBearerToken(req, token)
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -69,7 +70,7 @@ func (c *Client) Get(ctx context.Context, kind, id string) ([]byte, string, erro
 }
 
 // Store uploads an asset's bytes under kind/id, overwriting any existing asset there.
-func (c *Client) Store(ctx context.Context, kind, id string, data []byte, contentType string) error {
+func (c *Client) Store(ctx context.Context, token, kind, id string, data []byte, contentType string) error {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 	header := textproto.MIMEHeader{}
@@ -93,6 +94,7 @@ func (c *Client) Store(ctx context.Context, kind, id string, data []byte, conten
 		return fmt.Errorf("assets: build store request: %w", err)
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+	setBearerToken(req, token)
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -108,11 +110,12 @@ func (c *Client) Store(ctx context.Context, kind, id string, data []byte, conten
 
 // Delete removes an asset. A missing asset (404) is treated as success - the end state (no
 // asset at kind/id) is the same either way.
-func (c *Client) Delete(ctx context.Context, kind, id string) error {
+func (c *Client) Delete(ctx context.Context, token, kind, id string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.baseURL+"/asset/"+kind+"/"+id, nil)
 	if err != nil {
 		return fmt.Errorf("assets: build delete request: %w", err)
 	}
+	setBearerToken(req, token)
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -129,13 +132,22 @@ func (c *Client) Delete(ctx context.Context, kind, id string) error {
 // Promote copies a staged asset (fromKind/fromID) to a live one (toKind/toID), then deletes the
 // staged copy - the promote-then-delete step every editor/admin finalize and accepted proposal
 // performs for a referenced staged cover/sample.
-func (c *Client) Promote(ctx context.Context, fromKind, fromID, toKind, toID string) error {
-	data, contentType, err := c.Get(ctx, fromKind, fromID)
+func (c *Client) Promote(ctx context.Context, token, fromKind, fromID, toKind, toID string) error {
+	data, contentType, err := c.Get(ctx, token, fromKind, fromID)
 	if err != nil {
 		return fmt.Errorf("assets: promote %s/%s -> %s/%s: %w", fromKind, fromID, toKind, toID, err)
 	}
-	if err := c.Store(ctx, toKind, toID, data, contentType); err != nil {
+	if err := c.Store(ctx, token, toKind, toID, data, contentType); err != nil {
 		return fmt.Errorf("assets: promote %s/%s -> %s/%s: %w", fromKind, fromID, toKind, toID, err)
 	}
-	return c.Delete(ctx, fromKind, fromID)
+	return c.Delete(ctx, token, fromKind, fromID)
+}
+
+// setBearerToken forwards the caller's verified user token to assets-web, which authorizes the
+// write against the same user rather than trusting this service's identity. See platform's
+// api-client-auth change (openspec/changes/api-client-auth).
+func setBearerToken(req *http.Request, token string) {
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 }

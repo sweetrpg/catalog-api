@@ -105,7 +105,7 @@ func seedStagedAsset(t *testing.T, deps testDeps, kind, id string, data []byte) 
 	t.Helper()
 
 	client := assets.NewClient(deps.AssetsURL)
-	if err := client.Store(t.Context(), kind, id, data, "image/png"); err != nil {
+	if err := client.Store(t.Context(), "", kind, id, data, "image/png"); err != nil {
 		t.Fatalf("seed staged asset: %v", err)
 	}
 }

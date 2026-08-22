@@ -1,4 +1,11 @@
 
+## 0.23.2 - 2026-08-22
+
+### Fixed
+- Forward caller's bearer token to assets-web on promote calls
+
+
+
 ## 0.23.1 - 2026-08-21
 
 ### Fixed
