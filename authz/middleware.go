@@ -12,6 +12,7 @@ import (
 const (
 	rolesContextKey   = "authz.roles"
 	subjectContextKey = "authz.subject"
+	tokenContextKey   = "authz.token"
 )
 
 // RequireAnyRole returns Gin middleware that verifies the caller's bearer token against
@@ -53,6 +54,7 @@ func RequireAnyRole(client *Client, service string, allowedRoles ...string) gin.
 
 		c.Set(rolesContextKey, result.Roles)
 		c.Set(subjectContextKey, result.Sub)
+		c.Set(tokenContextKey, token)
 		c.Next()
 	}
 }
@@ -72,6 +74,18 @@ func Subject(c *gin.Context) string {
 	if v, ok := c.Get(subjectContextKey); ok {
 		if sub, ok := v.(string); ok {
 			return sub
+		}
+	}
+	return ""
+}
+
+// Token returns the caller's verified bearer token stashed in the Gin context by
+// RequireAnyRole - forwarded onward when this service calls another one on the user's behalf
+// (e.g. assets-web's asset store), so downstream services authorize the same user.
+func Token(c *gin.Context) string {
+	if v, ok := c.Get(tokenContextKey); ok {
+		if token, ok := v.(string); ok {
+			return token
 		}
 	}
 	return ""

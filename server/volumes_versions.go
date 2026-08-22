@@ -152,7 +152,7 @@ func acceptVolumeVersion(c *gin.Context, assetsClient *assets.Client) {
 	var liveCoverAssetId *string
 	var liveSampleAssetIds []string
 	if submitted.StagedCoverAssetId != nil {
-		if err := assetsClient.Promote(c.Request.Context(), "cover-staged", *submitted.StagedCoverAssetId, "cover", id); err != nil {
+		if err := assetsClient.Promote(c.Request.Context(), authz.Token(c), "cover-staged", *submitted.StagedCoverAssetId, "cover", id); err != nil {
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "cover_promote_failed", Message: err.Error()})
 			return
@@ -164,7 +164,7 @@ func acceptVolumeVersion(c *gin.Context, assetsClient *assets.Client) {
 		liveSampleAssetIds = make([]string, len(submitted.StagedSampleAssetIds))
 		for i, stagedID := range submitted.StagedSampleAssetIds {
 			liveID := fmt.Sprintf("%s-%d", id, i)
-			if err := assetsClient.Promote(c.Request.Context(), "sample-staged", stagedID, "sample", liveID); err != nil {
+			if err := assetsClient.Promote(c.Request.Context(), authz.Token(c), "sample-staged", stagedID, "sample", liveID); err != nil {
 				sentry.CaptureException(err)
 				c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "sample_promote_failed", Message: err.Error()})
 				return
