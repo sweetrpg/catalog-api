@@ -59,7 +59,7 @@
 				
 				<option value="file1">github.com/sweetrpg/catalog-api/authz/client.go (81.5%)</option>
 				
-				<option value="file2">github.com/sweetrpg/catalog-api/authz/middleware.go (91.3%)</option>
+				<option value="file2">github.com/sweetrpg/catalog-api/authz/middleware.go (84.3%)</option>
 				
 				<option value="file3">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
@@ -138,13 +138,14 @@ type NotFoundError struct{ Kind, ID string }
 func (e NotFoundError) Error() string <span class="cov0" title="0">{ return fmt.Sprintf("assets: %s/%s not found", e.Kind, e.ID) }</span>
 
 // Get downloads an asset's bytes and content type.
-func (c *Client) Get(ctx context.Context, kind, id string) ([]byte, string, error) <span class="cov0" title="0">{
+func (c *Client) Get(ctx context.Context, token, kind, id string) ([]byte, string, error) <span class="cov0" title="0">{
         req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/asset/"+kind+"/"+id, nil)
         if err != nil </span><span class="cov0" title="0">{
                 return nil, "", fmt.Errorf("assets: build get request: %w", err)
         }</span>
+        <span class="cov0" title="0">setBearerToken(req, token)
 
-        <span class="cov0" title="0">resp, err := c.http.Do(req)
+        resp, err := c.http.Do(req)
         if err != nil </span><span class="cov0" title="0">{
                 return nil, "", fmt.Errorf("assets: get request failed: %w", err)
         }</span>
@@ -165,7 +166,7 @@ func (c *Client) Get(ctx context.Context, kind, id string) ([]byte, string, erro
 }
 
 // Store uploads an asset's bytes under kind/id, overwriting any existing asset there.
-func (c *Client) Store(ctx context.Context, kind, id string, data []byte, contentType string) error <span class="cov0" title="0">{
+func (c *Client) Store(ctx context.Context, token, kind, id string, data []byte, contentType string) error <span class="cov0" title="0">{
         var buf bytes.Buffer
         writer := multipart.NewWriter(&amp;buf)
         header := textproto.MIMEHeader{}
@@ -189,6 +190,7 @@ func (c *Client) Store(ctx context.Context, kind, id string, data []byte, conten
                 return fmt.Errorf("assets: build store request: %w", err)
         }</span>
         <span class="cov0" title="0">req.Header.Set("Content-Type", writer.FormDataContentType())
+        setBearerToken(req, token)
 
         resp, err := c.http.Do(req)
         if err != nil </span><span class="cov0" title="0">{
@@ -204,13 +206,14 @@ func (c *Client) Store(ctx context.Context, kind, id string, data []byte, conten
 
 // Delete removes an asset. A missing asset (404) is treated as success - the end state (no
 // asset at kind/id) is the same either way.
-func (c *Client) Delete(ctx context.Context, kind, id string) error <span class="cov0" title="0">{
+func (c *Client) Delete(ctx context.Context, token, kind, id string) error <span class="cov0" title="0">{
         req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.baseURL+"/asset/"+kind+"/"+id, nil)
         if err != nil </span><span class="cov0" title="0">{
                 return fmt.Errorf("assets: build delete request: %w", err)
         }</span>
+        <span class="cov0" title="0">setBearerToken(req, token)
 
-        <span class="cov0" title="0">resp, err := c.http.Do(req)
+        resp, err := c.http.Do(req)
         if err != nil </span><span class="cov0" title="0">{
                 return fmt.Errorf("assets: delete request failed: %w", err)
         }</span>
@@ -225,15 +228,24 @@ func (c *Client) Delete(ctx context.Context, kind, id string) error <span class=
 // Promote copies a staged asset (fromKind/fromID) to a live one (toKind/toID), then deletes the
 // staged copy - the promote-then-delete step every editor/admin finalize and accepted proposal
 // performs for a referenced staged cover/sample.
-func (c *Client) Promote(ctx context.Context, fromKind, fromID, toKind, toID string) error <span class="cov0" title="0">{
-        data, contentType, err := c.Get(ctx, fromKind, fromID)
+func (c *Client) Promote(ctx context.Context, token, fromKind, fromID, toKind, toID string) error <span class="cov0" title="0">{
+        data, contentType, err := c.Get(ctx, token, fromKind, fromID)
         if err != nil </span><span class="cov0" title="0">{
                 return fmt.Errorf("assets: promote %s/%s -&gt; %s/%s: %w", fromKind, fromID, toKind, toID, err)
         }</span>
-        <span class="cov0" title="0">if err := c.Store(ctx, toKind, toID, data, contentType); err != nil </span><span class="cov0" title="0">{
+        <span class="cov0" title="0">if err := c.Store(ctx, token, toKind, toID, data, contentType); err != nil </span><span class="cov0" title="0">{
                 return fmt.Errorf("assets: promote %s/%s -&gt; %s/%s: %w", fromKind, fromID, toKind, toID, err)
         }</span>
-        <span class="cov0" title="0">return c.Delete(ctx, fromKind, fromID)</span>
+        <span class="cov0" title="0">return c.Delete(ctx, token, fromKind, fromID)</span>
+}
+
+// setBearerToken forwards the caller's verified user token to assets-web, which authorizes the
+// write against the same user rather than trusting this service's identity. See platform's
+// api-client-auth change (openspec/changes/api-client-auth).
+func setBearerToken(req *http.Request, token string) <span class="cov0" title="0">{
+        if token != "" </span><span class="cov0" title="0">{
+                req.Header.Set("Authorization", "Bearer "+token)
+        }</span>
 }
 </pre>
 		
@@ -357,6 +369,7 @@ import (
 const (
         rolesContextKey   = "authz.roles"
         subjectContextKey = "authz.subject"
+        tokenContextKey   = "authz.token"
 )
 
 // RequireAnyRole returns Gin middleware that verifies the caller's bearer token against
@@ -398,6 +411,7 @@ func RequireAnyRole(client *Client, service string, allowedRoles ...string) gin.
 
                 <span class="cov1" title="1">c.Set(rolesContextKey, result.Roles)
                 c.Set(subjectContextKey, result.Sub)
+                c.Set(tokenContextKey, token)
                 c.Next()</span>
         }
 }
@@ -417,6 +431,18 @@ func Subject(c *gin.Context) string <span class="cov1" title="1">{
         if v, ok := c.Get(subjectContextKey); ok </span><span class="cov1" title="1">{
                 if sub, ok := v.(string); ok </span><span class="cov1" title="1">{
                         return sub
+                }</span>
+        }
+        <span class="cov0" title="0">return ""</span>
+}
+
+// Token returns the caller's verified bearer token stashed in the Gin context by
+// RequireAnyRole - forwarded onward when this service calls another one on the user's behalf
+// (e.g. assets-web's asset store), so downstream services authorize the same user.
+func Token(c *gin.Context) string <span class="cov0" title="0">{
+        if v, ok := c.Get(tokenContextKey); ok </span><span class="cov0" title="0">{
+                if token, ok := v.(string); ok </span><span class="cov0" title="0">{
+                        return token
                 }</span>
         }
         <span class="cov0" title="0">return ""</span>
