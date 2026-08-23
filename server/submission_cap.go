@@ -44,27 +44,33 @@ type submissionCapResponse struct {
 //	@Router			/users/{userId}/submission-cap [put]
 func setSubmissionCapOverride(c *gin.Context) {
 	userID := c.Param("userId")
+	logging.Logger.Debug("setSubmissionCapOverride: enter", "userId", userID)
 
 	var req setSubmissionCapRequest
 	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
+		logging.Logger.Debug("setSubmissionCapOverride: exit", "userId", userID, "outcome", "bad_request")
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: err.Error()})
 		return
 	}
 
 	if req.Cap == nil {
 		if err := submissioncap.ClearOverride(c.Request.Context(), userID); err != nil {
+			logging.Logger.Error("setSubmissionCapOverride: clear override failed", "userId", userID, "error", err)
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "clear_failed", Message: err.Error()})
 			return
 		}
+		logging.Logger.Info("setSubmissionCapOverride: exit", "userId", userID, "outcome", "cleared")
 		c.JSON(http.StatusOK, submissionCapResponse{UserID: userID, Cap: submissioncap.Default()})
 		return
 	}
 
 	if err := submissioncap.SetOverride(c.Request.Context(), userID, *req.Cap); err != nil {
+		logging.Logger.Error("setSubmissionCapOverride: set override failed", "userId", userID, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "set_failed", Message: err.Error()})
 		return
 	}
+	logging.Logger.Info("setSubmissionCapOverride: exit", "userId", userID, "outcome", "ok", "cap", *req.Cap)
 	c.JSON(http.StatusOK, submissionCapResponse{UserID: userID, Cap: *req.Cap})
 }

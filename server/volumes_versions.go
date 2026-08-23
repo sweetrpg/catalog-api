@@ -13,6 +13,7 @@ import (
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-data.go/data"
+	"github.com/sweetrpg/common.go/logging"
 )
 
 // acceptVersionRequest mirrors acceptProposalRequest for the version-based accept action.
@@ -55,13 +56,16 @@ func versionParam(c *gin.Context) (int, bool) {
 //	@Router			/volumes/{id}/versions [get]
 func listVolumeVersions(c *gin.Context) {
 	id := c.Param("id")
+	logging.Logger.Debug("listVolumeVersions: enter", "id", id)
 
 	versions, err := data.ListVolumeVersions(c.Request.Context(), id)
 	if err != nil {
+		logging.Logger.Error("listVolumeVersions: query failed", "id", id, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
 		return
 	}
+	logging.Logger.Debug("listVolumeVersions: exit", "id", id, "count", len(versions))
 
 	c.JSON(http.StatusOK, versions)
 }
@@ -85,17 +89,21 @@ func getVolumeVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
+	logging.Logger.Debug("getVolumeVersion: enter", "id", id, "version", version)
 
 	result, err := data.GetVolumeVersion(c.Request.Context(), id, version)
 	if err != nil {
+		logging.Logger.Error("getVolumeVersion: query failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
 		return
 	}
 	if result == nil {
+		logging.Logger.Debug("getVolumeVersion: exit", "id", id, "outcome", "not_found")
 		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
 		return
 	}
+	logging.Logger.Debug("getVolumeVersion: exit", "id", id, "version", version, "outcome", "ok")
 
 	c.JSON(http.StatusOK, result)
 }
@@ -121,9 +129,11 @@ func acceptVolumeVersion(c *gin.Context, assetsClient *assets.Client) {
 	if !ok {
 		return
 	}
+	logging.Logger.Debug("acceptVolumeVersion: enter", "id", id, "version", version)
 
 	var req acceptVersionRequest
 	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
+		logging.Logger.Debug("acceptVolumeVersion: exit", "id", id, "outcome", "bad_request")
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: err.Error()})
 		return
 	}
@@ -135,11 +145,13 @@ func acceptVolumeVersion(c *gin.Context, assetsClient *assets.Client) {
 
 	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version)
 	if err != nil {
+		logging.Logger.Error("acceptVolumeVersion: version lookup failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
 		return
 	}
 	if submitted == nil {
+		logging.Logger.Debug("acceptVolumeVersion: exit", "id", id, "outcome", "not_found")
 		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
 		return
 	}
@@ -152,34 +164,42 @@ func acceptVolumeVersion(c *gin.Context, assetsClient *assets.Client) {
 	var liveCoverAssetId *string
 	var liveSampleAssetIds []string
 	if submitted.StagedCoverAssetId != nil {
+		logging.Logger.Info("acceptVolumeVersion: promoting staged cover", "id", id, "version", version, "stagedCoverAssetId", *submitted.StagedCoverAssetId)
 		if err := assetsClient.Promote(c.Request.Context(), authz.Token(c), "cover-staged", *submitted.StagedCoverAssetId, "cover", id); err != nil {
+			logging.Logger.Error("acceptVolumeVersion: staged cover promote failed", "id", id, "version", version, "stagedCoverAssetId", *submitted.StagedCoverAssetId, "error", err)
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "cover_promote_failed", Message: err.Error()})
 			return
 		}
 		coverID := id
 		liveCoverAssetId = &coverID
+		logging.Logger.Info("acceptVolumeVersion: staged cover promoted", "id", id, "version", version)
 	}
 	if len(submitted.StagedSampleAssetIds) > 0 {
 		liveSampleAssetIds = make([]string, len(submitted.StagedSampleAssetIds))
 		for i, stagedID := range submitted.StagedSampleAssetIds {
 			liveID := fmt.Sprintf("%s-%d", id, i)
+			logging.Logger.Info("acceptVolumeVersion: promoting staged sample", "id", id, "version", version, "stagedSampleAssetId", stagedID)
 			if err := assetsClient.Promote(c.Request.Context(), authz.Token(c), "sample-staged", stagedID, "sample", liveID); err != nil {
+				logging.Logger.Error("acceptVolumeVersion: staged sample promote failed", "id", id, "version", version, "stagedSampleAssetId", stagedID, "error", err)
 				sentry.CaptureException(err)
 				c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "sample_promote_failed", Message: err.Error()})
 				return
 			}
 			liveSampleAssetIds[i] = liveID
+			logging.Logger.Info("acceptVolumeVersion: staged sample promoted", "id", id, "version", version, "liveSampleAssetId", liveID)
 		}
 	}
 
 	accepted, conflicts, err := data.AcceptVolumeVersion(c.Request.Context(), id, version, selectedFields, authz.Subject(c), nil, liveCoverAssetId, liveSampleAssetIds)
 	if err != nil {
+		logging.Logger.Error("acceptVolumeVersion: accept failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "accept_failed", Message: err.Error()})
 		return
 	}
 
+	logging.Logger.Info("acceptVolumeVersion: exit", "id", id, "version", version, "outcome", "ok", "conflicts", len(conflicts))
 	c.JSON(http.StatusOK, reviewVersionResponse{
 		Version:   accepted.Version,
 		State:     string(accepted.State),
@@ -208,6 +228,7 @@ func rejectVolumeVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
+	logging.Logger.Debug("rejectVolumeVersion: enter", "id", id, "version", version)
 
 	var req rejectVersionRequest
 	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
@@ -221,11 +242,13 @@ func rejectVolumeVersion(c *gin.Context) {
 	}
 
 	if err := data.RejectVolumeVersion(c.Request.Context(), id, version, authz.Subject(c), note); err != nil {
+		logging.Logger.Error("rejectVolumeVersion: reject failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "reject_failed", Message: err.Error()})
 		return
 	}
 
+	logging.Logger.Info("rejectVolumeVersion: exit", "id", id, "version", version, "outcome", "ok")
 	c.JSON(http.StatusOK, reviewVersionResponse{Version: version, State: "rejected"})
 }
 
@@ -248,13 +271,16 @@ func retractVolumeVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
+	logging.Logger.Debug("retractVolumeVersion: enter", "id", id, "version", version)
 
 	retracted, err := data.RetractVolumeVersion(c.Request.Context(), id, version, authz.Subject(c))
 	if err != nil {
+		logging.Logger.Error("retractVolumeVersion: retract failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "retract_failed", Message: err.Error()})
 		return
 	}
+	logging.Logger.Info("retractVolumeVersion: exit", "id", id, "version", version, "outcome", "ok")
 
 	c.JSON(http.StatusOK, reviewVersionResponse{Version: retracted.Version, State: string(retracted.State)})
 }
@@ -286,25 +312,30 @@ func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
 		return
 	}
 	userID := authz.Subject(c)
+	logging.Logger.Debug("pullBackVolumeVersion: enter", "id", id, "version", version, "userId", userID)
 
 	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version)
 	if err != nil {
+		logging.Logger.Error("pullBackVolumeVersion: version lookup failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
 		return
 	}
 	if submitted == nil {
+		logging.Logger.Debug("pullBackVolumeVersion: exit", "id", id, "outcome", "not_found")
 		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
 		return
 	}
 
 	existingSession, err := editSessions.Get(c.Request.Context(), userID, recordTypeVolume)
 	if err != nil {
+		logging.Logger.Error("pullBackVolumeVersion: session lookup failed", "userId", userID, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "session_lookup_failed", Message: err.Error()})
 		return
 	}
 	if existingSession != nil {
+		logging.Logger.Warn("pullBackVolumeVersion: session already exists", "userId", userID)
 		c.JSON(http.StatusConflict, apiv.ErrorVO{
 			Error:   "session_exists",
 			Message: "You already have an in-flight edit session for this record type - finish or discard it before pulling back a submission",
@@ -330,6 +361,7 @@ func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
 		UpdatedAt:          now,
 	}
 	if err := editSessions.Set(c.Request.Context(), userID, recordTypeVolume, session); err != nil {
+		logging.Logger.Error("pullBackVolumeVersion: session create failed", "userId", userID, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "session_create_failed", Message: err.Error()})
 		return
@@ -344,11 +376,13 @@ func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
 		if delErr := editSessions.Delete(c.Request.Context(), userID, recordTypeVolume); delErr != nil {
 			sentry.CaptureException(delErr)
 		}
+		logging.Logger.Error("pullBackVolumeVersion: retract failed after session creation, session rolled back", "id", id, "version", version, "userId", userID, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "pull_back_failed", Message: err.Error()})
 		return
 	}
 
+	logging.Logger.Info("pullBackVolumeVersion: exit", "id", id, "version", version, "userId", userID, "outcome", "ok")
 	c.JSON(http.StatusOK, pullBackVersionResponse{RecordID: retracted.RecordID, Status: string(retracted.State)})
 }
 
@@ -371,17 +405,21 @@ func setCurrentVolumeVersion(c *gin.Context) {
 	if !ok {
 		return
 	}
+	logging.Logger.Debug("setCurrentVolumeVersion: enter", "id", id, "version", version)
 
 	result, err := data.SetCurrentVolumeVersion(c.Request.Context(), id, version)
 	if err != nil {
+		logging.Logger.Error("setCurrentVolumeVersion: rollback failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "rollback_failed", Message: err.Error()})
 		return
 	}
 	if result == nil {
+		logging.Logger.Debug("setCurrentVolumeVersion: exit", "id", id, "outcome", "not_found")
 		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
 		return
 	}
+	logging.Logger.Info("setCurrentVolumeVersion: exit", "id", id, "version", version, "outcome", "ok")
 
 	c.JSON(http.StatusOK, result)
 }

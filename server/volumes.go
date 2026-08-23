@@ -72,23 +72,28 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 //	@Router			/volumes/{id} [delete]
 func deleteVolume(c *gin.Context, store persistence.CacheStore) {
 	id := c.Param("id")
+	logging.Logger.Debug("deleteVolume: enter", "id", id)
 
 	existing, err := data.GetVolume(c.Request.Context(), id)
 	if err != nil {
+		logging.Logger.Error("deleteVolume: volume lookup failed", "id", id, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	if existing == nil {
+		logging.Logger.Debug("deleteVolume: exit", "id", id, "outcome", "not_found")
 		c.JSON(http.StatusNotFound, gin.H{})
 		return
 	}
 
 	if err := data.SoftDeleteVolume(c.Request.Context(), id, authz.Subject(c)); err != nil {
+		logging.Logger.Error("deleteVolume: soft delete failed", "id", id, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	logging.Logger.Info("deleteVolume: exit", "id", id, "outcome", "ok")
 	invalidateCachedPaths(store, "/volumes", "/volumes/"+id)
 	c.Status(http.StatusNoContent)
 }
@@ -106,19 +111,23 @@ func deleteVolume(c *gin.Context, store persistence.CacheStore) {
 //	@Router			/volumes/{id}/restore [post]
 func restoreVolume(c *gin.Context, store persistence.CacheStore) {
 	id := c.Param("id")
+	logging.Logger.Debug("restoreVolume: enter", "id", id)
 
 	existing, err := data.GetVolume(c.Request.Context(), id)
 	if err != nil {
+		logging.Logger.Error("restoreVolume: volume lookup failed", "id", id, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	if existing == nil {
+		logging.Logger.Debug("restoreVolume: exit", "id", id, "outcome", "not_found")
 		c.JSON(http.StatusNotFound, gin.H{})
 		return
 	}
 
 	if err := data.RestoreVolume(c.Request.Context(), id); err != nil {
+		logging.Logger.Error("restoreVolume: restore failed", "id", id, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -127,10 +136,12 @@ func restoreVolume(c *gin.Context, store persistence.CacheStore) {
 
 	result, err := data.GetVolume(c.Request.Context(), id)
 	if err != nil {
+		logging.Logger.Error("restoreVolume: post-restore query failed", "id", id, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	logging.Logger.Info("restoreVolume: exit", "id", id, "outcome", "ok")
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
 	if err := jsonapi.MarshalPayload(c.Writer, result); err != nil {
 		sentry.CaptureException(err)
