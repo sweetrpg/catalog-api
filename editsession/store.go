@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gomodule/redigo/redis"
+	"github.com/sweetrpg/common.go/logging"
 )
 
 // KeyPrefix is the Redis key namespace for edit sessions: "edit-session:<userId>:<recordType>".
@@ -45,6 +46,7 @@ func NewStore(pool *redis.Pool) *Store {
 
 // Get fetches a user's in-flight session for recordType, or nil if none exists.
 func (s *Store) Get(ctx context.Context, userID, recordType string) (*Session, error) {
+	logging.Logger.Debug("editsession.Get: enter", "userId", userID, "recordType", recordType)
 	conn, err := s.pool.GetContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("editsession: get connection: %w", err)
@@ -53,6 +55,7 @@ func (s *Store) Get(ctx context.Context, userID, recordType string) (*Session, e
 
 	raw, err := redis.Bytes(conn.Do("GET", Key(userID, recordType)))
 	if err == redis.ErrNil {
+		logging.Logger.Debug("editsession.Get: exit", "userId", userID, "recordType", recordType, "outcome", "miss")
 		return nil, nil
 	}
 	if err != nil {
@@ -63,12 +66,14 @@ func (s *Store) Get(ctx context.Context, userID, recordType string) (*Session, e
 	if err := json.Unmarshal(raw, &session); err != nil {
 		return nil, fmt.Errorf("editsession: unmarshal %s: %w", Key(userID, recordType), err)
 	}
+	logging.Logger.Debug("editsession.Get: exit", "userId", userID, "recordType", recordType, "outcome", "hit", "recordId", session.RecordID)
 	return &session, nil
 }
 
 // Set writes userID's session for recordType, overwriting any existing one. Used only by
 // pull-back (task 5.4) - every other session write comes from catalog-web directly.
 func (s *Store) Set(ctx context.Context, userID, recordType string, session Session) error {
+	logging.Logger.Debug("editsession.Set: enter", "userId", userID, "recordType", recordType)
 	conn, err := s.pool.GetContext(ctx)
 	if err != nil {
 		return fmt.Errorf("editsession: get connection: %w", err)
@@ -82,11 +87,13 @@ func (s *Store) Set(ctx context.Context, userID, recordType string, session Sess
 	if _, err := conn.Do("SET", Key(userID, recordType), raw); err != nil {
 		return fmt.Errorf("editsession: set %s: %w", Key(userID, recordType), err)
 	}
+	logging.Logger.Debug("editsession.Set: exit", "userId", userID, "recordType", recordType, "outcome", "ok")
 	return nil
 }
 
 // Delete removes a user's in-flight session for recordType. A missing session is not an error.
 func (s *Store) Delete(ctx context.Context, userID, recordType string) error {
+	logging.Logger.Debug("editsession.Delete: enter", "userId", userID, "recordType", recordType)
 	conn, err := s.pool.GetContext(ctx)
 	if err != nil {
 		return fmt.Errorf("editsession: get connection: %w", err)
@@ -96,5 +103,6 @@ func (s *Store) Delete(ctx context.Context, userID, recordType string) error {
 	if _, err := conn.Do("DEL", Key(userID, recordType)); err != nil {
 		return fmt.Errorf("editsession: delete %s: %w", Key(userID, recordType), err)
 	}
+	logging.Logger.Debug("editsession.Delete: exit", "userId", userID, "recordType", recordType, "outcome", "ok")
 	return nil
 }

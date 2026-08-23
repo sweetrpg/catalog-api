@@ -3,12 +3,19 @@ package editsession
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gomodule/redigo/redis"
+	"github.com/sweetrpg/common.go/logging"
 )
+
+func TestMain(m *testing.M) {
+	logging.Init()
+	os.Exit(m.Run())
+}
 
 func newTestPool(t *testing.T) (*redis.Pool, *miniredis.Miniredis) {
 	t.Helper()

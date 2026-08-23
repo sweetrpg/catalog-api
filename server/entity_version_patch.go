@@ -12,6 +12,7 @@ import (
 	apiv "github.com/sweetrpg/api-core.go/vo"
 	"github.com/sweetrpg/catalog-api/authz"
 	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
+	"github.com/sweetrpg/common.go/logging"
 )
 
 // entityFieldAccessor reads/writes one patchable string field on a live entity VO - used to
@@ -69,6 +70,7 @@ type entityVersionAPIConfig[T any, V any] struct {
 func createEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store persistence.CacheStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var entity T
+		logging.Logger.Debug("createEntityVersion: enter", "recordType", cfg.recordType)
 		if err := c.ShouldBindJSON(&entity); err != nil {
 			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: err.Error()})
 			return
@@ -119,6 +121,7 @@ type bulkCreateResult struct {
 func bulkCreateEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var rawEntries []json.RawMessage
+		logging.Logger.Debug("bulkCreateEntityVersion: enter", "recordType", cfg.recordType)
 		if err := c.ShouldBindJSON(&rawEntries); err != nil {
 			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: err.Error()})
 			return
@@ -164,6 +167,8 @@ func bulkCreateEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin
 func patchEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store persistence.CacheStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
+
+		logging.Logger.Debug("patchEntityVersion: enter", "recordType", cfg.recordType, "id", id)
 
 		// Bound to json.RawMessage rather than *string so a field can be either a string
 		// (cfg.fields) or an array (cfg.arrayFields, e.g. license tags) - each raw value is
@@ -282,6 +287,7 @@ func deleteEntity[T any, V any](cfg entityVersionAPIConfig[T, V], store persiste
 			return
 		}
 		if err := cfg.softDelete(c, id, authz.Subject(c)); err != nil {
+			logging.Logger.Debug("deleteEntity: enter", "recordType", cfg.recordType, "id", id)
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "delete_failed", Message: err.Error()})
 			return
@@ -306,6 +312,7 @@ func restoreEntity[T any, V any](cfg entityVersionAPIConfig[T, V], store persist
 			return
 		}
 		if err := cfg.restore(c, id); err != nil {
+			logging.Logger.Debug("restoreEntity: enter", "recordType", cfg.recordType, "id", id)
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "restore_failed", Message: err.Error()})
 			return
@@ -377,6 +384,7 @@ func acceptEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store p
 			return
 		}
 		var req acceptVersionRequest
+		logging.Logger.Debug("acceptEntityVersion: enter", "recordType", cfg.recordType, "id", id)
 		if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
 			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: err.Error()})
 			return
@@ -408,6 +416,7 @@ func rejectEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.Han
 		}
 		var req rejectVersionRequest
 		if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
+			logging.Logger.Debug("rejectEntityVersion: enter", "recordType", cfg.recordType, "id", id)
 			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: err.Error()})
 			return
 		}
@@ -433,6 +442,7 @@ func retractEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.Ha
 			return
 		}
 		retracted, err := cfg.retractVersion(c, id, version, authz.Subject(c))
+		logging.Logger.Debug("retractEntityVersion: enter", "recordType", cfg.recordType, "id", id, "version", version)
 		if err != nil {
 			sentry.CaptureException(err)
 			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "retract_failed", Message: err.Error()})

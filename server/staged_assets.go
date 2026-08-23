@@ -32,12 +32,15 @@ type pendingStagedAssetsResponse struct {
 //	@Failure		500	{object}	apiv.ErrorVO
 //	@Router			/staged-assets/pending [get]
 func listPendingStagedAssets(c *gin.Context) {
+	logging.Logger.Debug("listPendingStagedAssets: enter")
 	pending, err := data.ListPendingStagedAssetIds(c.Request.Context())
 	if err != nil {
+		logging.Logger.Error("listPendingStagedAssets: query failed", "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
 		return
 	}
+	logging.Logger.Debug("listPendingStagedAssets: exit", "covers", len(pending.CoverAssetIds), "samples", len(pending.SampleAssetIds))
 
 	c.JSON(http.StatusOK, pendingStagedAssetsResponse{
 		CoverAssetIds:  pending.CoverAssetIds,

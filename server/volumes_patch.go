@@ -13,6 +13,7 @@ import (
 	"github.com/sweetrpg/catalog-data.go/data"
 	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
+	"github.com/sweetrpg/common.go/logging"
 	modelcore "github.com/sweetrpg/model-core.go/vo"
 )
 
@@ -87,9 +88,11 @@ type submittedVersionResponse struct {
 //	@Router			/volumes/{id} [patch]
 func patchVolume(c *gin.Context, store persistence.CacheStore) {
 	id := c.Param("id")
+	logging.Logger.Debug("patchVolume: enter", "id", id)
 
 	var req patchVolumeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		logging.Logger.Debug("patchVolume: exit", "id", id, "outcome", "bad_request")
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: err.Error()})
 		return
 	}
@@ -98,17 +101,20 @@ func patchVolume(c *gin.Context, store persistence.CacheStore) {
 	// comment) - without this, an editor's request touching only those fields would 400 here
 	// before ever reaching the role check below that's supposed to allow it.
 	if !req.hasSubmittableFields() && !req.hasEditorOnlyFields() {
+		logging.Logger.Debug("patchVolume: exit", "id", id, "outcome", "bad_request", "reason", "no_fields")
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_request", Message: "no recognized fields to change"})
 		return
 	}
 
 	existing, err := data.GetVolume(c.Request.Context(), id)
 	if err != nil {
+		logging.Logger.Error("patchVolume: volume lookup failed", "id", id, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
 		return
 	}
 	if existing == nil {
+		logging.Logger.Debug("patchVolume: exit", "id", id, "outcome", "not_found")
 		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
 		return
 	}
@@ -117,6 +123,7 @@ func patchVolume(c *gin.Context, store persistence.CacheStore) {
 	isEditor := authz.HasRole(roles, authz.RoleAdmin) || authz.HasRole(roles, authz.RoleEditor)
 
 	if !isEditor && req.hasEditorOnlyFields() {
+		logging.Logger.Warn("patchVolume: submitter rejected editor-only fields", "id", id)
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{
 			Error:   "unsupported_field",
 			Message: "properties, publisherIds, studioIds, systemIds, credits, format, coverAssetId, and sampleAssetIds can't be submitted - an editor or admin must make this change directly",
@@ -128,6 +135,7 @@ func patchVolume(c *gin.Context, store persistence.CacheStore) {
 	if isEditor {
 		state = catalogmodels.VersionStateLive
 	}
+	logging.Logger.Info("patchVolume: branch selected", "id", id, "isEditor", isEditor, "state", string(state))
 	applyVolumePatch(c, existing, req, state, store)
 }
 
@@ -149,6 +157,7 @@ func applyVolumePatch(
 	c *gin.Context, existing *vo.VolumeVO, req patchVolumeRequest, state catalogmodels.VersionState,
 	store persistence.CacheStore,
 ) bool {
+	logging.Logger.Debug("applyVolumePatch: enter", "id", existing.ID, "state", string(state))
 	updated := *existing
 	if req.Title != nil {
 		updated.Title = *req.Title
@@ -195,6 +204,7 @@ func applyVolumePatch(
 	}
 	if req.SampleAssetIds != nil {
 		if len(*req.SampleAssetIds) > maxSampleAssetIds {
+			logging.Logger.Warn("applyVolumePatch: sample limit exceeded", "id", existing.ID, "count", len(*req.SampleAssetIds), "max", maxSampleAssetIds)
 			c.JSON(http.StatusBadRequest, apiv.ErrorVO{
 				Error:   "sample_limit_exceeded",
 				Message: fmt.Sprintf("a volume may have at most %d samples", maxSampleAssetIds),
@@ -207,6 +217,7 @@ func applyVolumePatch(
 
 	if req.Credits != nil {
 		if err := applyCreditsDiff(c, existing.ID, *req.Credits, updated.UpdatedBy); err != nil {
+			logging.Logger.Error("applyVolumePatch: credits diff failed", "id", existing.ID, "error", err)
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "update_failed", Message: err.Error()})
 			return false
@@ -215,16 +226,19 @@ func applyVolumePatch(
 
 	version, err := data.UpdateVolume(c.Request.Context(), existing.ID, &updated, state)
 	if err != nil {
+		logging.Logger.Error("applyVolumePatch: update failed", "id", existing.ID, "state", string(state), "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "update_failed", Message: err.Error()})
 		return false
 	}
 	if version == nil {
+		logging.Logger.Debug("applyVolumePatch: exit", "id", existing.ID, "outcome", "not_found")
 		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
 		return false
 	}
 
 	if state != catalogmodels.VersionStateLive {
+		logging.Logger.Info("applyVolumePatch: submitted version created", "id", existing.ID, "version", version.Version, "updatedBy", updated.UpdatedBy)
 		c.JSON(http.StatusAccepted, submittedVersionResponse{
 			Version: version.Version,
 			State:   string(version.State),
@@ -233,12 +247,15 @@ func applyVolumePatch(
 		return true
 	}
 
+	logging.Logger.Info("applyVolumePatch: live version applied", "id", existing.ID, "version", version.Version, "updatedBy", updated.UpdatedBy)
+
 	if req.PublisherIDs != nil || req.StudioIDs != nil || req.SystemIDs != nil {
 		invalidateVolumeAssociationCache(store, existing, &updated)
 	}
 
 	result, err := data.GetVolume(c.Request.Context(), existing.ID)
 	if err != nil {
+		logging.Logger.Error("applyVolumePatch: post-update query failed", "id", existing.ID, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
 		return false
@@ -249,6 +266,7 @@ func applyVolumePatch(
 	if err := jsonapi.MarshalPayload(c.Writer, result); err != nil {
 		sentry.CaptureException(err)
 	}
+	logging.Logger.Debug("applyVolumePatch: exit", "id", existing.ID, "outcome", "ok")
 	return true
 }
 
@@ -259,6 +277,7 @@ func applyVolumePatch(
 // (predating credits, or created some other way) is left untouched even if none of its roles
 // match, since it isn't representable as one desired pair.
 func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, updatedBy string) error {
+	logging.Logger.Debug("applyCreditsDiff: enter", "volumeId", volumeID, "desired", len(desired), "updatedBy", updatedBy)
 	existing, err := data.QueryContributionsByVolume(c.Request.Context(), volumeID)
 	if err != nil {
 		return err
@@ -295,5 +314,6 @@ func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, 
 			return err
 		}
 	}
+	logging.Logger.Debug("applyCreditsDiff: exit", "volumeId", volumeID, "outcome", "ok")
 	return nil
 }
