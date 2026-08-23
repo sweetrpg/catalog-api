@@ -63,7 +63,7 @@
 				
 				<option value="file3">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
-				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (22.2%)</option>
+				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (21.8%)</option>
 				
 				<option value="file5">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
@@ -698,6 +698,19 @@ func main() <span class="cov0" title="0">{
         <span class="cov0" title="0">if err := data.EnsureVolumeVersioningIndexes(context.Background()); err != nil </span><span class="cov0" title="0">{
                 logging.Logger.Error("Error while ensuring volume versioning indexes", "error", err.Error())
         }</span>
+        <span class="cov0" title="0">for _, ensure := range []struct {
+                name string
+                fn   func(context.Context) error
+        }{
+                {"license", data.EnsureLicenseVersioningIndexes},
+                {"person", data.EnsurePersonVersioningIndexes},
+                {"publisher", data.EnsurePublisherVersioningIndexes},
+                {"studio", data.EnsureStudioVersioningIndexes},
+        } </span><span class="cov0" title="0">{
+                if err := ensure.fn(context.Background()); err != nil </span><span class="cov0" title="0">{
+                        logging.Logger.Error("Error while ensuring versioning indexes", "entity", ensure.name, "error", err.Error())
+                }</span>
+        }
         <span class="cov0" title="0">if err := vocabularies.Backfill(context.Background()); err != nil </span><span class="cov0" title="0">{
                 logging.Logger.Error("Error while backfilling vocabularies", "error", err.Error())
         }</span>
