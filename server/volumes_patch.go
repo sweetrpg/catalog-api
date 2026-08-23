@@ -45,6 +45,7 @@ type patchVolumeRequest struct {
 	Title          *string            `json:"title"`
 	Description    *string            `json:"description"`
 	Notes          *string            `json:"notes"`
+	Tags           *[]string          `json:"tags"`
 	Properties     *[]propertyRequest `json:"properties"`
 	PublisherIDs   *[]string          `json:"publisherIds"`
 	StudioIDs      *[]string          `json:"studioIds"`
@@ -140,10 +141,11 @@ func patchVolume(c *gin.Context, store persistence.CacheStore) {
 }
 
 // hasSubmittableFields reports whether req touches a field a submitter is allowed to change
-// directly (title/description/notes) - the fields patchRequestDiff used to diff before the
-// version model made per-field diffing unnecessary.
+// directly (title/description/notes/tags - tags are free-text labels, same policy as license
+// tags) - the fields patchRequestDiff used to diff before the version model made per-field
+// diffing unnecessary.
 func (req patchVolumeRequest) hasSubmittableFields() bool {
-	return req.Title != nil || req.Description != nil || req.Notes != nil
+	return req.Title != nil || req.Description != nil || req.Notes != nil || req.Tags != nil
 }
 
 // applyVolumePatch merges req's present fields into existing and creates a new version with the
@@ -167,6 +169,13 @@ func applyVolumePatch(
 	}
 	if req.Notes != nil {
 		updated.Notes = *req.Notes
+	}
+	if req.Tags != nil {
+		tags := make([]modelcore.TagVO, len(*req.Tags))
+		for i, name := range *req.Tags {
+			tags[i] = modelcore.TagVO{Name: name}
+		}
+		updated.Tags = tags
 	}
 	if req.Properties != nil {
 		props := make([]modelcore.PropertyVO, len(*req.Properties))
