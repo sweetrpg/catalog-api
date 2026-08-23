@@ -141,10 +141,10 @@ func TestGetPersonVolumesReturnsOnlyContributedVolumes(t *testing.T) {
 
 	linked := seedVolume(t, "Linked Volume")
 	unlinked := seedVolume(t, "Unlinked Volume")
-	if _, err := data.AddContribution(t.Context(), personID, linked.ID, []string{"author"}, "test"); err != nil {
+	if _, err := data.AddContribution(t.Context(), personID, linked.ID, "author", "test"); err != nil {
 		t.Fatalf("seed contribution: %v", err)
 	}
-	if _, err := data.AddContribution(t.Context(), otherPersonID, unlinked.ID, []string{"author"}, "test"); err != nil {
+	if _, err := data.AddContribution(t.Context(), otherPersonID, unlinked.ID, "author", "test"); err != nil {
 		t.Fatalf("seed unrelated contribution: %v", err)
 	}
 

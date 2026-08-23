@@ -408,7 +408,7 @@ func TestPatchVolumeEditorAppliesCredits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("QueryContributionsByVolume() error = %v", err)
 	}
-	if len(credits) != 1 || credits[0].Person.ID != personID || len(credits[0].Roles) != 1 || credits[0].Roles[0] != "Author" {
+	if len(credits) != 1 || credits[0].Person.ID != personID || credits[0].Role != "Author" {
 		t.Fatalf("credits = %+v, want one %s/Author credit", credits, personID)
 	}
 

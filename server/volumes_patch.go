@@ -271,11 +271,8 @@ func applyVolumePatch(
 }
 
 // applyCreditsDiff reconciles a volume's contribution credits against desired - the full,
-// intended set of (person, contribution type) pairs - deleting existing single-role
-// contributions no longer present and adding new ones. Only single-role contributions
-// (Roles == [type]) are considered part of this mechanism; a contribution with multiple roles
-// (predating credits, or created some other way) is left untouched even if none of its roles
-// match, since it isn't representable as one desired pair.
+// intended set of (person, role) pairs - deleting existing contributions no longer present and
+// adding new ones. Contributions are single-role (one document per person/volume/role).
 func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, updatedBy string) error {
 	logging.Logger.Debug("applyCreditsDiff: enter", "volumeId", volumeID, "desired", len(desired), "updatedBy", updatedBy)
 	existing, err := data.QueryContributionsByVolume(c.Request.Context(), volumeID)
@@ -292,14 +289,10 @@ func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, 
 		wanted[creditKey{cr.PersonID, cr.ContributionType}] = true
 	}
 
-	have := make(map[creditKey]bool, len(existing))
+	have := make(map[creditKey]string, len(existing))
 	for _, contribution := range existing {
-		if len(contribution.Roles) != 1 {
-			continue
-		}
-		key := creditKey{contribution.Person.ID, contribution.Roles[0]}
-		have[key] = true
-		if !wanted[key] {
+		have[creditKey{contribution.Person.ID, contribution.Role}] = contribution.ID
+		if !wanted[creditKey{contribution.Person.ID, contribution.Role}] {
 			if _, err := data.DeleteContribution(c.Request.Context(), contribution.ID); err != nil {
 				return err
 			}
@@ -307,10 +300,10 @@ func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, 
 	}
 
 	for key := range wanted {
-		if have[key] {
+		if _, ok := have[key]; ok {
 			continue
 		}
-		if _, err := data.AddContribution(c.Request.Context(), key.personID, volumeID, []string{key.roleType}, updatedBy); err != nil {
+		if _, err := data.AddContribution(c.Request.Context(), key.personID, volumeID, key.roleType, updatedBy); err != nil {
 			return err
 		}
 	}
