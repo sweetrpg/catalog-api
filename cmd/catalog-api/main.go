@@ -112,6 +112,19 @@ func main() {
 	if err := data.EnsureVolumeVersioningIndexes(context.Background()); err != nil {
 		logging.Logger.Error("Error while ensuring volume versioning indexes", "error", err.Error())
 	}
+	for _, ensure := range []struct {
+		name string
+		fn   func(context.Context) error
+	}{
+		{"license", data.EnsureLicenseVersioningIndexes},
+		{"person", data.EnsurePersonVersioningIndexes},
+		{"publisher", data.EnsurePublisherVersioningIndexes},
+		{"studio", data.EnsureStudioVersioningIndexes},
+	} {
+		if err := ensure.fn(context.Background()); err != nil {
+			logging.Logger.Error("Error while ensuring versioning indexes", "entity", ensure.name, "error", err.Error())
+		}
+	}
 	if err := vocabularies.Backfill(context.Background()); err != nil {
 		logging.Logger.Error("Error while backfilling vocabularies", "error", err.Error())
 	}
