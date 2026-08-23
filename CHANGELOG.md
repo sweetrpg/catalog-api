@@ -1,4 +1,11 @@
 
+## 0.24.0 - 2026-08-23
+
+### Added
+- Structured entry/exit and decision-point logging across volume edit flow
+
+
+
 ## 0.23.2 - 2026-08-22
 
 ### Fixed
