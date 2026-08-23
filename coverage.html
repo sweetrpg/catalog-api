@@ -67,7 +67,7 @@
 				
 				<option value="file5">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
-				<option value="file6">github.com/sweetrpg/catalog-api/editsession/store.go (54.3%)</option>
+				<option value="file6">github.com/sweetrpg/catalog-api/editsession/store.go (57.1%)</option>
 				
 				<option value="file7">github.com/sweetrpg/catalog-api/ratelimit/ratelimit.go (91.7%)</option>
 				
@@ -110,6 +110,7 @@ import (
         "net/textproto"
         "time"
 
+        "github.com/sweetrpg/common.go/logging"
         "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
@@ -139,6 +140,7 @@ func (e NotFoundError) Error() string <span class="cov0" title="0">{ return fmt.
 
 // Get downloads an asset's bytes and content type.
 func (c *Client) Get(ctx context.Context, token, kind, id string) ([]byte, string, error) <span class="cov0" title="0">{
+        logging.Logger.Debug("assets.Get: enter", "kind", kind, "id", id)
         req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/asset/"+kind+"/"+id, nil)
         if err != nil </span><span class="cov0" title="0">{
                 return nil, "", fmt.Errorf("assets: build get request: %w", err)
@@ -147,14 +149,17 @@ func (c *Client) Get(ctx context.Context, token, kind, id string) ([]byte, strin
 
         resp, err := c.http.Do(req)
         if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Get: request failed", "kind", kind, "id", id, "error", err)
                 return nil, "", fmt.Errorf("assets: get request failed: %w", err)
         }</span>
         <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{ _ = resp.Body.Close() }</span>()
 
         <span class="cov0" title="0">if resp.StatusCode == http.StatusNotFound </span><span class="cov0" title="0">{
+                logging.Logger.Warn("assets.Get: not found", "kind", kind, "id", id)
                 return nil, "", NotFoundError{Kind: kind, ID: id}
         }</span>
         <span class="cov0" title="0">if resp.StatusCode != http.StatusOK </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Get: unexpected status", "kind", kind, "id", id, "status", resp.StatusCode)
                 return nil, "", fmt.Errorf("assets: unexpected status %d from get %s/%s", resp.StatusCode, kind, id)
         }</span>
 
@@ -162,11 +167,13 @@ func (c *Client) Get(ctx context.Context, token, kind, id string) ([]byte, strin
         if err != nil </span><span class="cov0" title="0">{
                 return nil, "", fmt.Errorf("assets: read get response: %w", err)
         }</span>
-        <span class="cov0" title="0">return body, resp.Header.Get("Content-Type"), nil</span>
+        <span class="cov0" title="0">logging.Logger.Debug("assets.Get: exit", "kind", kind, "id", id, "outcome", "ok")
+        return body, resp.Header.Get("Content-Type"), nil</span>
 }
 
 // Store uploads an asset's bytes under kind/id, overwriting any existing asset there.
 func (c *Client) Store(ctx context.Context, token, kind, id string, data []byte, contentType string) error <span class="cov0" title="0">{
+        logging.Logger.Debug("assets.Store: enter", "kind", kind, "id", id)
         var buf bytes.Buffer
         writer := multipart.NewWriter(&amp;buf)
         header := textproto.MIMEHeader{}
@@ -194,19 +201,23 @@ func (c *Client) Store(ctx context.Context, token, kind, id string, data []byte,
 
         resp, err := c.http.Do(req)
         if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Store: request failed", "kind", kind, "id", id, "error", err)
                 return fmt.Errorf("assets: store request failed: %w", err)
         }</span>
         <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{ _ = resp.Body.Close() }</span>()
 
         <span class="cov0" title="0">if resp.StatusCode != http.StatusCreated </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Store: unexpected status", "kind", kind, "id", id, "status", resp.StatusCode)
                 return fmt.Errorf("assets: unexpected status %d from store %s/%s", resp.StatusCode, kind, id)
         }</span>
-        <span class="cov0" title="0">return nil</span>
+        <span class="cov0" title="0">logging.Logger.Debug("assets.Store: exit", "kind", kind, "id", id, "outcome", "ok")
+        return nil</span>
 }
 
 // Delete removes an asset. A missing asset (404) is treated as success - the end state (no
 // asset at kind/id) is the same either way.
 func (c *Client) Delete(ctx context.Context, token, kind, id string) error <span class="cov0" title="0">{
+        logging.Logger.Debug("assets.Delete: enter", "kind", kind, "id", id)
         req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.baseURL+"/asset/"+kind+"/"+id, nil)
         if err != nil </span><span class="cov0" title="0">{
                 return fmt.Errorf("assets: build delete request: %w", err)
@@ -215,28 +226,39 @@ func (c *Client) Delete(ctx context.Context, token, kind, id string) error <span
 
         resp, err := c.http.Do(req)
         if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Delete: request failed", "kind", kind, "id", id, "error", err)
                 return fmt.Errorf("assets: delete request failed: %w", err)
         }</span>
         <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{ _ = resp.Body.Close() }</span>()
 
         <span class="cov0" title="0">if resp.StatusCode != http.StatusNoContent &amp;&amp; resp.StatusCode != http.StatusNotFound </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Delete: unexpected status", "kind", kind, "id", id, "status", resp.StatusCode)
                 return fmt.Errorf("assets: unexpected status %d from delete %s/%s", resp.StatusCode, kind, id)
         }</span>
-        <span class="cov0" title="0">return nil</span>
+        <span class="cov0" title="0">logging.Logger.Debug("assets.Delete: exit", "kind", kind, "id", id, "outcome", "ok")
+        return nil</span>
 }
 
 // Promote copies a staged asset (fromKind/fromID) to a live one (toKind/toID), then deletes the
 // staged copy - the promote-then-delete step every editor/admin finalize and accepted proposal
 // performs for a referenced staged cover/sample.
 func (c *Client) Promote(ctx context.Context, token, fromKind, fromID, toKind, toID string) error <span class="cov0" title="0">{
+        logging.Logger.Debug("assets.Promote: enter", "fromKind", fromKind, "fromId", fromID, "toKind", toKind, "toId", toID)
         data, contentType, err := c.Get(ctx, token, fromKind, fromID)
         if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Promote: get staged asset failed", "fromKind", fromKind, "fromId", fromID, "error", err)
                 return fmt.Errorf("assets: promote %s/%s -&gt; %s/%s: %w", fromKind, fromID, toKind, toID, err)
         }</span>
         <span class="cov0" title="0">if err := c.Store(ctx, token, toKind, toID, data, contentType); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Promote: store live asset failed", "toKind", toKind, "toId", toID, "error", err)
                 return fmt.Errorf("assets: promote %s/%s -&gt; %s/%s: %w", fromKind, fromID, toKind, toID, err)
         }</span>
-        <span class="cov0" title="0">return c.Delete(ctx, token, fromKind, fromID)</span>
+        <span class="cov0" title="0">if err := c.Delete(ctx, token, fromKind, fromID); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Promote: delete staged asset failed", "fromKind", fromKind, "fromId", fromID, "error", err)
+                return fmt.Errorf("assets: promote %s/%s -&gt; %s/%s: %w", fromKind, fromID, toKind, toID, err)
+        }</span>
+        <span class="cov0" title="0">logging.Logger.Debug("assets.Promote: exit", "fromKind", fromKind, "fromId", fromID, "toKind", toKind, "toId", toID, "outcome", "ok")
+        return nil</span>
 }
 
 // setBearerToken forwards the caller's verified user token to assets-web, which authorizes the
@@ -1680,6 +1702,7 @@ import (
         "time"
 
         "github.com/gomodule/redigo/redis"
+        "github.com/sweetrpg/common.go/logging"
 )
 
 // KeyPrefix is the Redis key namespace for edit sessions: "edit-session:&lt;userId&gt;:&lt;recordType&gt;".
@@ -1712,6 +1735,7 @@ func NewStore(pool *redis.Pool) *Store <span class="cov7" title="4">{
 
 // Get fetches a user's in-flight session for recordType, or nil if none exists.
 func (s *Store) Get(ctx context.Context, userID, recordType string) (*Session, error) <span class="cov4" title="2">{
+        logging.Logger.Debug("editsession.Get: enter", "userId", userID, "recordType", recordType)
         conn, err := s.pool.GetContext(ctx)
         if err != nil </span><span class="cov0" title="0">{
                 return nil, fmt.Errorf("editsession: get connection: %w", err)
@@ -1720,6 +1744,7 @@ func (s *Store) Get(ctx context.Context, userID, recordType string) (*Session, e
 
         <span class="cov4" title="2">raw, err := redis.Bytes(conn.Do("GET", Key(userID, recordType)))
         if err == redis.ErrNil </span><span class="cov1" title="1">{
+                logging.Logger.Debug("editsession.Get: exit", "userId", userID, "recordType", recordType, "outcome", "miss")
                 return nil, nil
         }</span>
         <span class="cov1" title="1">if err != nil </span><span class="cov0" title="0">{
@@ -1730,12 +1755,14 @@ func (s *Store) Get(ctx context.Context, userID, recordType string) (*Session, e
         if err := json.Unmarshal(raw, &amp;session); err != nil </span><span class="cov0" title="0">{
                 return nil, fmt.Errorf("editsession: unmarshal %s: %w", Key(userID, recordType), err)
         }</span>
-        <span class="cov1" title="1">return &amp;session, nil</span>
+        <span class="cov1" title="1">logging.Logger.Debug("editsession.Get: exit", "userId", userID, "recordType", recordType, "outcome", "hit", "recordId", session.RecordID)
+        return &amp;session, nil</span>
 }
 
 // Set writes userID's session for recordType, overwriting any existing one. Used only by
 // pull-back (task 5.4) - every other session write comes from catalog-web directly.
 func (s *Store) Set(ctx context.Context, userID, recordType string, session Session) error <span class="cov0" title="0">{
+        logging.Logger.Debug("editsession.Set: enter", "userId", userID, "recordType", recordType)
         conn, err := s.pool.GetContext(ctx)
         if err != nil </span><span class="cov0" title="0">{
                 return fmt.Errorf("editsession: get connection: %w", err)
@@ -1749,11 +1776,13 @@ func (s *Store) Set(ctx context.Context, userID, recordType string, session Sess
         <span class="cov0" title="0">if _, err := conn.Do("SET", Key(userID, recordType), raw); err != nil </span><span class="cov0" title="0">{
                 return fmt.Errorf("editsession: set %s: %w", Key(userID, recordType), err)
         }</span>
-        <span class="cov0" title="0">return nil</span>
+        <span class="cov0" title="0">logging.Logger.Debug("editsession.Set: exit", "userId", userID, "recordType", recordType, "outcome", "ok")
+        return nil</span>
 }
 
 // Delete removes a user's in-flight session for recordType. A missing session is not an error.
 func (s *Store) Delete(ctx context.Context, userID, recordType string) error <span class="cov4" title="2">{
+        logging.Logger.Debug("editsession.Delete: enter", "userId", userID, "recordType", recordType)
         conn, err := s.pool.GetContext(ctx)
         if err != nil </span><span class="cov0" title="0">{
                 return fmt.Errorf("editsession: get connection: %w", err)
@@ -1763,7 +1792,8 @@ func (s *Store) Delete(ctx context.Context, userID, recordType string) error <sp
         <span class="cov4" title="2">if _, err := conn.Do("DEL", Key(userID, recordType)); err != nil </span><span class="cov0" title="0">{
                 return fmt.Errorf("editsession: delete %s: %w", Key(userID, recordType), err)
         }</span>
-        <span class="cov4" title="2">return nil</span>
+        <span class="cov4" title="2">logging.Logger.Debug("editsession.Delete: exit", "userId", userID, "recordType", recordType, "outcome", "ok")
+        return nil</span>
 }
 </pre>
 		
