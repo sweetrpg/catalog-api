@@ -1,4 +1,11 @@
 
+## 0.26.0 - 2026-08-23
+
+### Added
+- Support tags on volume PATCH and finalize-session
+
+
+
 ## 0.25.0 - 2026-08-23
 
 ### Added
