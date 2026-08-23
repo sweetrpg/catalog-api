@@ -1,4 +1,15 @@
 
+## 0.25.0 - 2026-08-23
+
+### Added
+- Ensure license/person/publisher/studio versioning indexes at startup
+
+
+### Fixed
+- Single role per contribution
+
+
+
 ## 0.24.0 - 2026-08-23
 
 ### Added
