@@ -14,8 +14,9 @@ import (
 	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-api/submissioncap"
 	"github.com/sweetrpg/catalog-data.go/data"
-	"github.com/sweetrpg/catalog-objects.go/models"
+	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/common.go/logging"
+	modelcore "github.com/sweetrpg/model-core.go/vo"
 )
 
 // recordTypeVolume is the edit-session recordType this endpoint reads (see docs/
@@ -77,7 +78,7 @@ func finalizeVolumeSession(
 	}
 
 	// session.Fields round-trips through patchVolumeRequest's own JSON tags (title,
-	// description, notes, properties, publisherIds, studioIds, credits, format) rather than
+	// description, notes, tags, properties, publisherIds, studioIds, credits, format) rather than
 	// hand-unmarshaling each key - the two shapes are deliberately the same, since finalize
 	// reuses the PATCH role-branch below instead of introducing a second code path.
 	req, err := fieldsToPatchRequest(session.Fields)
@@ -119,7 +120,7 @@ func finalizeVolumeSession(
 			req.SampleAssetIds = &liveSampleIds
 		}
 
-		if !applyVolumePatch(c, existing, req, models.VersionStateLive, store) {
+		if !applyVolumePatch(c, existing, req, catalogmodels.VersionStateLive, store) {
 			logging.Logger.Debug("finalizeVolumeSession: exit", "volumeId", volumeID, "outcome", "apply_failed")
 			return
 		}
@@ -170,6 +171,13 @@ func finalizeVolumeSession(
 	}
 	if req.Notes != nil {
 		updated.Notes = *req.Notes
+	}
+	if req.Tags != nil {
+		tags := make([]modelcore.TagVO, len(*req.Tags))
+		for i, name := range *req.Tags {
+			tags[i] = modelcore.TagVO{Name: name}
+		}
+		updated.Tags = tags
 	}
 	updated.UpdatedBy = userID
 
