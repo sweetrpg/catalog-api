@@ -56,7 +56,11 @@ spec:
                             name: api-misc
                       - secretRef:
                             name: api-cache
-                  env: []
+                  env:
+                      - name: GOMEMLIMIT
+                        value: "900MiB"
+                      - name: GOGC
+                        value: "100"
                   ports:
                       - containerPort: 8000
                         name: http
