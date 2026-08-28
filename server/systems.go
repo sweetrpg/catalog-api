@@ -16,9 +16,9 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-// Systems are read-only here: gamesystems-api is the system of record (see
+// Systems are read-only here: game-systems-api is the system of record (see
 // catalog-data.go's GameSystemsClient), so there's no create/update/delete path to wire up -
-// only list/get, resolved live against gamesystems-api rather than a local Mongo collection.
+// only list/get, resolved live against game-systems-api rather than a local Mongo collection.
 func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
 	logging.Logger.Info("Setting up system endpoint handlers...")
 	ttl := ttls.TTL("systems")

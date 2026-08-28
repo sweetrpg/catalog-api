@@ -32,10 +32,10 @@ const (
 	// See durable-volume-editing in sweetrpg/platform.
 	ASSETS_WEB_URL = "ASSETS_WEB_URL"
 
-	// GAMESYSTEMS_API_URL points at gamesystems-api's base URL (e.g.
-	// http://api-v1.sweetrpg-gamesystems.svc.cluster.local:8000), the system of record a
+	// GAME_SYSTEMS_API_URL points at game-systems-api's base URL (e.g.
+	// http://api-v1.sweetrpg-game-systems.svc.cluster.local:8000), the system of record a
 	// volume's system references resolve against. See game-systems-service in sweetrpg/platform.
-	GAMESYSTEMS_API_URL = "GAMESYSTEMS_API_URL"
+	GAME_SYSTEMS_API_URL = "GAME_SYSTEMS_API_URL"
 )
 
 // Value constants

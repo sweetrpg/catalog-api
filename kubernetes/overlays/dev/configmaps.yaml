@@ -47,4 +47,4 @@ data:
   # needing an authz check (e.g. volume-edit's vocabulary fetch) instead of a startup error.
   AUTH_API_URL: http://api-v1.sweetrpg-auth.svc.cluster.local:8000
   ASSETS_WEB_URL: http://web-v1.sweetrpg-assets.svc.cluster.local:8081
-  GAMESYSTEMS_API_URL: http://api-v1.sweetrpg-gamesystems.svc.cluster.local:8000
+  GAME_SYSTEMS_API_URL: http://api-v1.sweetrpg-game-systems.svc.cluster.local:8000
