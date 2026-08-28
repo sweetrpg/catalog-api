@@ -1,4 +1,10 @@
 
+## 0.26.1 - 2026-08-28
+
+### Changed
+- Update game-systems-api names and URL
+
+
 ## 0.26.0 - 2026-08-25
 
 

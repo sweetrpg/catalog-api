@@ -105,7 +105,7 @@ func main() {
 
 	database.SetupDatabase()
 	defer database.TeardownDatabase()
-	data.GameSystemsClient = gamesystems.NewClient(util.GetEnv(constants.GAMESYSTEMS_API_URL, ""))
+	data.GameSystemsClient = gamesystems.NewClient(util.GetEnv(constants.GAME_SYSTEMS_API_URL, ""))
 	if err := vocabularies.EnsureIndexes(context.Background()); err != nil {
 		logging.Logger.Error("Error while ensuring vocabularies indexes", "error", err.Error())
 	}
