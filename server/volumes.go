@@ -26,6 +26,7 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	logging.Logger.Info("Setting up volume endpoint handlers...")
 	ttl := ttls.TTL("volumes")
 	g.GET("/volumes", cache.CachePage(store, ttl, listVolumes))
+	g.GET("/volumes/search", cache.CachePage(store, ttl, searchVolumes))
 	g.GET("/volumes/:id", cache.CachePage(store, ttl, getVolume))
 	g.GET("/volumes/:id/versions", listVolumeVersions)
 	g.GET("/volumes/:id/versions/:version", getVolumeVersion)
@@ -164,6 +165,40 @@ func listVolumes(c *gin.Context) {
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "volumes", "list-volumes", params)
 	vos, err := data.QueryVolumes(c.Request.Context(), params)
 	logging.Logger.Debug("Retrieved volumes", "vos", vos)
+	span.End()
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
+// Search volumes.
+//
+//	@Summary		Search volumes
+//	@Description	Finds volumes whose title contains q (case-insensitive).
+//	@Tags			volumes
+//	@Produce		json
+//	@Param			q		query		string			true	"Search query"
+//	@Success		200		{object}	interface{}
+//	@Failure		400		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/volumes/search [get]
+func searchVolumes(c *gin.Context) {
+	q := c.Query("q")
+	if q == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "q is required"})
+		return
+	}
+
+	_, span := otel.Tracer("volumes").Start(c.Request.Context(), "search-volumes", oteltrace.WithAttributes(attribute.String("q", q)))
+	vos, err := data.SearchVolumes(c.Request.Context(), q)
 	span.End()
 	if err != nil {
 		sentry.CaptureException(err)
