@@ -12,11 +12,13 @@ resources:
 
 labels:
     - pairs:
-          app: api
-          version: v1
-          platform: sweetrpg
-          package: catalog
-          component: api
+          app.kubernetes.io/name: catalog-api
+          app.kubernetes.io/version: v1
+          app.kubernetes.io/component: api
+          app.kubernetes.io/part-of: catalog
+          com.sweetrpg/env: local
+      includeSelectors: false
+      includeTemplates: true
 
 generatorOptions:
     disableNameSuffixHash: true
