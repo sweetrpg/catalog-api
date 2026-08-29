@@ -1,4 +1,11 @@
 
+## 0.27.0 - 2026-08-29
+
+### Added
+- Add GET /volumes/search endpoint
+
+
+
 ## 0.26.1 - 2026-08-28
 
 ### Changed
