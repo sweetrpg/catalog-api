@@ -63,15 +63,21 @@
 				
 				<option value="file3">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
-				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (21.8%)</option>
+				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (21.2%)</option>
 				
 				<option value="file5">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
 				<option value="file6">github.com/sweetrpg/catalog-api/editsession/store.go (57.1%)</option>
 				
-				<option value="file7">github.com/sweetrpg/catalog-api/ratelimit/ratelimit.go (91.7%)</option>
+				<option value="file7">github.com/sweetrpg/catalog-api/internal/events/envelope.go (87.5%)</option>
 				
-				<option value="file8">github.com/sweetrpg/catalog-api/readiness/readiness.go (100.0%)</option>
+				<option value="file8">github.com/sweetrpg/catalog-api/internal/events/handlers.go (0.0%)</option>
+				
+				<option value="file9">github.com/sweetrpg/catalog-api/internal/events/publisher.go (56.9%)</option>
+				
+				<option value="file10">github.com/sweetrpg/catalog-api/ratelimit/ratelimit.go (91.7%)</option>
+				
+				<option value="file11">github.com/sweetrpg/catalog-api/readiness/readiness.go (100.0%)</option>
 				
 				</select>
 			</div>
@@ -619,6 +625,7 @@ import (
         "github.com/sweetrpg/catalog-api/constants"
         "github.com/sweetrpg/catalog-api/docs"
         "github.com/sweetrpg/catalog-api/editsession"
+        "github.com/sweetrpg/catalog-api/internal/events"
         "github.com/sweetrpg/catalog-api/ratelimit"
         "github.com/sweetrpg/catalog-api/readiness"
         "github.com/sweetrpg/catalog-api/server"
@@ -727,13 +734,21 @@ func main() <span class="cov0" title="0">{
         authzClient := authz.NewClient(util.GetEnv(constants.AUTH_API_URL, ""))
         assetsClient := assets.NewClient(util.GetEnv(constants.ASSETS_WEB_URL, ""))
 
-        editSessionPool := setupEditSessionPool()
+        eventPublisher, err := events.NewPublisher(context.Background())
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("Failed to initialize event publisher", "error", err.Error())
+        }</span>
+        <span class="cov0" title="0">if eventPublisher != nil </span><span class="cov0" title="0">{
+                defer eventPublisher.Close()
+        }</span>
+
+        <span class="cov0" title="0">editSessionPool := setupEditSessionPool()
         if editSessionPool != nil </span><span class="cov0" title="0">{
                 defer func() </span><span class="cov0" title="0">{ _ = editSessionPool.Close() }</span>()
         }
         <span class="cov0" title="0">editSessions := editsession.NewStore(editSessionPool)
 
-        server.SetupHandlers(r, cache, ttls, authzClient, assetsClient, editSessions)
+        server.SetupHandlers(r, cache, ttls, authzClient, assetsClient, editSessions, eventPublisher)
 
         _ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))</span>
 }
@@ -1810,7 +1825,295 @@ func (s *Store) Delete(ctx context.Context, userID, recordType string) error <sp
 }
 </pre>
 		
-		<pre class="file" id="file7" style="display: none">// Package ratelimit implements a Redis-backed, per-client, per-route-tier request rate
+		<pre class="file" id="file7" style="display: none">package events
+
+import (
+        "encoding/json"
+        "time"
+)
+
+// Envelope is the JSON event payload published to NATS JetStream.
+// Fields: event_id (UUID string), occurred_at (RFC3339), source ("catalog-api"),
+// entity_type, entity_id, action, revision (entity's post-change version, 0 for delete),
+// data (object; for volume.updated include at least the current title; may be empty for delete).
+type Envelope struct {
+        EventID    string          `json:"event_id"`
+        OccurredAt string          `json:"occurred_at"`
+        Source     string          `json:"source"`
+        EntityType string          `json:"entity_type"`
+        EntityID   string          `json:"entity_id"`
+        Action     string          `json:"action"`
+        Revision   int             `json:"revision"`
+        Data       json.RawMessage `json:"data"`
+}
+
+// NewEnvelope creates a new event envelope with all required fields.
+// eventID should be a UUID string, occurredAt is RFC3339 formatted, revision is the
+// entity's post-change version (0 for delete), and data is arbitrary JSON (may be null).
+func NewEnvelope(eventID, entityType, entityID, action string, revision int, data interface{}) (*Envelope, error) <span class="cov10" title="5">{
+        var rawData json.RawMessage
+        if data != nil </span><span class="cov8" title="4">{
+                b, err := json.Marshal(data)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov8" title="4">rawData = b</span>
+        } else<span class="cov1" title="1"> {
+                rawData = json.RawMessage("null")
+        }</span>
+
+        <span class="cov10" title="5">return &amp;Envelope{
+                EventID:    eventID,
+                OccurredAt: time.Now().UTC().Format(time.RFC3339),
+                Source:     "catalog-api",
+                EntityType: entityType,
+                EntityID:   entityID,
+                Action:     action,
+                Revision:   revision,
+                Data:       rawData,
+        }, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package events
+
+import (
+        "github.com/gin-gonic/gin"
+        "github.com/sweetrpg/catalog-objects.go/vo"
+        "github.com/sweetrpg/common.go/logging"
+)
+
+// PublishLicenseEvent publishes a license entity event.
+func PublishLicenseEvent(pub *Publisher) func(c *gin.Context, id string, revision int, action string, data vo.LicenseVO) <span class="cov0" title="0">{
+        return func(c *gin.Context, id string, revision int, action string, data vo.LicenseVO) </span><span class="cov0" title="0">{
+                if pub == nil </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">ctx := c.Request.Context()
+                switch action </span>{
+                case "created":<span class="cov0" title="0">
+                        pub.PublishEntityCreated(ctx, "license", id, revision, data)</span>
+                case "updated":<span class="cov0" title="0">
+                        pub.PublishEntityUpdated(ctx, "license", id, revision, data)</span>
+                case "deleted":<span class="cov0" title="0">
+                        pub.PublishEntityDeleted(ctx, "license", id)</span>
+                default:<span class="cov0" title="0">
+                        logging.Logger.Warn("PublishLicenseEvent: unknown action", "entity_id", id, "action", action)</span>
+                }
+        }
+}
+
+// PublishPersonEvent publishes a person entity event.
+func PublishPersonEvent(pub *Publisher) func(c *gin.Context, id string, revision int, action string, data vo.PersonVO) <span class="cov0" title="0">{
+        return func(c *gin.Context, id string, revision int, action string, data vo.PersonVO) </span><span class="cov0" title="0">{
+                if pub == nil </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">ctx := c.Request.Context()
+                switch action </span>{
+                case "created":<span class="cov0" title="0">
+                        pub.PublishEntityCreated(ctx, "person", id, revision, data)</span>
+                case "updated":<span class="cov0" title="0">
+                        pub.PublishEntityUpdated(ctx, "person", id, revision, data)</span>
+                case "deleted":<span class="cov0" title="0">
+                        pub.PublishEntityDeleted(ctx, "person", id)</span>
+                default:<span class="cov0" title="0">
+                        logging.Logger.Warn("PublishPersonEvent: unknown action", "entity_id", id, "action", action)</span>
+                }
+        }
+}
+
+// PublishPublisherEvent publishes a publisher entity event.
+func PublishPublisherEvent(pub *Publisher) func(c *gin.Context, id string, revision int, action string, data vo.PublisherVO) <span class="cov0" title="0">{
+        return func(c *gin.Context, id string, revision int, action string, data vo.PublisherVO) </span><span class="cov0" title="0">{
+                if pub == nil </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">ctx := c.Request.Context()
+                switch action </span>{
+                case "created":<span class="cov0" title="0">
+                        pub.PublishEntityCreated(ctx, "publisher", id, revision, data)</span>
+                case "updated":<span class="cov0" title="0">
+                        pub.PublishEntityUpdated(ctx, "publisher", id, revision, data)</span>
+                case "deleted":<span class="cov0" title="0">
+                        pub.PublishEntityDeleted(ctx, "publisher", id)</span>
+                default:<span class="cov0" title="0">
+                        logging.Logger.Warn("PublishPublisherEvent: unknown action", "entity_id", id, "action", action)</span>
+                }
+        }
+}
+
+// PublishStudioEvent publishes a studio entity event.
+func PublishStudioEvent(pub *Publisher) func(c *gin.Context, id string, revision int, action string, data vo.StudioVO) <span class="cov0" title="0">{
+        return func(c *gin.Context, id string, revision int, action string, data vo.StudioVO) </span><span class="cov0" title="0">{
+                if pub == nil </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">ctx := c.Request.Context()
+                switch action </span>{
+                case "created":<span class="cov0" title="0">
+                        pub.PublishEntityCreated(ctx, "studio", id, revision, data)</span>
+                case "updated":<span class="cov0" title="0">
+                        pub.PublishEntityUpdated(ctx, "studio", id, revision, data)</span>
+                case "deleted":<span class="cov0" title="0">
+                        pub.PublishEntityDeleted(ctx, "studio", id)</span>
+                default:<span class="cov0" title="0">
+                        logging.Logger.Warn("PublishStudioEvent: unknown action", "entity_id", id, "action", action)</span>
+                }
+        }
+}
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package events
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "os"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/nats-io/nats.go"
+        "github.com/nats-io/nats.go/jetstream"
+        "github.com/sweetrpg/common.go/logging"
+        "github.com/sweetrpg/common.go/util"
+)
+
+// Publisher publishes entity-change events to NATS JetStream.
+type Publisher struct {
+        conn           *nats.Conn
+        js             jetstream.JetStream
+        publishTimeout time.Duration
+}
+
+// NewPublisher creates a new NATS JetStream publisher from environment configuration.
+// NATS_URL: NATS server URL (e.g., "nats://localhost:4222")
+// NATS_CREDS: path to credentials file (optional, empty/unset for no-auth)
+// PUBLISH_TIMEOUT_MS: milliseconds to wait for publish (default 3000)
+func NewPublisher(ctx context.Context) (*Publisher, error) <span class="cov1" title="1">{
+        natsURL := util.GetEnv("NATS_URL", "")
+        if natsURL == "" </span><span class="cov0" title="0">{
+                logging.Logger.Warn("NATS_URL not set; event publishing disabled")
+                return nil, nil
+        }</span>
+
+        <span class="cov1" title="1">opts := []nats.Option{}
+        if creds := os.Getenv("NATS_CREDS"); creds != "" </span><span class="cov0" title="0">{
+                opts = append(opts, nats.UserCredentials(creds))
+        }</span> else<span class="cov1" title="1"> if user := os.Getenv("NATS_USER"); user != "" </span><span class="cov0" title="0">{
+                opts = append(opts, nats.UserInfo(user, os.Getenv("NATS_PASSWORD")))
+        }</span>
+
+        <span class="cov1" title="1">conn, err := nats.Connect(natsURL, opts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("nats connect: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">js, err := jetstream.New(conn)
+        if err != nil </span><span class="cov0" title="0">{
+                conn.Close()
+                return nil, fmt.Errorf("jetstream: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">timeoutMs := util.GetEnvInt("PUBLISH_TIMEOUT_MS", 3000)
+
+        p := &amp;Publisher{
+                conn:           conn,
+                js:             js,
+                publishTimeout: time.Duration(timeoutMs) * time.Millisecond,
+        }
+
+        logging.Logger.Info("Publisher initialized", "nats_url", natsURL, "publish_timeout_ms", timeoutMs)
+        return p, nil</span>
+}
+
+// Close closes the NATS connection.
+func (p *Publisher) Close() <span class="cov10" title="2">{
+        if p != nil &amp;&amp; p.conn != nil </span><span class="cov1" title="1">{
+                p.conn.Close()
+        }</span>
+}
+
+// PublishEntityCreated publishes a created event for an entity.
+// data is the entity's current state.
+func (p *Publisher) PublishEntityCreated(ctx context.Context, entityType, entityID string, revision int, data interface{}) <span class="cov1" title="1">{
+        if p == nil || p.conn == nil </span><span class="cov1" title="1">{
+                return
+        }</span>
+
+        <span class="cov0" title="0">eventID := uuid.NewString()
+        envelope, err := NewEnvelope(eventID, entityType, entityID, "created", revision, data)
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("PublishEntityCreated: envelope creation failed", "entity_type", entityType, "entity_id", entityID, "error", err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">p.publishWithFallback(ctx, entityType, "created", eventID, envelope)</span>
+}
+
+// PublishEntityUpdated publishes an updated event for an entity.
+// data is the entity's current state (for volume.updated must include title).
+func (p *Publisher) PublishEntityUpdated(ctx context.Context, entityType, entityID string, revision int, data interface{}) <span class="cov10" title="2">{
+        if p == nil || p.conn == nil </span><span class="cov1" title="1">{
+                return
+        }</span>
+
+        <span class="cov1" title="1">eventID := uuid.NewString()
+        envelope, err := NewEnvelope(eventID, entityType, entityID, "updated", revision, data)
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("PublishEntityUpdated: envelope creation failed", "entity_type", entityType, "entity_id", entityID, "error", err)
+                return
+        }</span>
+
+        <span class="cov1" title="1">p.publishWithFallback(ctx, entityType, "updated", eventID, envelope)</span>
+}
+
+// PublishEntityDeleted publishes a deleted event for an entity.
+// revision is 0 for delete, data may be empty.
+func (p *Publisher) PublishEntityDeleted(ctx context.Context, entityType, entityID string) <span class="cov1" title="1">{
+        if p == nil || p.conn == nil </span><span class="cov1" title="1">{
+                return
+        }</span>
+
+        <span class="cov0" title="0">eventID := uuid.NewString()
+        envelope, err := NewEnvelope(eventID, entityType, entityID, "deleted", 0, nil)
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("PublishEntityDeleted: envelope creation failed", "entity_type", entityType, "entity_id", entityID, "error", err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">p.publishWithFallback(ctx, entityType, "deleted", eventID, envelope)</span>
+}
+
+// publishWithFallback publishes the envelope with a bounded timeout and fails open:
+// on error/timeout/unreachable broker, logs the dropped event and returns success.
+func (p *Publisher) publishWithFallback(ctx context.Context, entityType, action, eventID string, envelope *Envelope) <span class="cov1" title="1">{
+        subject := fmt.Sprintf("catalog.events.%s.%s", entityType, action)
+
+        body, err := json.Marshal(envelope)
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("publishWithFallback: marshal failed", "entity_type", entityType, "entity_id", envelope.EntityID, "action", action, "error", err)
+                return
+        }</span>
+
+        // Bounded publish timeout
+        <span class="cov1" title="1">ctx, cancel := context.WithTimeout(ctx, p.publishTimeout)
+        defer cancel()
+
+        // ponytail: fail-open on timeout/error. Alternative: in-process queue with goroutine retry,
+        // but unbounded growth + restarts lose queued events. No retry is correct here.
+        _, err = p.js.Publish(ctx, subject, body, jetstream.WithMsgID(eventID))
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("PublishEntityEvent: publish failed (event dropped)", "subject", subject, "entity_id", envelope.EntityID, "event_id", eventID, "error", err)
+                return
+        }</span>
+
+        <span class="cov1" title="1">logging.Logger.Info("PublishEntityEvent: published", "subject", subject, "entity_id", envelope.EntityID, "event_id", eventID)</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">// Package ratelimit implements a Redis-backed, per-client, per-route-tier request rate
 // limiter. Counters live in Redis (INCR + EXPIRE) rather than per-pod memory, so the limit is
 // consistent across catalog-api's replicas instead of being N times looser depending on how
 // many pods happen to be up.
@@ -1883,7 +2186,7 @@ func Ping(ctx context.Context, pool *redis.Pool) error <span class="cov3" title=
 }
 </pre>
 		
-		<pre class="file" id="file8" style="display: none">// Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
+		<pre class="file" id="file11" style="display: none">// Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
 // api-core.go's HealthHandler already covers) so /status/health can fail loud instead of the
 // service silently degrading to an uncached or unlimited mode.
 package readiness
