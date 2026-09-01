@@ -1,4 +1,20 @@
 
+## 0.28.0 - 2026-09-01
+
+### Added
+- Publish entity-change events to NATS JetStream
+- Wire NATS publisher env into the dev overlay (task 3.6)
+- NATS user/password auth
+
+
+### Fixed
+- Use conventional Akeyless path /sweetrpg/catalog-api/nats/creds
+- NATS_URL points at nats.nats-system (flux runs NATS there)
+- Drop NATS creds wiring - the flux-managed NATS has no auth
+- Akeyless path /sweetrpg/catalog/api/nats/auth (convention)
+
+
+
 ## 0.27.0 - 2026-08-29
 
 ### Added
