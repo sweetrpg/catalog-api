@@ -10,17 +10,6 @@ spec:
         spec:
             containers:
                 - name: app
-                  env:
-                      - name: NATS_CREDS
-                        value: /secrets/nats/creds
-                  volumeMounts:
-                      - name: nats-creds
-                        mountPath: /secrets/nats
-                        readOnly: true
-            volumes:
-                - name: nats-creds
-                  secret:
-                      secretName: api-nats
-                      items:
-                          - key: NATS_CREDS
-                            path: creds
+                  envFrom:
+                      - secretRef:
+                            name: api-nats

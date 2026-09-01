@@ -32,10 +32,11 @@ func NewPublisher(ctx context.Context) (*Publisher, error) {
 		return nil, nil
 	}
 
-	natsCreds := os.Getenv("NATS_CREDS")
 	opts := []nats.Option{}
-	if natsCreds != "" {
-		opts = append(opts, nats.UserCredentials(natsCreds))
+	if creds := os.Getenv("NATS_CREDS"); creds != "" {
+		opts = append(opts, nats.UserCredentials(creds))
+	} else if user := os.Getenv("NATS_USER"); user != "" {
+		opts = append(opts, nats.UserInfo(user, os.Getenv("NATS_PASSWORD")))
 	}
 
 	conn, err := nats.Connect(natsURL, opts...)
