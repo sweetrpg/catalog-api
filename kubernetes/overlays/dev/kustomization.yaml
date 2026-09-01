@@ -16,10 +16,6 @@ resources:
     - secrets/db.yaml
     - secrets/files.yaml
     - secrets/misc.yaml
-    - secrets/nats.yaml
-
-patches:
-    - path: deployment-nats.yaml
 
 labels:
     - pairs:
