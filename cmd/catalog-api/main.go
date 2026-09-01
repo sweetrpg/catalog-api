@@ -33,6 +33,7 @@ import (
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/docs"
 	"github.com/sweetrpg/catalog-api/editsession"
+	"github.com/sweetrpg/catalog-api/internal/events"
 	"github.com/sweetrpg/catalog-api/ratelimit"
 	"github.com/sweetrpg/catalog-api/readiness"
 	"github.com/sweetrpg/catalog-api/server"
@@ -141,13 +142,21 @@ func main() {
 	authzClient := authz.NewClient(util.GetEnv(constants.AUTH_API_URL, ""))
 	assetsClient := assets.NewClient(util.GetEnv(constants.ASSETS_WEB_URL, ""))
 
+	eventPublisher, err := events.NewPublisher(context.Background())
+	if err != nil {
+		logging.Logger.Error("Failed to initialize event publisher", "error", err.Error())
+	}
+	if eventPublisher != nil {
+		defer eventPublisher.Close()
+	}
+
 	editSessionPool := setupEditSessionPool()
 	if editSessionPool != nil {
 		defer func() { _ = editSessionPool.Close() }()
 	}
 	editSessions := editsession.NewStore(editSessionPool)
 
-	server.SetupHandlers(r, cache, ttls, authzClient, assetsClient, editSessions)
+	server.SetupHandlers(r, cache, ttls, authzClient, assetsClient, editSessions, eventPublisher)
 
 	_ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
 }

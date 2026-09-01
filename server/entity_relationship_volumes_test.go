@@ -13,6 +13,7 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
+	"github.com/sweetrpg/catalog-api/internal/events"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/catalog-objects.go/vo"
 )
@@ -30,7 +31,7 @@ func newPersonTestRouter(t *testing.T) *gin.Engine {
 	return newRelationshipTestRouter(t, setupPersonHandlers)
 }
 
-func newRelationshipTestRouter(t *testing.T, setup func(*gin.Engine, persistence.CacheStore, cachettl.Config, *authz.Client)) *gin.Engine {
+func newRelationshipTestRouter(t *testing.T, setup func(*gin.Engine, persistence.CacheStore, cachettl.Config, *authz.Client, *events.Publisher)) *gin.Engine {
 	t.Helper()
 
 	authAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +40,7 @@ func newRelationshipTestRouter(t *testing.T, setup func(*gin.Engine, persistence
 	t.Cleanup(authAPI.Close)
 
 	r := gin.New()
-	setup(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authz.NewClient(authAPI.URL))
+	setup(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authz.NewClient(authAPI.URL), nil)
 	return r
 }
 

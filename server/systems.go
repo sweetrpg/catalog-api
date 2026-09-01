@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/catalog-api/cachettl"
+	"github.com/sweetrpg/catalog-api/internal/events"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -19,7 +20,7 @@ import (
 // Systems are read-only here: game-systems-api is the system of record (see
 // catalog-data.go's GameSystemsClient), so there's no create/update/delete path to wire up -
 // only list/get, resolved live against game-systems-api rather than a local Mongo collection.
-func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config) {
+func setupSystemHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, eventPublisher *events.Publisher) {
 	logging.Logger.Info("Setting up system endpoint handlers...")
 	ttl := ttls.TTL("systems")
 	g.GET("/systems", cache.CachePage(store, ttl, listSystems))

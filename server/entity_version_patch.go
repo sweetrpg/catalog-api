@@ -61,6 +61,10 @@ type entityVersionAPIConfig[T any, V any] struct {
 	restore           func(c *gin.Context, id string) error
 	versionState      func(*V) string
 	versionNumber     func(*V) int
+	// onPublishEvent is called after successful persistence to publish events.
+	// action is one of: "created", "updated", "deleted".
+	// data is the entity's current state (or null for delete).
+	onPublishEvent func(c *gin.Context, id string, revision int, action string, data T)
 }
 
 // createEntityVersion creates a brand-new record, always live - unlike patchEntityVersion, there
@@ -94,6 +98,11 @@ func createEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store p
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
 			return
 		}
+
+		if cfg.onPublishEvent != nil && result != nil {
+			cfg.onPublishEvent(c, *id, 1, "created", *result)
+		}
+
 		c.Writer.Header().Set("Content-type", jsonapi.MediaType)
 		c.Writer.WriteHeader(http.StatusCreated)
 		if err := jsonapi.MarshalPayload(c.Writer, result); err != nil {
@@ -262,6 +271,11 @@ func patchEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store pe
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
 			return
 		}
+
+		if cfg.onPublishEvent != nil && result != nil {
+			cfg.onPublishEvent(c, id, cfg.versionNumber(version), "updated", *result)
+		}
+
 		c.Writer.Header().Set("Content-type", jsonapi.MediaType)
 		c.Writer.WriteHeader(http.StatusOK)
 		if err := jsonapi.MarshalPayload(c.Writer, result); err != nil {
@@ -292,6 +306,12 @@ func deleteEntity[T any, V any](cfg entityVersionAPIConfig[T, V], store persiste
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "delete_failed", Message: err.Error()})
 			return
 		}
+
+		if cfg.onPublishEvent != nil {
+			var zeroVal T
+			cfg.onPublishEvent(c, id, 0, "deleted", zeroVal)
+		}
+
 		invalidateCachedPaths(store, cfg.listPath, cfg.listPath+"/"+id)
 		c.Status(http.StatusNoContent)
 	}
@@ -399,6 +419,14 @@ func acceptEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store p
 			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "accept_failed", Message: err.Error()})
 			return
 		}
+
+		if cfg.onPublishEvent != nil {
+			result, err := cfg.get(c, id)
+			if err == nil && result != nil {
+				cfg.onPublishEvent(c, id, cfg.versionNumber(accepted), "updated", *result)
+			}
+		}
+
 		invalidateCachedPaths(store, cfg.listPath, cfg.listPath+"/"+id)
 		c.JSON(http.StatusOK, reviewVersionResponse{
 			Version: cfg.versionNumber(accepted), State: cfg.versionState(accepted), Conflicts: conflicts,

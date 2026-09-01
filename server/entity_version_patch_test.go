@@ -29,7 +29,7 @@ func newStudioTestRouter(t *testing.T, roles []string) *gin.Engine {
 	t.Cleanup(authAPI.Close)
 
 	r := gin.New()
-	setupStudioHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authz.NewClient(authAPI.URL))
+	setupStudioHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authz.NewClient(authAPI.URL), nil)
 	return r
 }
 
@@ -183,7 +183,7 @@ func newPersonBulkTestRouter(t *testing.T, roles []string) *gin.Engine {
 	t.Cleanup(authAPI.Close)
 
 	r := gin.New()
-	setupPersonHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authz.NewClient(authAPI.URL))
+	setupPersonHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authz.NewClient(authAPI.URL), nil)
 	return r
 }
 

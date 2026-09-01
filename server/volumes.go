@@ -15,6 +15,7 @@ import (
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/editsession"
+	"github.com/sweetrpg/catalog-api/internal/events"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
 	"go.opentelemetry.io/otel"
@@ -22,7 +23,11 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client, assetsClient *assets.Client, editSessions *editsession.Store) {
+// volumeEventPublisher is the NATS JetStream publisher for volume events, set by setupVolumeHandlers.
+var volumeEventPublisher *events.Publisher
+
+func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client, assetsClient *assets.Client, editSessions *editsession.Store, eventPublisher *events.Publisher) {
+	volumeEventPublisher = eventPublisher
 	logging.Logger.Info("Setting up volume endpoint handlers...")
 	ttl := ttls.TTL("volumes")
 	g.GET("/volumes", cache.CachePage(store, ttl, listVolumes))
@@ -94,6 +99,11 @@ func deleteVolume(c *gin.Context, store persistence.CacheStore) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	if volumeEventPublisher != nil {
+		volumeEventPublisher.PublishEntityDeleted(c.Request.Context(), "volume", id)
+	}
+
 	logging.Logger.Info("deleteVolume: exit", "id", id, "outcome", "ok")
 	invalidateCachedPaths(store, "/volumes", "/volumes/"+id)
 	c.Status(http.StatusNoContent)
