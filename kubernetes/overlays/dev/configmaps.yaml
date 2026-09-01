@@ -48,3 +48,7 @@ data:
   AUTH_API_URL: http://api-v1.sweetrpg-auth.svc.cluster.local:8000
   ASSETS_WEB_URL: http://web-v1.sweetrpg-assets.svc.cluster.local:8081
   GAME_SYSTEMS_API_URL: http://api-v1.sweetrpg-game-systems.svc.cluster.local:8000
+  # Entity-change event publishing (platform-event-processing). Publisher fails open: if NATS
+  # is unreachable the mutation still succeeds. NATS_CREDS is mounted from the api-nats secret.
+  NATS_URL: nats://nats.sweetrpg-messaging.svc.cluster.local:4222
+  PUBLISH_TIMEOUT_MS: "3000"
