@@ -270,6 +270,12 @@ func applyVolumePatch(
 		return false
 	}
 
+	if volumeEventPublisher != nil && result != nil {
+		volumeEventPublisher.PublishEntityUpdated(c.Request.Context(), "volume", result.ID, version.Version, map[string]interface{}{
+			"title": result.Title,
+		})
+	}
+
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
 	c.Writer.WriteHeader(http.StatusOK)
 	if err := jsonapi.MarshalPayload(c.Writer, result); err != nil {

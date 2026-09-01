@@ -13,6 +13,7 @@ import (
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
+	"github.com/sweetrpg/catalog-api/internal/events"
 	"github.com/sweetrpg/catalog-data.go/data"
 	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
@@ -79,8 +80,9 @@ var studioVersionConfig = entityVersionAPIConfig[vo.StudioVO, vo.StudioVersionVO
 	},
 }
 
-func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client) {
+func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client, eventPublisher *events.Publisher) {
 	logging.Logger.Info("Setting up studio endpoint handlers...")
+	studioVersionConfig.onPublishEvent = events.PublishStudioEvent(eventPublisher)
 	ttl := ttls.TTL("studios")
 	g.GET("/studios", cache.CachePage(store, ttl, listStudios))
 	g.GET("/studios/search", cache.CachePage(store, ttl, searchStudios))

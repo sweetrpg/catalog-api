@@ -13,6 +13,7 @@ import (
 	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
+	"github.com/sweetrpg/catalog-api/internal/events"
 	"github.com/sweetrpg/catalog-data.go/data"
 	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
@@ -83,8 +84,9 @@ var publisherVersionConfig = entityVersionAPIConfig[vo.PublisherVO, vo.Publisher
 	},
 }
 
-func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client) {
+func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client, eventPublisher *events.Publisher) {
 	logging.Logger.Info("Setting up publisher endpoint handlers...")
+	publisherVersionConfig.onPublishEvent = events.PublishPublisherEvent(eventPublisher)
 	ttl := ttls.TTL("publishers")
 	g.GET("/publishers", cache.CachePage(store, ttl, listPublishers))
 	g.GET("/publishers/search", cache.CachePage(store, ttl, searchPublishers))

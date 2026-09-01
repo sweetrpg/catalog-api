@@ -74,7 +74,7 @@ func newTestDepsWithAssets(t *testing.T, roles []string, assetsURL string) testD
 	authzClient := authz.NewClient(authAPI.URL)
 
 	r := gin.New()
-	setupVolumeHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authzClient, assets.NewClient(assetsURL), editsession.NewStore(redisPool))
+	setupVolumeHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authzClient, assets.NewClient(assetsURL), editsession.NewStore(redisPool), nil)
 	setupSubmissionCapHandlers(r, authzClient)
 	return testDeps{Router: r, AssetsURL: assetsURL, RedisPool: redisPool}
 }

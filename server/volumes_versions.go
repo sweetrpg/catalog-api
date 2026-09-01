@@ -199,6 +199,15 @@ func acceptVolumeVersion(c *gin.Context, assetsClient *assets.Client) {
 		return
 	}
 
+	if volumeEventPublisher != nil {
+		result, err := data.GetVolume(c.Request.Context(), id)
+		if err == nil && result != nil {
+			volumeEventPublisher.PublishEntityUpdated(c.Request.Context(), "volume", id, accepted.Version, map[string]interface{}{
+				"title": result.Title,
+			})
+		}
+	}
+
 	logging.Logger.Info("acceptVolumeVersion: exit", "id", id, "version", version, "outcome", "ok", "conflicts", len(conflicts))
 	c.JSON(http.StatusOK, reviewVersionResponse{
 		Version:   accepted.Version,
