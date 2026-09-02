@@ -63,21 +63,27 @@
 				
 				<option value="file3">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
 				
-				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (21.2%)</option>
+				<option value="file4">github.com/sweetrpg/catalog-api/cmd/backfill-volume-system-titles/main.go (0.0%)</option>
 				
-				<option value="file5">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
+				<option value="file5">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (20.6%)</option>
 				
-				<option value="file6">github.com/sweetrpg/catalog-api/editsession/store.go (57.1%)</option>
+				<option value="file6">github.com/sweetrpg/catalog-api/cmd/consumer/main.go (0.0%)</option>
 				
-				<option value="file7">github.com/sweetrpg/catalog-api/internal/events/envelope.go (87.5%)</option>
+				<option value="file7">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
 				
-				<option value="file8">github.com/sweetrpg/catalog-api/internal/events/handlers.go (0.0%)</option>
+				<option value="file8">github.com/sweetrpg/catalog-api/editsession/store.go (57.1%)</option>
 				
-				<option value="file9">github.com/sweetrpg/catalog-api/internal/events/publisher.go (56.9%)</option>
+				<option value="file9">github.com/sweetrpg/catalog-api/internal/events/consumer.go (16.7%)</option>
 				
-				<option value="file10">github.com/sweetrpg/catalog-api/ratelimit/ratelimit.go (91.7%)</option>
+				<option value="file10">github.com/sweetrpg/catalog-api/internal/events/envelope.go (87.5%)</option>
 				
-				<option value="file11">github.com/sweetrpg/catalog-api/readiness/readiness.go (100.0%)</option>
+				<option value="file11">github.com/sweetrpg/catalog-api/internal/events/handlers.go (0.0%)</option>
+				
+				<option value="file12">github.com/sweetrpg/catalog-api/internal/events/publisher.go (56.9%)</option>
+				
+				<option value="file13">github.com/sweetrpg/catalog-api/ratelimit/ratelimit.go (91.7%)</option>
+				
+				<option value="file14">github.com/sweetrpg/catalog-api/readiness/readiness.go (100.0%)</option>
 				
 				</select>
 			</div>
@@ -590,7 +596,94 @@ func (c Config) TTL(route string) time.Duration <span class="cov9" title="8">{
 }
 </pre>
 		
-		<pre class="file" id="file4" style="display: none">package main
+		<pre class="file" id="file4" style="display: none">// Command backfill-volume-system-titles populates the denormalized system_titles map on every
+// existing volume by resolving each referenced game system's current title from
+// game-systems-api once. Idempotent and safe to re-run (UpdateVolumeSystemTitleBySystem is a
+// no-op when the stored title is unchanged). Run once after deploying the sync consumer.
+package main
+
+import (
+        "context"
+        "sync"
+
+        "github.com/joho/godotenv"
+        apiutil "github.com/sweetrpg/api-core.go/util"
+        "github.com/sweetrpg/catalog-api/constants"
+        "github.com/sweetrpg/catalog-data.go/data"
+        "github.com/sweetrpg/catalog-data.go/gamesystems"
+        "github.com/sweetrpg/common.go/logging"
+        "github.com/sweetrpg/common.go/util"
+        "github.com/sweetrpg/mongodb.go/database"
+)
+
+const backfillConcurrency = 8
+
+func main() <span class="cov0" title="0">{
+        _ = godotenv.Load(".env")
+        logging.Init()
+
+        database.SetupDatabase()
+        defer database.TeardownDatabase()
+
+        data.GameSystemsClient = gamesystems.NewClient(util.GetEnv(constants.GAME_SYSTEMS_API_URL, ""))
+
+        ctx := context.Background()
+
+        volumes, err := data.QueryVolumes(ctx, apiutil.QueryParams{Limit: 100000})
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("backfill: list volumes failed", "error", err.Error())
+                return
+        }</span>
+
+        // One title lookup per distinct referenced system; UpdateVolumeSystemTitleBySystem then
+        // fans that title out to every volume that references it.
+        <span class="cov0" title="0">distinct := map[string]struct{}{}
+        for _, v := range volumes </span><span class="cov0" title="0">{
+                for _, s := range v.Systems </span><span class="cov0" title="0">{
+                        if s != nil &amp;&amp; s.ID != "" </span><span class="cov0" title="0">{
+                                distinct[s.ID] = struct{}{}
+                        }</span>
+                }
+        }
+        <span class="cov0" title="0">logging.Logger.Info("backfill: starting", "volumes", len(volumes), "distinct_systems", len(distinct))
+
+        var wg sync.WaitGroup
+        sem := make(chan struct{}, backfillConcurrency)
+        var mu sync.Mutex
+        var updated, skipped int
+
+        for id := range distinct </span><span class="cov0" title="0">{
+                wg.Add(1)
+                go func(systemID string) </span><span class="cov0" title="0">{
+                        defer wg.Done()
+                        sem &lt;- struct{}{}
+                        defer func() </span><span class="cov0" title="0">{ &lt;-sem }</span>()
+
+                        <span class="cov0" title="0">sys, err := data.GetSystem(ctx, systemID)
+                        if err != nil || sys == nil || sys.GameSystem == "" </span><span class="cov0" title="0">{
+                                logging.Logger.Warn("backfill: system unresolved, left unset", "system_id", systemID, "error", err)
+                                mu.Lock()
+                                skipped++
+                                mu.Unlock()
+                                return
+                        }</span>
+                        <span class="cov0" title="0">affected, err := data.UpdateVolumeSystemTitleBySystem(ctx, systemID, sys.GameSystem)
+                        if err != nil </span><span class="cov0" title="0">{
+                                logging.Logger.Error("backfill: update failed", "system_id", systemID, "error", err.Error())
+                                return
+                        }</span>
+                        <span class="cov0" title="0">mu.Lock()
+                        updated += len(affected)
+                        mu.Unlock()</span>
+                }(id)
+        }
+        <span class="cov0" title="0">wg.Wait()
+
+        logging.Logger.Info("backfill: done", "volume_versions_updated", updated, "systems_skipped", skipped)</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package main
 
 import (
         "context"
@@ -750,7 +843,19 @@ func main() <span class="cov0" title="0">{
 
         server.SetupHandlers(r, cache, ttls, authzClient, assetsClient, editSessions, eventPublisher)
 
-        _ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))</span>
+        // Background worker: keep denormalized volume system-titles current from
+        // gamesystems.events.system.updated. Disabled (nil) when NATS_URL is unset.
+        if titleSync, err := events.NewConsumer(context.Background()); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("Failed to initialize system-title sync consumer", "error", err.Error())
+        }</span> else<span class="cov0" title="0"> if titleSync != nil </span><span class="cov0" title="0">{
+                if err := titleSync.Start(context.Background(), server.SyncSystemTitle(cache)); err != nil </span><span class="cov0" title="0">{
+                        logging.Logger.Error("Failed to start system-title sync consumer", "error", err.Error())
+                }</span> else<span class="cov0" title="0"> {
+                        defer titleSync.Stop()
+                }</span>
+        }
+
+        <span class="cov0" title="0">_ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))</span>
 }
 
 func setupSwagger(r *gin.Engine) <span class="cov0" title="0">{
@@ -1140,7 +1245,58 @@ func globalRateLimiter() gin.HandlerFunc <span class="cov0" title="0">{
 }
 </pre>
 		
-		<pre class="file" id="file5" style="display: none">// Package docs Code generated by swaggo/swag. DO NOT EDIT
+		<pre class="file" id="file6" style="display: none">// Command consumer runs the system-title sync JetStream consumer as a standalone process, for
+// local development without the full catalog-api server. In production the same consumer runs
+// as a background worker of cmd/catalog-api.
+package main
+
+import (
+        "context"
+        "os"
+        "os/signal"
+        "syscall"
+
+        "github.com/joho/godotenv"
+        "github.com/sweetrpg/catalog-api/internal/events"
+        "github.com/sweetrpg/catalog-api/server"
+        "github.com/sweetrpg/common.go/logging"
+        "github.com/sweetrpg/mongodb.go/database"
+)
+
+func main() <span class="cov0" title="0">{
+        _ = godotenv.Load(".env")
+        logging.Init()
+
+        database.SetupDatabase()
+        defer database.TeardownDatabase()
+
+        consumer, err := events.NewConsumer(context.Background())
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("consumer: init failed", "error", err.Error())
+                os.Exit(1)
+        }</span>
+        <span class="cov0" title="0">if consumer == nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("consumer: NATS_URL not set")
+                os.Exit(1)
+        }</span>
+        <span class="cov0" title="0">defer consumer.Stop()
+
+        // No cache store here - a standalone consumer only updates stored titles; the catalog-api
+        // server process owns cache invalidation.
+        if err := consumer.Start(context.Background(), server.SyncSystemTitle(nil)); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("consumer: start failed", "error", err.Error())
+                os.Exit(1)
+        }</span>
+        <span class="cov0" title="0">logging.Logger.Info("consumer: running, press Ctrl-C to stop")
+
+        sig := make(chan os.Signal, 1)
+        signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+        &lt;-sig
+        logging.Logger.Info("consumer: shutting down")</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">// Package docs Code generated by swaggo/swag. DO NOT EDIT
 package docs
 
 import "github.com/swaggo/swag"
@@ -1715,7 +1871,7 @@ func init() <span class="cov0" title="0">{
 }</span>
 </pre>
 		
-		<pre class="file" id="file6" style="display: none">// Package editsession reads/deletes the shared, session-backed volume edit state that
+		<pre class="file" id="file8" style="display: none">// Package editsession reads/deletes the shared, session-backed volume edit state that
 // catalog-web writes to Redis (REDIS_DB=2 on catalog-api's own Redis instance - see
 // docs/frontend-conventions.md's edit-session schema in sweetrpg/platform). catalog-api reads
 // a session at finalize time and deletes it once finalize completes; the one exception to
@@ -1825,7 +1981,149 @@ func (s *Store) Delete(ctx context.Context, userID, recordType string) error <sp
 }
 </pre>
 		
-		<pre class="file" id="file7" style="display: none">package events
+		<pre class="file" id="file9" style="display: none">package events
+
+import (
+        "context"
+        "encoding/json"
+        "errors"
+        "fmt"
+        "os"
+
+        "github.com/nats-io/nats.go"
+        "github.com/nats-io/nats.go/jetstream"
+        "github.com/sweetrpg/common.go/logging"
+        "github.com/sweetrpg/common.go/util"
+)
+
+const (
+        systemEventsStream     = "GAMESYSTEMS_EVENTS"
+        systemTitleSyncDurable = "catalog-api-system-title-sync"
+        systemUpdatedSubject   = "gamesystems.events.system.updated"
+)
+
+// SystemUpdateHandler applies one gamesystems.events.system.updated event. Returning an error
+// Naks the message so JetStream redelivers it; the handler MUST be idempotent.
+type SystemUpdateHandler func(ctx context.Context, systemID, title string) error
+
+// Consumer binds catalog-api's durable pull consumer on the game-systems events stream and
+// dispatches system.updated events to a handler.
+type Consumer struct {
+        conn *nats.Conn
+        js   jetstream.JetStream
+        cc   jetstream.ConsumeContext
+}
+
+// NewConsumer builds a Consumer from the environment (same NATS_URL / NATS_CREDS /
+// NATS_USER+NATS_PASSWORD scheme as the publisher). Returns (nil, nil) when NATS_URL is unset so
+// the caller treats sync as disabled rather than a startup error.
+func NewConsumer(ctx context.Context) (*Consumer, error) <span class="cov0" title="0">{
+        natsURL := util.GetEnv("NATS_URL", "")
+        if natsURL == "" </span><span class="cov0" title="0">{
+                logging.Logger.Warn("NATS_URL not set; system-title sync consumer disabled")
+                return nil, nil
+        }</span>
+
+        <span class="cov0" title="0">opts := []nats.Option{}
+        if creds := os.Getenv("NATS_CREDS"); creds != "" </span><span class="cov0" title="0">{
+                opts = append(opts, nats.UserCredentials(creds))
+        }</span> else<span class="cov0" title="0"> if user := os.Getenv("NATS_USER"); user != "" </span><span class="cov0" title="0">{
+                opts = append(opts, nats.UserInfo(user, os.Getenv("NATS_PASSWORD")))
+        }</span>
+
+        <span class="cov0" title="0">conn, err := nats.Connect(natsURL, opts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("nats connect: %w", err)
+        }</span>
+        <span class="cov0" title="0">js, err := jetstream.New(conn)
+        if err != nil </span><span class="cov0" title="0">{
+                conn.Close()
+                return nil, fmt.Errorf("jetstream: %w", err)
+        }</span>
+        <span class="cov0" title="0">return &amp;Consumer{conn: conn, js: js}, nil</span>
+}
+
+// Start binds the durable (declared as a NACK CRD in sweetrpg/infrastructure; created here as a
+// fallback for local runs without NACK) and begins delivering events to handle in the
+// background. It returns once the subscription is established.
+func (c *Consumer) Start(ctx context.Context, handle SystemUpdateHandler) error <span class="cov0" title="0">{
+        if c == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">cons, err := c.js.Consumer(ctx, systemEventsStream, systemTitleSyncDurable)
+        if errors.Is(err, jetstream.ErrConsumerNotFound) </span><span class="cov0" title="0">{
+                cons, err = c.js.CreateOrUpdateConsumer(ctx, systemEventsStream, jetstream.ConsumerConfig{
+                        Durable:       systemTitleSyncDurable,
+                        FilterSubject: systemUpdatedSubject,
+                        AckPolicy:     jetstream.AckExplicitPolicy,
+                })
+        }</span>
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("bind consumer %s/%s: %w", systemEventsStream, systemTitleSyncDurable, err)
+        }</span>
+
+        <span class="cov0" title="0">cc, err := cons.Consume(func(msg jetstream.Msg) </span><span class="cov0" title="0">{
+                if herr := dispatchSystemUpdate(ctx, msg, handle); herr != nil </span><span class="cov0" title="0">{
+                        logging.Logger.Error("system-title sync: handler failed, event will redeliver",
+                                "subject", msg.Subject(), "error", herr)
+                        _ = msg.Nak()
+                        return
+                }</span>
+                <span class="cov0" title="0">_ = msg.Ack()</span>
+        })
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("consume: %w", err)
+        }</span>
+        <span class="cov0" title="0">c.cc = cc
+        logging.Logger.Info("system-title sync consumer bound", "stream", systemEventsStream, "durable", systemTitleSyncDurable)
+        return nil</span>
+}
+
+// dispatchSystemUpdate decodes the message and invokes handle. A malformed envelope is dropped
+// (returns nil -&gt; Ack) rather than poisoning the durable; a handler error propagates (-&gt; Nak).
+func dispatchSystemUpdate(ctx context.Context, msg jetstream.Msg, handle SystemUpdateHandler) error <span class="cov0" title="0">{
+        systemID, title, ok := decodeSystemUpdate(msg.Data())
+        if !ok </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">return handle(ctx, systemID, title)</span>
+}
+
+// decodeSystemUpdate parses a raw event body into (systemID, title). ok is false for an
+// undecodable envelope or one that is not a system.updated with a non-empty entity_id - the
+// caller acks and moves on in that case.
+func decodeSystemUpdate(body []byte) (systemID, title string, ok bool) <span class="cov10" title="5">{
+        var env Envelope
+        if err := json.Unmarshal(body, &amp;env); err != nil </span><span class="cov1" title="1">{
+                logging.Logger.Error("system-title sync: undecodable envelope, dropping", "error", err)
+                return "", "", false
+        }</span>
+        <span class="cov8" title="4">if env.Action != "updated" || env.EntityID == "" </span><span class="cov7" title="3">{
+                return "", "", false
+        }</span>
+        <span class="cov1" title="1">var payload struct {
+                Title string `json:"title"`
+        }
+        _ = json.Unmarshal(env.Data, &amp;payload)
+        return env.EntityID, payload.Title, true</span>
+}
+
+// Stop halts delivery and closes the connection.
+func (c *Consumer) Stop() <span class="cov0" title="0">{
+        if c == nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">if c.cc != nil </span><span class="cov0" title="0">{
+                c.cc.Stop()
+        }</span>
+        <span class="cov0" title="0">if c.conn != nil </span><span class="cov0" title="0">{
+                c.conn.Close()
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package events
 
 import (
         "encoding/json"
@@ -1875,7 +2173,7 @@ func NewEnvelope(eventID, entityType, entityID, action string, revision int, dat
 }
 </pre>
 		
-		<pre class="file" id="file8" style="display: none">package events
+		<pre class="file" id="file11" style="display: none">package events
 
 import (
         "github.com/gin-gonic/gin"
@@ -1964,7 +2262,7 @@ func PublishStudioEvent(pub *Publisher) func(c *gin.Context, id string, revision
 }
 </pre>
 		
-		<pre class="file" id="file9" style="display: none">package events
+		<pre class="file" id="file12" style="display: none">package events
 
 import (
         "context"
@@ -2113,7 +2411,7 @@ func (p *Publisher) publishWithFallback(ctx context.Context, entityType, action,
 }
 </pre>
 		
-		<pre class="file" id="file10" style="display: none">// Package ratelimit implements a Redis-backed, per-client, per-route-tier request rate
+		<pre class="file" id="file13" style="display: none">// Package ratelimit implements a Redis-backed, per-client, per-route-tier request rate
 // limiter. Counters live in Redis (INCR + EXPIRE) rather than per-pod memory, so the limit is
 // consistent across catalog-api's replicas instead of being N times looser depending on how
 // many pods happen to be up.
@@ -2186,7 +2484,7 @@ func Ping(ctx context.Context, pool *redis.Pool) error <span class="cov3" title=
 }
 </pre>
 		
-		<pre class="file" id="file11" style="display: none">// Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
+		<pre class="file" id="file14" style="display: none">// Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
 // api-core.go's HealthHandler already covers) so /status/health can fail loud instead of the
 // service silently degrading to an uncached or unlimited mode.
 package readiness
