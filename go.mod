@@ -22,8 +22,8 @@ require (
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
 	github.com/sweetrpg/api-core.go v0.1.1
-	github.com/sweetrpg/catalog-data.go v0.15.0
-	github.com/sweetrpg/catalog-objects.go v0.4.3
+	github.com/sweetrpg/catalog-data.go v0.16.0
+	github.com/sweetrpg/catalog-objects.go v0.5.0
 	github.com/sweetrpg/common.go v0.0.16
 	github.com/sweetrpg/model-core.go v0.0.173
 	github.com/sweetrpg/mongodb.go v0.0.193
