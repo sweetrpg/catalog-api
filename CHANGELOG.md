@@ -1,4 +1,11 @@
 
+## 0.28.1 - 2026-09-02
+
+### Fixed
+- Append api-nats to envFrom via JSON patch, not strategic merge
+
+
+
 ## 0.28.0 - 2026-09-01
 
 ### Added
