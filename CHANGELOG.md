@@ -1,4 +1,14 @@
 
+## 0.29.0 - 2026-09-02
+
+### Added
+- Capture and sync denormalized system titles
+
+
+
+## 0.28.1 - 2026-09-02
+
+
 ## 0.28.1 - 2026-09-02
 
 ### Fixed
