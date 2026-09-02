@@ -1,15 +1,7 @@
----
-apiVersion: apps/v1
-kind: Deployment
-
-metadata:
-    name: api-v1
-
-spec:
-    template:
-        spec:
-            containers:
-                - name: app
-                  envFrom:
-                      - secretRef:
-                            name: api-nats
+# JSON 6902 patch: append api-nats to envFrom without replacing the list
+# (a strategic-merge patch on envFrom has replace semantics - no merge key).
+- op: add
+  path: /spec/template/spec/containers/0/envFrom/-
+  value:
+    secretRef:
+      name: api-nats
