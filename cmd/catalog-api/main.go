@@ -158,6 +158,18 @@ func main() {
 
 	server.SetupHandlers(r, cache, ttls, authzClient, assetsClient, editSessions, eventPublisher)
 
+	// Background worker: keep denormalized volume system-titles current from
+	// gamesystems.events.system.updated. Disabled (nil) when NATS_URL is unset.
+	if titleSync, err := events.NewConsumer(context.Background()); err != nil {
+		logging.Logger.Error("Failed to initialize system-title sync consumer", "error", err.Error())
+	} else if titleSync != nil {
+		if err := titleSync.Start(context.Background(), server.SyncSystemTitle(cache)); err != nil {
+			logging.Logger.Error("Failed to start system-title sync consumer", "error", err.Error())
+		} else {
+			defer titleSync.Stop()
+		}
+	}
+
 	_ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
 }
 

@@ -42,14 +42,18 @@ const maxSampleAssetIds = 5
 // editor/admin-only by policy (see hasEditorOnlyFields) - a submitter request touching any of
 // them is rejected with a clear error rather than silently dropping the field.
 type patchVolumeRequest struct {
-	Title          *string            `json:"title"`
-	Description    *string            `json:"description"`
-	Notes          *string            `json:"notes"`
-	Tags           *[]string          `json:"tags"`
-	Properties     *[]propertyRequest `json:"properties"`
-	PublisherIDs   *[]string          `json:"publisherIds"`
-	StudioIDs      *[]string          `json:"studioIds"`
-	SystemIDs      *[]string          `json:"systemIds"`
+	Title        *string            `json:"title"`
+	Description  *string            `json:"description"`
+	Notes        *string            `json:"notes"`
+	Tags         *[]string          `json:"tags"`
+	Properties   *[]propertyRequest `json:"properties"`
+	PublisherIDs *[]string          `json:"publisherIds"`
+	StudioIDs    *[]string          `json:"studioIds"`
+	SystemIDs    *[]string          `json:"systemIds"`
+	// SystemTitles is an advisory id->title hint from the caller (e.g. the edit dialog's
+	// already-loaded system names); catalog-api overwrites it from an authoritative
+	// game-systems-api lookup when reachable, and falls back to it only when that lookup fails.
+	SystemTitles   *map[string]string `json:"systemTitles"`
 	Credits        *[]creditRequest   `json:"credits"`
 	Format         *string            `json:"format"`
 	CoverAssetId   *string            `json:"coverAssetId"`
@@ -223,6 +227,17 @@ func applyVolumePatch(
 		updated.SampleAssetIds = *req.SampleAssetIds
 	}
 	updated.UpdatedBy = authz.Subject(c)
+
+	// Capture a denormalized title for every referenced system so volume reads never resolve
+	// the reference against game-systems-api. Uses the caller's systemTitles hint only when the
+	// authoritative lookup is unreachable; an unresolvable system stores an empty title.
+	var reqHint map[string]string
+	if req.SystemTitles != nil {
+		reqHint = *req.SystemTitles
+	}
+	updated.SystemTitles = resolveSystemTitles(
+		c.Request.Context(), systemIDsOf(updated.Systems), mergeTitleHints(existing.SystemTitles, reqHint),
+	)
 
 	if req.Credits != nil {
 		if err := applyCreditsDiff(c, existing.ID, *req.Credits, updated.UpdatedBy); err != nil {
