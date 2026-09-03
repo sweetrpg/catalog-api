@@ -416,7 +416,7 @@ func setCurrentVolumeVersion(c *gin.Context) {
 	}
 	logging.Logger.Debug("setCurrentVolumeVersion: enter", "id", id, "version", version)
 
-	result, err := data.SetCurrentVolumeVersion(c.Request.Context(), id, version)
+	result, err := data.SetCurrentVolumeVersion(c.Request.Context(), id, version, authz.Subject(c))
 	if err != nil {
 		logging.Logger.Error("setCurrentVolumeVersion: rollback failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)

@@ -52,13 +52,13 @@ var personVersionConfig = entityVersionAPIConfig[vo.PersonVO, vo.PersonVersionVO
 		return data.RetractPersonVersion(c.Request.Context(), id, version, submitterID)
 	},
 	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.PersonVersionVO, error) {
-		return data.SetCurrentPersonVersion(c.Request.Context(), id, version)
+		return data.SetCurrentPersonVersion(c.Request.Context(), id, version, authz.Subject(c))
 	},
 	softDelete: func(c *gin.Context, id string, deletedBy string) error {
 		return data.SoftDeletePerson(c.Request.Context(), id, deletedBy)
 	},
 	restore: func(c *gin.Context, id string) error {
-		return data.RestorePerson(c.Request.Context(), id)
+		return data.RestorePerson(c.Request.Context(), id, authz.Subject(c))
 	},
 	versionState:  func(v *vo.PersonVersionVO) string { return string(v.State) },
 	versionNumber: func(v *vo.PersonVersionVO) int { return v.Version },
