@@ -137,7 +137,7 @@ func restoreVolume(c *gin.Context, store persistence.CacheStore) {
 		return
 	}
 
-	if err := data.RestoreVolume(c.Request.Context(), id); err != nil {
+	if err := data.RestoreVolume(c.Request.Context(), id, authz.Subject(c)); err != nil {
 		logging.Logger.Error("restoreVolume: restore failed", "id", id, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
