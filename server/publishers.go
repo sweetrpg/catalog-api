@@ -52,13 +52,13 @@ var publisherVersionConfig = entityVersionAPIConfig[vo.PublisherVO, vo.Publisher
 		return data.RetractPublisherVersion(c.Request.Context(), id, version, submitterID)
 	},
 	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.PublisherVersionVO, error) {
-		return data.SetCurrentPublisherVersion(c.Request.Context(), id, version)
+		return data.SetCurrentPublisherVersion(c.Request.Context(), id, version, authz.Subject(c))
 	},
 	softDelete: func(c *gin.Context, id string, deletedBy string) error {
 		return data.SoftDeletePublisher(c.Request.Context(), id, deletedBy)
 	},
 	restore: func(c *gin.Context, id string) error {
-		return data.RestorePublisher(c.Request.Context(), id)
+		return data.RestorePublisher(c.Request.Context(), id, authz.Subject(c))
 	},
 	versionState:  func(v *vo.PublisherVersionVO) string { return string(v.State) },
 	versionNumber: func(v *vo.PublisherVersionVO) int { return v.Version },

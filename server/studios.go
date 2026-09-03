@@ -52,13 +52,13 @@ var studioVersionConfig = entityVersionAPIConfig[vo.StudioVO, vo.StudioVersionVO
 		return data.RetractStudioVersion(c.Request.Context(), id, version, submitterID)
 	},
 	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.StudioVersionVO, error) {
-		return data.SetCurrentStudioVersion(c.Request.Context(), id, version)
+		return data.SetCurrentStudioVersion(c.Request.Context(), id, version, authz.Subject(c))
 	},
 	softDelete: func(c *gin.Context, id string, deletedBy string) error {
 		return data.SoftDeleteStudio(c.Request.Context(), id, deletedBy)
 	},
 	restore: func(c *gin.Context, id string) error {
-		return data.RestoreStudio(c.Request.Context(), id)
+		return data.RestoreStudio(c.Request.Context(), id, authz.Subject(c))
 	},
 	versionState:  func(v *vo.StudioVersionVO) string { return string(v.State) },
 	versionNumber: func(v *vo.StudioVersionVO) int { return v.Version },
