@@ -1,4 +1,11 @@
 
+## 0.30.0 - 2026-09-03
+
+### Added
+- Thread the acting user into restore + set-current-version calls
+
+
+
 ## 0.29.0 - 2026-09-02
 
 ### Added
