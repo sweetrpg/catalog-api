@@ -1,4 +1,11 @@
 
+## 0.31.0 - 2026-09-04
+
+### Added
+- Add POST /volumes create endpoint
+
+
+
 ## 0.30.0 - 2026-09-03
 
 ### Added
