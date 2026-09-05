@@ -1,4 +1,11 @@
 
+## 0.31.1 - 2026-09-05
+
+### Fixed
+- Bump ExternalSecret refreshInterval to 12h to cut Akeyless auth pressure
+
+
+
 ## 0.31.0 - 2026-09-04
 
 ### Added
