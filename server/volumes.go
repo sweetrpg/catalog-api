@@ -32,6 +32,7 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	ttl := ttls.TTL("volumes")
 	g.GET("/volumes", cache.CachePage(store, ttl, listVolumes))
 	g.GET("/volumes/search", cache.CachePage(store, ttl, searchVolumes))
+	g.GET("/volumes/tags", cache.CachePage(store, ttl, getVolumeTags))
 	g.GET("/volumes/:id", cache.CachePage(store, ttl, getVolume))
 	g.GET("/volumes/:id/versions", listVolumeVersions)
 	g.GET("/volumes/:id/versions/:version", getVolumeVersion)
