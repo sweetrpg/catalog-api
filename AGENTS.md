@@ -19,8 +19,9 @@ contributions, persons, publishers, reviews, studios, systems). It's a thin Gin-
   integration tests (matching `catalog-data.go`'s pattern) or refactoring for dependency
   injection - neither has been done yet. `cmd/catalog-api`, `cachettl`, and `ratelimit` do have
   unit test coverage (the latter two use `alicebob/miniredis` rather than a real Redis).
-- This repo currently cannot build against the *published* versions of `catalog-data.go`
-  (a bug there is fixed on `develop` but unreleased) - see CHANGELOG.md.
+- The volumes tag cloud endpoint (`GET /volumes/tags`) depends on `catalog-data.go >= v0.18.0`,
+  which introduced `GetVolumeTags`. Older published versions of the module lack that function
+  and fail at build time.
 - The `DISTRIBUTED_RATE_LIMIT_ENABLED` per-client rate limiter hasn't been validated against a
   real dev workload yet - the legacy process-wide limiter is still the default. See
   `openspec/changes/catalog-api-caching-rate-limiting` (in the `platform` umbrella repo) for the
