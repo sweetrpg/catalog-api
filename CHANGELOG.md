@@ -1,4 +1,11 @@
 
+## 0.32.0 - 2026-09-06
+
+### Added
+- Add tag cloud endpoint /volumes/tags
+
+
+
 ## 0.31.1 - 2026-09-05
 
 ### Fixed
