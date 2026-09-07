@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	apiv "github.com/sweetrpg/api-core.go/vo"
-	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-data.go/data"
 	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
@@ -226,7 +226,7 @@ func applyVolumePatch(
 		}
 		updated.SampleAssetIds = *req.SampleAssetIds
 	}
-	updated.UpdatedBy = authz.Subject(c)
+	updated.UpdatedBy = authz.Viewer(c)
 
 	// Capture a denormalized title for every referenced system so volume reads never resolve
 	// the reference against game-systems-api. Uses the caller's systemTitles hint only when the

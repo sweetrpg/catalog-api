@@ -4,7 +4,7 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/sweetrpg/catalog-api/assets"
-	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-api/internal/events"

@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	apiv "github.com/sweetrpg/api-core.go/vo"
 	"github.com/sweetrpg/catalog-api/assets"
-	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
@@ -191,7 +191,7 @@ func acceptVolumeVersion(c *gin.Context, assetsClient *assets.Client) {
 		}
 	}
 
-	accepted, conflicts, err := data.AcceptVolumeVersion(c.Request.Context(), id, version, selectedFields, authz.Subject(c), nil, liveCoverAssetId, liveSampleAssetIds)
+	accepted, conflicts, err := data.AcceptVolumeVersion(c.Request.Context(), id, version, selectedFields, authz.Viewer(c), nil, liveCoverAssetId, liveSampleAssetIds)
 	if err != nil {
 		logging.Logger.Error("acceptVolumeVersion: accept failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
@@ -250,7 +250,7 @@ func rejectVolumeVersion(c *gin.Context) {
 		note = &req.Note
 	}
 
-	if err := data.RejectVolumeVersion(c.Request.Context(), id, version, authz.Subject(c), note); err != nil {
+	if err := data.RejectVolumeVersion(c.Request.Context(), id, version, authz.Viewer(c), note); err != nil {
 		logging.Logger.Error("rejectVolumeVersion: reject failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "reject_failed", Message: err.Error()})
@@ -282,7 +282,7 @@ func retractVolumeVersion(c *gin.Context) {
 	}
 	logging.Logger.Debug("retractVolumeVersion: enter", "id", id, "version", version)
 
-	retracted, err := data.RetractVolumeVersion(c.Request.Context(), id, version, authz.Subject(c))
+	retracted, err := data.RetractVolumeVersion(c.Request.Context(), id, version, authz.Viewer(c))
 	if err != nil {
 		logging.Logger.Error("retractVolumeVersion: retract failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
@@ -320,7 +320,7 @@ func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
 	if !ok {
 		return
 	}
-	userID := authz.Subject(c)
+	userID := authz.Viewer(c)
 	logging.Logger.Debug("pullBackVolumeVersion: enter", "id", id, "version", version, "userId", userID)
 
 	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version)
@@ -416,7 +416,7 @@ func setCurrentVolumeVersion(c *gin.Context) {
 	}
 	logging.Logger.Debug("setCurrentVolumeVersion: enter", "id", id, "version", version)
 
-	result, err := data.SetCurrentVolumeVersion(c.Request.Context(), id, version, authz.Subject(c))
+	result, err := data.SetCurrentVolumeVersion(c.Request.Context(), id, version, authz.Viewer(c))
 	if err != nil {
 		logging.Logger.Error("setCurrentVolumeVersion: rollback failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)

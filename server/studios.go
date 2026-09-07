@@ -10,7 +10,7 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
-	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/internal/events"
@@ -52,13 +52,13 @@ var studioVersionConfig = entityVersionAPIConfig[vo.StudioVO, vo.StudioVersionVO
 		return data.RetractStudioVersion(c.Request.Context(), id, version, submitterID)
 	},
 	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.StudioVersionVO, error) {
-		return data.SetCurrentStudioVersion(c.Request.Context(), id, version, authz.Subject(c))
+		return data.SetCurrentStudioVersion(c.Request.Context(), id, version, authz.Viewer(c))
 	},
 	softDelete: func(c *gin.Context, id string, deletedBy string) error {
 		return data.SoftDeleteStudio(c.Request.Context(), id, deletedBy)
 	},
 	restore: func(c *gin.Context, id string) error {
-		return data.RestoreStudio(c.Request.Context(), id, authz.Subject(c))
+		return data.RestoreStudio(c.Request.Context(), id, authz.Viewer(c))
 	},
 	versionState:  func(v *vo.StudioVersionVO) string { return string(v.State) },
 	versionNumber: func(v *vo.StudioVersionVO) int { return v.Version },

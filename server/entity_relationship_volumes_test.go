@@ -11,7 +11,7 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
-	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/internal/events"
 	"github.com/sweetrpg/catalog-data.go/data"
@@ -35,12 +35,16 @@ func newRelationshipTestRouter(t *testing.T, setup func(*gin.Engine, persistence
 	t.Helper()
 
 	authAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/profile" {
+			_ = json.NewEncoder(w).Encode(map[string]string{"user_id": "auth0|test-reviewer"})
+			return
+		}
 		_ = json.NewEncoder(w).Encode(authz.CheckResponse{Allowed: true, Roles: []string{authz.RoleEditor}, Sub: "auth0|test-reviewer"})
 	}))
 	t.Cleanup(authAPI.Close)
 
 	r := gin.New()
-	setup(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authz.NewClient(authAPI.URL), nil)
+	setup(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authz.NewClient(authAPI.URL, authAPI.URL), nil)
 	return r
 }
 
