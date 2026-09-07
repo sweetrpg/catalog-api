@@ -27,8 +27,8 @@ import (
 	"github.com/sweetrpg/api-core.go/featureflags"
 	"github.com/sweetrpg/api-core.go/tracing"
 	"github.com/sweetrpg/api-core.go/vo"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-api/assets"
-	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/docs"
@@ -139,7 +139,7 @@ func main() {
 	// Add rate limiter
 	r.Use(RateLimiter(redisPool))
 
-	authzClient := authz.NewClient(util.GetEnv(constants.AUTH_API_URL, ""))
+	authzClient := authz.NewClient(util.GetEnv(constants.AUTH_API_URL, ""), util.GetEnv(constants.USERS_API_URL, ""))
 	assetsClient := assets.NewClient(util.GetEnv(constants.ASSETS_WEB_URL, ""))
 
 	eventPublisher, err := events.NewPublisher(context.Background())

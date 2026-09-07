@@ -10,7 +10,7 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
-	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/internal/events"
@@ -54,13 +54,13 @@ var licenseVersionConfig = entityVersionAPIConfig[vo.LicenseVO, vo.LicenseVersio
 		return data.RetractLicenseVersion(c.Request.Context(), id, version, submitterID)
 	},
 	setCurrentVersion: func(c *gin.Context, id string, version int) (*vo.LicenseVersionVO, error) {
-		return data.SetCurrentLicenseVersion(c.Request.Context(), id, version, authz.Subject(c))
+		return data.SetCurrentLicenseVersion(c.Request.Context(), id, version, authz.Viewer(c))
 	},
 	softDelete: func(c *gin.Context, id string, deletedBy string) error {
 		return data.SoftDeleteLicense(c.Request.Context(), id, deletedBy)
 	},
 	restore: func(c *gin.Context, id string) error {
-		return data.RestoreLicense(c.Request.Context(), id, authz.Subject(c))
+		return data.RestoreLicense(c.Request.Context(), id, authz.Viewer(c))
 	},
 	versionState:  func(v *vo.LicenseVersionVO) string { return string(v.State) },
 	versionNumber: func(v *vo.LicenseVersionVO) int { return v.Version },

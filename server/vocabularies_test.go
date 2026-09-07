@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/authz-client.go/authz"
 )
 
 // newVocabTestRouter mirrors newTestRouter but wires setupVocabularyHandlers instead of the
@@ -16,12 +16,16 @@ func newVocabTestRouter(t *testing.T, roles []string) *gin.Engine {
 	t.Helper()
 
 	authAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/profile" {
+			_ = json.NewEncoder(w).Encode(map[string]string{"user_id": "auth0|test-reviewer"})
+			return
+		}
 		_ = json.NewEncoder(w).Encode(authz.CheckResponse{Allowed: true, Roles: roles, Sub: "auth0|test-reviewer"})
 	}))
 	t.Cleanup(authAPI.Close)
 
 	r := gin.New()
-	setupVocabularyHandlers(r, authz.NewClient(authAPI.URL))
+	setupVocabularyHandlers(r, authz.NewClient(authAPI.URL, authAPI.URL))
 	return r
 }
 

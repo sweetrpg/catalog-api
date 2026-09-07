@@ -10,8 +10,8 @@ import (
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
 	apiutil "github.com/sweetrpg/api-core.go/util"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-api/assets"
-	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/constants"
 	"github.com/sweetrpg/catalog-api/editsession"
@@ -97,7 +97,7 @@ func deleteVolume(c *gin.Context, store persistence.CacheStore) {
 		return
 	}
 
-	if err := data.SoftDeleteVolume(c.Request.Context(), id, authz.Subject(c)); err != nil {
+	if err := data.SoftDeleteVolume(c.Request.Context(), id, authz.Viewer(c)); err != nil {
 		logging.Logger.Error("deleteVolume: soft delete failed", "id", id, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -141,7 +141,7 @@ func restoreVolume(c *gin.Context, store persistence.CacheStore) {
 		return
 	}
 
-	if err := data.RestoreVolume(c.Request.Context(), id, authz.Subject(c)); err != nil {
+	if err := data.RestoreVolume(c.Request.Context(), id, authz.Viewer(c)); err != nil {
 		logging.Logger.Error("restoreVolume: restore failed", "id", id, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

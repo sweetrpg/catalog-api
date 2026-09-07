@@ -9,7 +9,7 @@ import (
 	"github.com/google/jsonapi"
 	apiutil "github.com/sweetrpg/api-core.go/util"
 	apiv "github.com/sweetrpg/api-core.go/vo"
-	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-data.go/data"
 	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/catalog-objects.go/vo"
@@ -86,7 +86,7 @@ func patchPublisherVolumes(c *gin.Context, store persistence.CacheStore) {
 		requested[vid] = true
 	}
 
-	updatedBy := authz.Subject(c)
+	updatedBy := authz.Viewer(c)
 
 	for _, vid := range req.VolumeIDs {
 		if current[vid] {

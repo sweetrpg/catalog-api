@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	apiv "github.com/sweetrpg/api-core.go/vo"
-	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/catalog-objects.go/vo"
 	"github.com/sweetrpg/common.go/logging"
@@ -64,7 +64,7 @@ func createVolume(c *gin.Context, store persistence.CacheStore) {
 		return
 	}
 
-	subject := authz.Subject(c)
+	subject := authz.Viewer(c)
 	newVolume := vo.VolumeVO{
 		Title:          req.Title,
 		Description:    req.Description,
