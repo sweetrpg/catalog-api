@@ -15,8 +15,8 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-api/assets"
-	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-data.go/data"
@@ -66,12 +66,16 @@ func newTestDepsWithAssets(t *testing.T, roles []string, assetsURL string) testD
 	t.Helper()
 
 	authAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/profile" {
+			_ = json.NewEncoder(w).Encode(map[string]string{"user_id": "auth0|test-reviewer"})
+			return
+		}
 		_ = json.NewEncoder(w).Encode(authz.CheckResponse{Allowed: true, Roles: roles, Sub: "auth0|test-reviewer"})
 	}))
 	t.Cleanup(authAPI.Close)
 
 	redisPool := newTestRedisPool(t)
-	authzClient := authz.NewClient(authAPI.URL)
+	authzClient := authz.NewClient(authAPI.URL, authAPI.URL)
 
 	r := gin.New()
 	setupVolumeHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authzClient, assets.NewClient(assetsURL), editsession.NewStore(redisPool), nil)

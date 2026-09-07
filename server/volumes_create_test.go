@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/jsonapi"
-	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/catalog-objects.go/vo"
 )

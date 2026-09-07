@@ -9,8 +9,8 @@ import (
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/gin-gonic/gin"
 	apiv "github.com/sweetrpg/api-core.go/vo"
+	"github.com/sweetrpg/authz-client.go/authz"
 	"github.com/sweetrpg/catalog-api/assets"
-	"github.com/sweetrpg/catalog-api/authz"
 	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-api/submissioncap"
 	"github.com/sweetrpg/catalog-data.go/data"
@@ -42,7 +42,7 @@ func finalizeVolumeSession(
 	store persistence.CacheStore,
 ) {
 	volumeID := c.Param("id")
-	userID := authz.Subject(c)
+	userID := authz.Viewer(c)
 	logging.Logger.Debug("finalizeVolumeSession: enter", "volumeId", volumeID, "userId", userID)
 
 	session, err := editSessions.Get(c.Request.Context(), userID, recordTypeVolume)

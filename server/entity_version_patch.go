@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	apiv "github.com/sweetrpg/api-core.go/vo"
-	"github.com/sweetrpg/catalog-api/authz"
+	"github.com/sweetrpg/authz-client.go/authz"
 	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/common.go/logging"
 )
@@ -80,7 +80,7 @@ func createEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store p
 			return
 		}
 
-		id, err := cfg.create(c, &entity, authz.Subject(c))
+		id, err := cfg.create(c, &entity, authz.Viewer(c))
 		if err != nil {
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "create_failed", Message: err.Error()})
@@ -136,7 +136,7 @@ func bulkCreateEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin
 			return
 		}
 
-		createdBy := authz.Subject(c)
+		createdBy := authz.Viewer(c)
 		results := make([]bulkCreateResult, len(rawEntries))
 		for i, raw := range rawEntries {
 			var entity T
@@ -300,7 +300,7 @@ func deleteEntity[T any, V any](cfg entityVersionAPIConfig[T, V], store persiste
 			c.JSON(http.StatusNotFound, apiv.ErrorVO{})
 			return
 		}
-		if err := cfg.softDelete(c, id, authz.Subject(c)); err != nil {
+		if err := cfg.softDelete(c, id, authz.Viewer(c)); err != nil {
 			logging.Logger.Debug("deleteEntity: enter", "recordType", cfg.recordType, "id", id)
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "delete_failed", Message: err.Error()})
@@ -413,7 +413,7 @@ func acceptEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V], store p
 		if req.Fields != nil {
 			selectedFields = *req.Fields
 		}
-		accepted, conflicts, err := cfg.acceptVersion(c, id, version, selectedFields, authz.Subject(c), nil)
+		accepted, conflicts, err := cfg.acceptVersion(c, id, version, selectedFields, authz.Viewer(c), nil)
 		if err != nil {
 			sentry.CaptureException(err)
 			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "accept_failed", Message: err.Error()})
@@ -452,7 +452,7 @@ func rejectEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.Han
 		if req.Note != "" {
 			note = &req.Note
 		}
-		if err := cfg.rejectVersion(c, id, version, authz.Subject(c), note); err != nil {
+		if err := cfg.rejectVersion(c, id, version, authz.Viewer(c), note); err != nil {
 			sentry.CaptureException(err)
 			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "reject_failed", Message: err.Error()})
 			return
@@ -469,7 +469,7 @@ func retractEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.Ha
 		if !ok {
 			return
 		}
-		retracted, err := cfg.retractVersion(c, id, version, authz.Subject(c))
+		retracted, err := cfg.retractVersion(c, id, version, authz.Viewer(c))
 		logging.Logger.Debug("retractEntityVersion: enter", "recordType", cfg.recordType, "id", id, "version", version)
 		if err != nil {
 			sentry.CaptureException(err)

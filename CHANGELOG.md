@@ -1,4 +1,11 @@
 
+## 0.32.1 - 2026-09-07
+
+### Changed
+- Resolve write callers to canonical user ids via authz-client
+
+
+
 ## 0.32.0 - 2026-09-06
 
 ### Added
