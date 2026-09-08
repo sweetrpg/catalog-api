@@ -123,7 +123,11 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls ca
 //	@Failure		500		{object}	interface{}
 //	@Router			/publishers [get]
 func listPublishers(c *gin.Context) {
-	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	if qerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+		return
+	}
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "publishers", "list-publishers", params)
 	vos, err := data.QueryPublishers(c.Request.Context(), params)
@@ -189,7 +193,11 @@ func searchPublishers(c *gin.Context) {
 func getPublisherVolumes(c *gin.Context) {
 	id := c.Param("id")
 
-	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	if qerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+		return
+	}
 
 	inOp := "$in"
 	params.Filter = []apiutil.Filter{{

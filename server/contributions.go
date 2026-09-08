@@ -38,7 +38,11 @@ func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore, ttls
 //	@Failure		500		{object}	vo.ErrorVO
 //	@Router			/contributions [get]
 func listContributions(c *gin.Context) {
-	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	if qerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+		return
+	}
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "contributions", "list-contributions", params)
 	vos, err := data.QueryContributions(c.Request.Context(), params)

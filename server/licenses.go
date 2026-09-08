@@ -166,7 +166,11 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cach
 //	@Failure		500		{object}	interface{}
 //	@Router			/licenses [get]
 func listLicenses(c *gin.Context) {
-	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	if qerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+		return
+	}
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "licenses", "list-licenses", params)
 	vos, err := data.QueryLicenses(c.Request.Context(), params)
@@ -237,7 +241,11 @@ func getLicenseVolumes(c *gin.Context) {
 		return
 	}
 
-	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	if qerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+		return
+	}
 
 	inOp := "$in"
 	params.Filter = []apiutil.Filter{{
