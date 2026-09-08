@@ -321,6 +321,10 @@ func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
 		return
 	}
 	userID := authz.Viewer(c)
+	// The shared edit-session store is keyed by the raw IdP subject (catalog-web, the writer,
+	// has no canonical users._id). Session reads/writes here use that key; authz.Viewer stays
+	// the acting user for the retract below.
+	sessionKey := authz.Subject(c)
 	logging.Logger.Debug("pullBackVolumeVersion: enter", "id", id, "version", version, "userId", userID)
 
 	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version)
@@ -336,7 +340,7 @@ func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
 		return
 	}
 
-	existingSession, err := editSessions.Get(c.Request.Context(), userID, recordTypeVolume)
+	existingSession, err := editSessions.Get(c.Request.Context(), sessionKey, recordTypeVolume)
 	if err != nil {
 		logging.Logger.Error("pullBackVolumeVersion: session lookup failed", "userId", userID, "error", err)
 		sentry.CaptureException(err)
@@ -369,7 +373,7 @@ func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}
-	if err := editSessions.Set(c.Request.Context(), userID, recordTypeVolume, session); err != nil {
+	if err := editSessions.Set(c.Request.Context(), sessionKey, recordTypeVolume, session); err != nil {
 		logging.Logger.Error("pullBackVolumeVersion: session create failed", "userId", userID, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "session_create_failed", Message: err.Error()})
@@ -382,7 +386,7 @@ func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
 		// "creates the session and retracts the source, or does neither", same pattern as
 		// pullBackVolumeProposedChange. Roll the session back out rather than leaving one
 		// without the other.
-		if delErr := editSessions.Delete(c.Request.Context(), userID, recordTypeVolume); delErr != nil {
+		if delErr := editSessions.Delete(c.Request.Context(), sessionKey, recordTypeVolume); delErr != nil {
 			sentry.CaptureException(delErr)
 		}
 		logging.Logger.Error("pullBackVolumeVersion: retract failed after session creation, session rolled back", "id", id, "version", version, "userId", userID, "error", err)

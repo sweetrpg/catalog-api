@@ -83,6 +83,33 @@ func newTestDepsWithAssets(t *testing.T, roles []string, assetsURL string) testD
 	return testDeps{Router: r, AssetsURL: assetsURL, RedisPool: redisPool}
 }
 
+// newTestDepsDistinctProfileID is newTestDeps but the fake auth-api's /profile returns a
+// canonical users._id (authz.Viewer) different from the token subject (authz.Subject) - so a
+// test can tell which of the two a handler keys the shared edit-session store by. Mirrors the
+// real dev split: catalog-web keys sessions by the raw IdP sub, catalog-api resolves a
+// canonical id it must not use for the session key.
+func newTestDepsDistinctProfileID(t *testing.T, roles []string, canonicalUserID string) testDeps {
+	t.Helper()
+
+	assetsURL := newFakeAssetsServer(t).URL
+	authAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/profile" {
+			_ = json.NewEncoder(w).Encode(map[string]string{"user_id": canonicalUserID})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(authz.CheckResponse{Allowed: true, Roles: roles, Sub: "auth0|test-reviewer"})
+	}))
+	t.Cleanup(authAPI.Close)
+
+	redisPool := newTestRedisPool(t)
+	authzClient := authz.NewClient(authAPI.URL, authAPI.URL)
+
+	r := gin.New()
+	setupVolumeHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authzClient, assets.NewClient(assetsURL), editsession.NewStore(redisPool), nil)
+	setupSubmissionCapHandlers(r, authzClient)
+	return testDeps{Router: r, AssetsURL: assetsURL, RedisPool: redisPool}
+}
+
 // seedEditSession writes a session directly into the fixture's Redis, in place of catalog-web
 // (which owns real session writes - catalog-api only reads/deletes).
 func seedEditSession(t *testing.T, deps testDeps, userID, recordType string, session editsession.Session) {
