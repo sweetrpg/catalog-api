@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/google/jsonapi"
+	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/catalog-objects.go/vo"
 )
 
