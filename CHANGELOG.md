@@ -1,4 +1,11 @@
 
+## 0.34.0 - 2026-09-08
+
+### Added
+- Add volume-scoped contributions and reviews endpoints
+
+
+
 ## 0.33.1 - 2026-09-08
 
 ### Fixed
