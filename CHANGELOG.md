@@ -1,4 +1,11 @@
 
+## 0.33.0 - 2026-09-08
+
+### Added
+- Query-layer filter/sort/search on entity list endpoints
+
+
+
 ## 0.32.3 - 2026-09-08
 
 ### Fixed
