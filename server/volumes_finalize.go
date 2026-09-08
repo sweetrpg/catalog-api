@@ -43,9 +43,13 @@ func finalizeVolumeSession(
 ) {
 	volumeID := c.Param("id")
 	userID := authz.Viewer(c)
+	// The shared edit-session store is keyed by the raw IdP subject: catalog-web (the writer)
+	// has no canonical users._id, so it keys sessions by the token sub. Reads here must use the
+	// same key. authz.Viewer stays the acting user for roles / UpdatedBy / submission cap.
+	sessionKey := authz.Subject(c)
 	logging.Logger.Debug("finalizeVolumeSession: enter", "volumeId", volumeID, "userId", userID)
 
-	session, err := editSessions.Get(c.Request.Context(), userID, recordTypeVolume)
+	session, err := editSessions.Get(c.Request.Context(), sessionKey, recordTypeVolume)
 	if err != nil {
 		logging.Logger.Error("finalizeVolumeSession: session lookup failed", "userId", userID, "error", err)
 		sentry.CaptureException(err)
@@ -124,7 +128,7 @@ func finalizeVolumeSession(
 			logging.Logger.Debug("finalizeVolumeSession: exit", "volumeId", volumeID, "outcome", "apply_failed")
 			return
 		}
-		if err := editSessions.Delete(c.Request.Context(), userID, recordTypeVolume); err != nil {
+		if err := editSessions.Delete(c.Request.Context(), sessionKey, recordTypeVolume); err != nil {
 			logging.Logger.Error("finalizeVolumeSession: session delete failed after apply", "userId", userID, "error", err)
 			sentry.CaptureException(err)
 		}
@@ -199,7 +203,7 @@ func finalizeVolumeSession(
 		return
 	}
 
-	if err := editSessions.Delete(c.Request.Context(), userID, recordTypeVolume); err != nil {
+	if err := editSessions.Delete(c.Request.Context(), sessionKey, recordTypeVolume); err != nil {
 		logging.Logger.Error("finalizeVolumeSession: session delete failed after submit", "userId", userID, "error", err)
 		sentry.CaptureException(err)
 	}
