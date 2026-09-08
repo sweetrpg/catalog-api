@@ -35,6 +35,8 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.GET("/volumes/:id", cache.CachePage(store, ttl, getVolume))
 	g.GET("/volumes/:id/versions", listVolumeVersions)
 	g.GET("/volumes/:id/versions/:version", getVolumeVersion)
+	g.GET("/volumes/:id/contributions", cache.CachePage(store, ttls.TTL("contributions"), getVolumeContributions))
+	g.GET("/volumes/:id/reviews", cache.CachePage(store, ttls.TTL("reviews"), getVolumeReviews))
 	// g.GET("/volumes/:id/volumes", cache.CachePage(store, ttl, getVolumeVolumes))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
@@ -67,6 +69,82 @@ func setupVolumeHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.POST("/volumes/:id/restore", rollbackRoles, func(c *gin.Context) {
 		restoreVolume(c, store)
 	})
+}
+
+// Get a volume's contributions.
+//
+//	@Summary		Get volume contributions
+//	@Description	Lists every contribution (person credit) for a single volume, filtered at the
+//	@Description	query layer rather than by fetching the whole /contributions collection.
+//	@Tags			volumes
+//	@Produce		json
+//	@Param			id		path		string	true	"Volume ID"
+//	@Success		200		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/volumes/{id}/contributions [get]
+func getVolumeContributions(c *gin.Context) {
+	id := c.Param("id")
+
+	_, span := otel.Tracer("volumes").Start(c.Request.Context(), "list-volume-contributions", oteltrace.WithAttributes(attribute.String("id", id)))
+	vos, err := data.QueryContributionsByVolume(c.Request.Context(), id)
+	span.End()
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
+// Get a volume's reviews.
+//
+//	@Summary		Get volume reviews
+//	@Description	Lists every review for a single volume, filtered at the query layer rather than
+//	@Description	by fetching the whole /reviews collection. catalog-data has no ReviewsByVolume
+//	@Description	helper, so this scopes the shared QueryReviews with a volume_id $in filter -
+//	@Description	same approach as getPublisherVolumes.
+//	@Tags			volumes
+//	@Produce		json
+//	@Param			id		path		string	true	"Volume ID"
+//	@Success		200		{object}	interface{}
+//	@Failure		400		{object}	interface{}
+//	@Failure		500		{object}	interface{}
+//	@Router			/volumes/{id}/reviews [get]
+func getVolumeReviews(c *gin.Context) {
+	id := c.Param("id")
+
+	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	if qerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+		return
+	}
+
+	inOp := "$in"
+	params.Filter = []apiutil.Filter{{
+		Field:     "volume_id",
+		Operation: &inOp,
+		Value:     []string{id},
+	}}
+
+	span := tracing.BuildSpanWithParams(c.Request.Context(), "volumes", "list-volume-reviews", params)
+	vos, err := data.QueryReviews(c.Request.Context(), params)
+	span.End()
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
+	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
 }
 
 // Soft-delete a volume - admin only.
