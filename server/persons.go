@@ -113,7 +113,11 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 //	@Failure		500		{object}	interface{}
 //	@Router			/persons [get]
 func listPersons(c *gin.Context) {
-	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	if qerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+		return
+	}
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "persons", "list-persons", params)
 	vos, err := data.QueryPersons(c.Request.Context(), params)
@@ -178,7 +182,11 @@ func searchPersons(c *gin.Context) {
 func getPersonVolumes(c *gin.Context) {
 	id := c.Param("id")
 
-	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	if qerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+		return
+	}
 	inOp := "$in"
 	params.Filter = []apiutil.Filter{{
 		Field:     "person_id",

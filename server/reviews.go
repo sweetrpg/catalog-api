@@ -36,7 +36,11 @@ func setupReviewHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 //	@Failure		500		{object}	interface{}
 //	@Router			/reviews [get]
 func listReviews(c *gin.Context) {
-	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	if qerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+		return
+	}
 	logging.Logger.Debug("listReviews: enter", "params", params)
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "reviews", "list-reviews", params)

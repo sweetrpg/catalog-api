@@ -119,7 +119,11 @@ func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 //	@Failure		500		{object}	interface{}
 //	@Router			/studios [get]
 func listStudios(c *gin.Context) {
-	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	if qerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+		return
+	}
 
 	span := tracing.BuildSpanWithParams(c.Request.Context(), "studios", "list-studios", params)
 	vos, err := data.QueryStudios(c.Request.Context(), params)
@@ -185,7 +189,11 @@ func searchStudios(c *gin.Context) {
 func getStudioVolumes(c *gin.Context) {
 	id := c.Param("id")
 
-	params := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
+	if qerr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+		return
+	}
 
 	inOp := "$in"
 	params.Filter = []apiutil.Filter{{
