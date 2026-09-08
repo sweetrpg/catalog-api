@@ -1,4 +1,11 @@
 
+## 0.33.1 - 2026-09-08
+
+### Fixed
+- Bust /contributions + /persons cache on a credits change
+
+
+
 ## 0.33.0 - 2026-09-08
 
 ### Added

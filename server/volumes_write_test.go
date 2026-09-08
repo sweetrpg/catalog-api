@@ -44,6 +44,7 @@ type testDeps struct {
 	Router    *gin.Engine
 	AssetsURL string
 	RedisPool *redis.Pool
+	Cache     persistence.CacheStore
 }
 
 // newTestRouter wires the real setupVolumeHandlers against a fake auth-api that always returns
@@ -77,10 +78,11 @@ func newTestDepsWithAssets(t *testing.T, roles []string, assetsURL string) testD
 	redisPool := newTestRedisPool(t)
 	authzClient := authz.NewClient(authAPI.URL, authAPI.URL)
 
+	cacheStore := persistence.NewInMemoryStore(0)
 	r := gin.New()
-	setupVolumeHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authzClient, assets.NewClient(assetsURL), editsession.NewStore(redisPool), nil)
+	setupVolumeHandlers(r, cacheStore, cachettl.Config{}, authzClient, assets.NewClient(assetsURL), editsession.NewStore(redisPool), nil)
 	setupSubmissionCapHandlers(r, authzClient)
-	return testDeps{Router: r, AssetsURL: assetsURL, RedisPool: redisPool}
+	return testDeps{Router: r, AssetsURL: assetsURL, RedisPool: redisPool, Cache: cacheStore}
 }
 
 // newTestDepsDistinctProfileID is newTestDeps but the fake auth-api's /profile returns a
@@ -104,10 +106,11 @@ func newTestDepsDistinctProfileID(t *testing.T, roles []string, canonicalUserID 
 	redisPool := newTestRedisPool(t)
 	authzClient := authz.NewClient(authAPI.URL, authAPI.URL)
 
+	cacheStore := persistence.NewInMemoryStore(0)
 	r := gin.New()
-	setupVolumeHandlers(r, persistence.NewInMemoryStore(0), cachettl.Config{}, authzClient, assets.NewClient(assetsURL), editsession.NewStore(redisPool), nil)
+	setupVolumeHandlers(r, cacheStore, cachettl.Config{}, authzClient, assets.NewClient(assetsURL), editsession.NewStore(redisPool), nil)
 	setupSubmissionCapHandlers(r, authzClient)
-	return testDeps{Router: r, AssetsURL: assetsURL, RedisPool: redisPool}
+	return testDeps{Router: r, AssetsURL: assetsURL, RedisPool: redisPool, Cache: cacheStore}
 }
 
 // seedEditSession writes a session directly into the fixture's Redis, in place of catalog-web
