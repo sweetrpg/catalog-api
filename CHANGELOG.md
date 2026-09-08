@@ -1,4 +1,11 @@
 
+## 0.32.2 - 2026-09-08
+
+### Fixed
+- Bump catalog-data.go to v0.18.1 for game-systems /systems envelope
+
+
+
 ## 0.32.1 - 2026-09-07
 
 ### Changed

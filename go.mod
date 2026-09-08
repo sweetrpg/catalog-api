@@ -3,7 +3,7 @@ module github.com/sweetrpg/catalog-api
 go 1.26.5
 
 require (
-	github.com/alicebob/miniredis/v2 v2.38.0
+	github.com/alicebob/miniredis/v2 v2.39.0
 	github.com/getsentry/sentry-go v0.49.0
 	github.com/gin-contrib/cache v1.4.4
 	github.com/gin-contrib/cors v1.7.7
@@ -23,7 +23,7 @@ require (
 	github.com/swaggo/swag v1.16.6
 	github.com/sweetrpg/api-core.go v0.1.1
 	github.com/sweetrpg/authz-client.go v0.2.0
-	github.com/sweetrpg/catalog-data.go v0.18.0
+	github.com/sweetrpg/catalog-data.go v0.18.1
 	github.com/sweetrpg/catalog-objects.go v0.6.0
 	github.com/sweetrpg/common.go v0.0.16
 	github.com/sweetrpg/model-core.go v0.1.0
