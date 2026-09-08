@@ -240,12 +240,17 @@ func applyVolumePatch(
 	)
 
 	if req.Credits != nil {
-		if err := applyCreditsDiff(c, existing.ID, *req.Credits, updated.UpdatedBy); err != nil {
+		affectedPersons, err := applyCreditsDiff(c, existing.ID, *req.Credits, updated.UpdatedBy)
+		if err != nil {
 			logging.Logger.Error("applyVolumePatch: credits diff failed", "id", existing.ID, "error", err)
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "update_failed", Message: err.Error()})
 			return false
 		}
+		// Contributions live in their own collection, not on the versioned volume, so a credits
+		// change takes effect immediately regardless of `state` - bust the cache now, not only
+		// on the live path where invalidateVolumeAssociationCache runs.
+		invalidateVolumeCreditsCache(store, existing.ID, affectedPersons)
 	}
 
 	version, err := data.UpdateVolume(c.Request.Context(), existing.ID, &updated, state)
@@ -302,12 +307,13 @@ func applyVolumePatch(
 
 // applyCreditsDiff reconciles a volume's contribution credits against desired - the full,
 // intended set of (person, role) pairs - deleting existing contributions no longer present and
-// adding new ones. Contributions are single-role (one document per person/volume/role).
-func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, updatedBy string) error {
+// adding new ones. Contributions are single-role (one document per person/volume/role). Returns
+// the distinct person IDs whose credits changed (added or removed), for cache invalidation.
+func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, updatedBy string) ([]string, error) {
 	logging.Logger.Debug("applyCreditsDiff: enter", "volumeId", volumeID, "desired", len(desired), "updatedBy", updatedBy)
 	existing, err := data.QueryContributionsByVolume(c.Request.Context(), volumeID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	type creditKey struct {
@@ -319,13 +325,16 @@ func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, 
 		wanted[creditKey{cr.PersonID, cr.ContributionType}] = true
 	}
 
+	affected := map[string]bool{}
+
 	have := make(map[creditKey]string, len(existing))
 	for _, contribution := range existing {
 		have[creditKey{contribution.Person.ID, contribution.Role}] = contribution.ID
 		if !wanted[creditKey{contribution.Person.ID, contribution.Role}] {
 			if _, err := data.DeleteContribution(c.Request.Context(), contribution.ID); err != nil {
-				return err
+				return nil, err
 			}
+			affected[contribution.Person.ID] = true
 		}
 	}
 
@@ -334,9 +343,15 @@ func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, 
 			continue
 		}
 		if _, err := data.AddContribution(c.Request.Context(), key.personID, volumeID, key.roleType, updatedBy); err != nil {
-			return err
+			return nil, err
 		}
+		affected[key.personID] = true
 	}
-	logging.Logger.Debug("applyCreditsDiff: exit", "volumeId", volumeID, "outcome", "ok")
-	return nil
+
+	affectedIDs := make([]string, 0, len(affected))
+	for id := range affected {
+		affectedIDs = append(affectedIDs, id)
+	}
+	logging.Logger.Debug("applyCreditsDiff: exit", "volumeId", volumeID, "outcome", "ok", "affectedPersons", len(affectedIDs))
+	return affectedIDs, nil
 }

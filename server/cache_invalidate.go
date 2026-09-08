@@ -40,6 +40,19 @@ func invalidateVolumeAssociationCache(store persistence.CacheStore, before, afte
 	invalidateCachedPaths(store, paths...)
 }
 
+// invalidateVolumeCreditsCache busts the cached GET responses a credits (contribution) change
+// makes stale: the top-level `/contributions` list, the volume's own `/volumes/<id>` (its
+// Credits panel), and each affected person's `/persons/<id>` and `/persons/<id>/volumes` (the
+// credit-count badge and their volume list). applyCreditsDiff mutates contributions directly -
+// they are not on the versioned volume - so nothing else invalidates these.
+func invalidateVolumeCreditsCache(store persistence.CacheStore, volumeID string, personIDs []string) {
+	paths := []string{"/contributions", "/volumes/" + volumeID}
+	for _, pid := range personIDs {
+		paths = append(paths, "/persons/"+pid, "/persons/"+pid+"/volumes")
+	}
+	invalidateCachedPaths(store, paths...)
+}
+
 func unionPublisherIDs(a, b []*vo.PublisherVO) []string {
 	seen := map[string]bool{}
 	var ids []string
