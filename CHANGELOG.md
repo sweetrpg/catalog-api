@@ -1,4 +1,11 @@
 
+## 0.32.3 - 2026-09-08
+
+### Fixed
+- Key the edit-session store by token subject, not canonical id
+
+
+
 ## 0.32.2 - 2026-09-08
 
 ### Fixed
