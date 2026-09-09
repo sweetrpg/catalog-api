@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"testing"
@@ -10,6 +11,23 @@ import (
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/catalog-objects.go/vo"
 )
+
+// metaTotal extracts the top-level meta.total from a JSON:API list payload.
+func metaTotal(t *testing.T, body []byte) int64 {
+	t.Helper()
+	var env struct {
+		Meta struct {
+			Total *int64 `json:"total"`
+		} `json:"meta"`
+	}
+	if err := json.Unmarshal(body, &env); err != nil {
+		t.Fatalf("unmarshal meta: %v (body: %s)", err, body)
+	}
+	if env.Meta.Total == nil {
+		t.Fatalf("meta.total absent (body: %s)", body)
+	}
+	return *env.Meta.Total
+}
 
 // entityNames unmarshals a JSON:API list payload of elemType and returns each element's display
 // name via getName, in response order.
@@ -113,6 +131,27 @@ func TestListPublishersPageLimitCapsResults(t *testing.T) {
 	})
 	if len(names) != 2 {
 		t.Fatalf("page[limit]=2 returned %d results: %v", len(names), names)
+	}
+}
+
+func TestListPublishersMetaTotalCountsAllMatchesNotJustPage(t *testing.T) {
+	for _, n := range []string{"Qptot One", "Qptot Two", "Qptot Three"} {
+		seedPublisher(t, n)
+	}
+
+	r := newRelationshipTestRouter(t, setupPublisherHandlers)
+	rec := doGet(t, r, "/publishers?filter[name][contains]=qptot&page[start]=0&page[limit]=2")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	names := entityNames(t, rec.Body.Bytes(), reflect.TypeOf(new(vo.PublisherVO)), func(x any) string {
+		return x.(*vo.PublisherVO).Name
+	})
+	if len(names) != 2 {
+		t.Fatalf("page[limit]=2 returned %d rows: %v", len(names), names)
+	}
+	if got := metaTotal(t, rec.Body.Bytes()); got != 3 {
+		t.Fatalf("meta.total = %d, want 3 (full filter match, not page size)", got)
 	}
 }
 
