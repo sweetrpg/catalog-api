@@ -28,13 +28,9 @@ data:
   REDIS_PORT: "6379"
   CACHE_TTLS: "licenses=30m,volumes=30m,systems=2h,publishers=2h,studios=2h,persons=1h,contributions=1h,reviews=15m"
   CACHE_DEFAULT_TTL: 1h
-  # Switched on 2026-08-21: the legacy process-wide limiter (burst 10, refill 1/s, shared across
-  # every caller hitting the pod) was 429ing catalog-web's own server-to-server calls - a single
-  # volume detail/edit page render fans out to 10-15+ requests (per-entity full-list fetches for
-  # name maps, contributions, reviews, vocabularies) since the pagination work, which blows the
-  # burst instantly. Per-client keying plus a window sized to that fan-out fixes it; see
-  # AGENTS.md's "Known gaps" - this is that validation.
-  DISTRIBUTED_RATE_LIMIT_ENABLED: "true"
+  # Per-client/IP rate limiting (platform rate-limiting capability, #106). Standard tier kept at
+  # 300/60 - a deliberate override for catalog-web's server-to-server fan-out (a volume
+  # detail/edit render issues 10-15+ requests), not the api-core default of 30/60.
   RATE_LIMIT_CHEAP: "120"
   RATE_LIMIT_CHEAP_WINDOW_SECONDS: "60"
   RATE_LIMIT_STANDARD: "300"
