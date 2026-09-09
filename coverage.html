@@ -63,7 +63,7 @@
 				
 				<option value="file3">github.com/sweetrpg/catalog-api/cmd/backfill-volume-system-titles/main.go (0.0%)</option>
 				
-				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (20.6%)</option>
+				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (24.6%)</option>
 				
 				<option value="file5">github.com/sweetrpg/catalog-api/cmd/consumer/main.go (0.0%)</option>
 				
@@ -79,9 +79,7 @@
 				
 				<option value="file11">github.com/sweetrpg/catalog-api/internal/events/publisher.go (56.9%)</option>
 				
-				<option value="file12">github.com/sweetrpg/catalog-api/ratelimit/ratelimit.go (91.7%)</option>
-				
-				<option value="file13">github.com/sweetrpg/catalog-api/readiness/readiness.go (100.0%)</option>
+				<option value="file12">github.com/sweetrpg/catalog-api/readiness/readiness.go (100.0%)</option>
 				
 				</select>
 			</div>
@@ -652,8 +650,8 @@ import (
         ginSwagger "github.com/swaggo/gin-swagger"
         apiconstants "github.com/sweetrpg/api-core.go/constants"
         "github.com/sweetrpg/api-core.go/featureflags"
+        "github.com/sweetrpg/api-core.go/ratelimit"
         "github.com/sweetrpg/api-core.go/tracing"
-        "github.com/sweetrpg/api-core.go/vo"
         "github.com/sweetrpg/authz-client.go/authz"
         "github.com/sweetrpg/catalog-api/assets"
         "github.com/sweetrpg/catalog-api/cachettl"
@@ -661,7 +659,6 @@ import (
         "github.com/sweetrpg/catalog-api/docs"
         "github.com/sweetrpg/catalog-api/editsession"
         "github.com/sweetrpg/catalog-api/internal/events"
-        "github.com/sweetrpg/catalog-api/ratelimit"
         "github.com/sweetrpg/catalog-api/readiness"
         "github.com/sweetrpg/catalog-api/server"
         "github.com/sweetrpg/catalog-api/vocabularies"
@@ -671,7 +668,6 @@ import (
         "github.com/sweetrpg/common.go/util"
         "github.com/sweetrpg/mongodb.go/database"
         "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
-        xrate "golang.org/x/time/rate"
 )
 
 // redisConnectTimeout bounds startup/readiness pings to Redis so a stalled connection fails
@@ -763,8 +759,8 @@ func main() <span class="cov0" title="0">{
         // Swagger
         setupSwagger(r)
 
-        // Add rate limiter
-        r.Use(RateLimiter(redisPool))
+        // Per-client/IP rate limiter (Redis-backed, fail-closed). See api-core.go/ratelimit.
+        r.Use(ratelimit.Middleware(redisPool, ratelimit.DefaultOptions()))
 
         authzClient := authz.NewClient(util.GetEnv(constants.AUTH_API_URL, ""), util.GetEnv(constants.USERS_API_URL, ""))
         assetsClient := assets.NewClient(util.GetEnv(constants.ASSETS_WEB_URL, ""))
@@ -1043,26 +1039,6 @@ func setupMetrics(r *gin.Engine) <span class="cov0" title="0">{
         m.Use(r)
 }</span>
 
-// rateLimitTierFor groups routes into a looser "cheap" tier (shallow status endpoints) and a
-// stricter "standard" tier (everything else), per design.md's decision to start with two tiers
-// keyed by route cost rather than one entry per resource.
-func rateLimitTierFor(path string) string <span class="cov0" title="0">{
-        if strings.HasPrefix(path, "/status/") </span><span class="cov0" title="0">{
-                return "cheap"
-        }</span>
-        <span class="cov0" title="0">return "standard"</span>
-}
-
-// rateLimitClientKey identifies the caller for per-client limiting: API key if the client sent
-// one, otherwise client IP. This doesn't introduce a new auth mechanism - it keys off whatever
-// identity already exists on the request (see design.md's open question on API-key issuance).
-func rateLimitClientKey(c *gin.Context) string <span class="cov0" title="0">{
-        if apiKey := c.GetHeader("X-API-Key"); apiKey != "" </span><span class="cov0" title="0">{
-                return "key:" + apiKey
-        }</span>
-        <span class="cov0" title="0">return "ip:" + c.ClientIP()</span>
-}
-
 // cacheInvalidationMiddleware flushes the response cache after any write (POST/PATCH/PUT/
 // DELETE) that succeeds (2xx status). A full flush rather than a targeted per-key delete:
 // gin-contrib/cache's page-cache key is derived from the full request URL (including query
@@ -1107,82 +1083,6 @@ func isCacheInvalidatingMethod(method string) bool <span class="cov10" title="4"
                 return true</span>
         default:<span class="cov1" title="1">
                 return false</span>
-        }
-}
-
-// RateLimiter selects between the new Redis-backed per-client limiter and the legacy
-// process-wide token bucket, gated by DISTRIBUTED_RATE_LIMIT_ENABLED so the new limiter can be
-// validated in dev before the old one is removed (tasks 4.5-4.6).
-func RateLimiter(redisPool *redis.Pool) gin.HandlerFunc <span class="cov0" title="0">{
-        distributedEnabled, _ := strconv.ParseBool(util.GetEnv(constants.DISTRIBUTED_RATE_LIMIT_ENABLED, "false"))
-        if distributedEnabled &amp;&amp; redisPool != nil </span><span class="cov0" title="0">{
-                return distributedRateLimiter(redisPool)
-        }</span>
-
-        <span class="cov0" title="0">if distributedEnabled &amp;&amp; redisPool == nil </span><span class="cov0" title="0">{
-                logging.Logger.Warn("DISTRIBUTED_RATE_LIMIT_ENABLED is set but REDIS_HOST is not; falling back to the process-wide limiter")
-        }</span>
-
-        <span class="cov0" title="0">return globalRateLimiter()</span>
-}
-
-// distributedRateLimiter enforces per-client, per-tier limits backed by Redis, consistent
-// across replicas. Fails closed (503) if the Redis backend is unreachable, rather than letting
-// requests through unlimited during an outage.
-func distributedRateLimiter(redisPool *redis.Pool) gin.HandlerFunc <span class="cov0" title="0">{
-        limiter := ratelimit.New(redisPool, map[string]ratelimit.Tier{
-                "cheap": {
-                        Limit:  util.GetEnvInt(constants.RATE_LIMIT_CHEAP, 120),
-                        Window: util.GetEnvInt(constants.RATE_LIMIT_CHEAP_WINDOW, 60),
-                },
-                "standard": {
-                        Limit:  util.GetEnvInt(constants.RATE_LIMIT_STANDARD, 30),
-                        Window: util.GetEnvInt(constants.RATE_LIMIT_STANDARD_WINDOW, 60),
-                },
-        })
-
-        return func(c *gin.Context) </span><span class="cov0" title="0">{
-                tier := rateLimitTierFor(c.Request.URL.Path)
-                clientKey := rateLimitClientKey(c)
-
-                allowed, err := limiter.Allow(c.Request.Context(), clientKey, tier)
-                if err != nil </span><span class="cov0" title="0">{
-                        logging.Logger.Error("Rate-limit backend unreachable; rejecting request (fail closed)", "error", err.Error())
-                        c.AbortWithStatusJSON(http.StatusServiceUnavailable, vo.ErrorVO{
-                                Error:   constants.ErrorRateLimitUnavailable,
-                                Message: "Rate limiting is temporarily unavailable",
-                        })
-                        return
-                }</span>
-                <span class="cov0" title="0">if !allowed </span><span class="cov0" title="0">{
-                        logging.Logger.Warn("Rate limit exceeded", "client", clientKey, "tier", tier, "path", c.Request.URL.Path)
-                        c.AbortWithStatusJSON(http.StatusTooManyRequests, vo.ErrorVO{
-                                Error:   apiconstants.ErrorRateLimited,
-                                Message: "Limit exceeded",
-                        })
-                        return
-                }</span>
-                <span class="cov0" title="0">c.Next()</span>
-        }
-}
-
-// globalRateLimiter is the legacy process-wide token bucket: one shared limit across every
-// client and route, effectively N times looser with N replicas since each pod holds its own
-// bucket. Kept behind the DISTRIBUTED_RATE_LIMIT_ENABLED toggle until the new limiter is
-// validated in dev (task 4.6 removes this once that happens).
-func globalRateLimiter() gin.HandlerFunc <span class="cov0" title="0">{
-        limiter := xrate.NewLimiter(1, util.GetEnvInt(apiconstants.RATE_LIMIT, 10))
-
-        return func(c *gin.Context) </span><span class="cov0" title="0">{
-                if limiter.Allow() </span><span class="cov0" title="0">{
-                        c.Next()
-                }</span> else<span class="cov0" title="0"> {
-                        logging.Logger.Warn(fmt.Sprintf("Rate limit exceeded for request: %v", c.Request))
-                        c.AbortWithStatusJSON(http.StatusTooManyRequests, vo.ErrorVO{
-                                Error:   apiconstants.ErrorRateLimited,
-                                Message: "Limit exceeded",
-                        })
-                }</span>
         }
 }
 </pre>
@@ -2353,80 +2253,7 @@ func (p *Publisher) publishWithFallback(ctx context.Context, entityType, action,
 }
 </pre>
 		
-		<pre class="file" id="file12" style="display: none">// Package ratelimit implements a Redis-backed, per-client, per-route-tier request rate
-// limiter. Counters live in Redis (INCR + EXPIRE) rather than per-pod memory, so the limit is
-// consistent across catalog-api's replicas instead of being N times looser depending on how
-// many pods happen to be up.
-package ratelimit
-
-import (
-        "context"
-        "fmt"
-
-        "github.com/gomodule/redigo/redis"
-)
-
-// Tier describes a rate-limit budget: at most Limit requests per Window.
-type Tier struct {
-        Limit  int
-        Window int // seconds
-}
-
-// Limiter enforces per-client request limits per tier, backed by a Redis connection pool.
-type Limiter struct {
-        pool  *redis.Pool
-        tiers map[string]Tier
-}
-
-// New builds a Limiter using the given Redis pool and tier definitions. Callers should pass at
-// least a "standard" and "cheap" tier; Allow falls back to "standard" for an unknown tier name.
-func New(pool *redis.Pool, tiers map[string]Tier) *Limiter <span class="cov6" title="6">{
-        return &amp;Limiter{pool: pool, tiers: tiers}
-}</span>
-
-// Allow increments the request counter for clientKey within the named tier and reports whether
-// the request is within that tier's limit. A non-nil error means the Redis backend was
-// unreachable - callers must treat that as fail-closed (reject the request), not fail-open.
-func (l *Limiter) Allow(ctx context.Context, clientKey, tierName string) (bool, error) <span class="cov10" title="15">{
-        tier, ok := l.tiers[tierName]
-        if !ok </span><span class="cov3" title="2">{
-                tier = l.tiers["standard"]
-        }</span>
-
-        <span class="cov10" title="15">conn, err := l.pool.GetContext(ctx)
-        if err != nil </span><span class="cov1" title="1">{
-                return false, fmt.Errorf("ratelimit: get redis connection: %w", err)
-        }</span>
-        <span class="cov9" title="14">defer func() </span><span class="cov9" title="14">{ _ = conn.Close() }</span>()
-
-        <span class="cov9" title="14">key := fmt.Sprintf("ratelimit:%s:%s", tierName, clientKey)
-        count, err := redis.Int(conn.Do("INCR", key))
-        if err != nil </span><span class="cov0" title="0">{
-                return false, fmt.Errorf("ratelimit: incr: %w", err)
-        }</span>
-        <span class="cov9" title="14">if count == 1 </span><span class="cov7" title="7">{
-                if _, err := conn.Do("EXPIRE", key, tier.Window); err != nil </span><span class="cov0" title="0">{
-                        return false, fmt.Errorf("ratelimit: expire: %w", err)
-                }</span>
-        }
-
-        <span class="cov9" title="14">return count &lt;= tier.Limit, nil</span>
-}
-
-// Ping verifies the Redis backend is reachable, for use in startup/readiness checks.
-func Ping(ctx context.Context, pool *redis.Pool) error <span class="cov3" title="2">{
-        conn, err := pool.GetContext(ctx)
-        if err != nil </span><span class="cov1" title="1">{
-                return err
-        }</span>
-        <span class="cov1" title="1">defer func() </span><span class="cov1" title="1">{ _ = conn.Close() }</span>()
-
-        <span class="cov1" title="1">_, err = conn.Do("PING")
-        return err</span>
-}
-</pre>
-		
-		<pre class="file" id="file13" style="display: none">// Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
+		<pre class="file" id="file12" style="display: none">// Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
 // api-core.go's HealthHandler already covers) so /status/health can fail loud instead of the
 // service silently degrading to an uncached or unlimited mode.
 package readiness
@@ -2436,7 +2263,7 @@ import (
         "sync/atomic"
 
         "github.com/gomodule/redigo/redis"
-        "github.com/sweetrpg/catalog-api/ratelimit"
+        "github.com/sweetrpg/api-core.go/ratelimit"
 )
 
 var cachePool atomic.Pointer[redis.Pool]
