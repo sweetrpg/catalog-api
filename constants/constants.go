@@ -12,14 +12,6 @@ const (
 	CACHE_TTLS        = "CACHE_TTLS"
 	CACHE_DEFAULT_TTL = "CACHE_DEFAULT_TTL"
 
-	// DISTRIBUTED_RATE_LIMIT_ENABLED toggles the Redis-backed per-client limiter on in
-	// place of the process-wide golang.org/x/time/rate limiter. Requires REDIS_HOST.
-	DISTRIBUTED_RATE_LIMIT_ENABLED = "DISTRIBUTED_RATE_LIMIT_ENABLED"
-	RATE_LIMIT_CHEAP               = "RATE_LIMIT_CHEAP"
-	RATE_LIMIT_CHEAP_WINDOW        = "RATE_LIMIT_CHEAP_WINDOW_SECONDS"
-	RATE_LIMIT_STANDARD            = "RATE_LIMIT_STANDARD"
-	RATE_LIMIT_STANDARD_WINDOW     = "RATE_LIMIT_STANDARD_WINDOW_SECONDS"
-
 	// AUTH_API_URL points at auth-api's base URL (e.g.
 	// http://api-v1.sweetrpg-auth.svc.cluster.local:8000), used to verify bearer tokens and
 	// resolve roles via POST /authz/check for write endpoints. See platform docs/openspec.md's
@@ -54,6 +46,5 @@ const (
 	// openspec/changes/pyroscope-profiling-feature-flag in sweetrpg/platform.
 	ProfilingEnabledFlag = "profiling-enabled"
 
-	ErrorCacheUnavailable     = "cache_unavailable"
-	ErrorRateLimitUnavailable = "rate_limit_unavailable"
+	ErrorCacheUnavailable = "cache_unavailable"
 )
