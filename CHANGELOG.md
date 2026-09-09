@@ -1,4 +1,11 @@
 
+## 0.35.0 - 2026-09-09
+
+### Added
+- Add meta.total to entity list responses
+
+
+
 ## 0.34.0 - 2026-09-08
 
 ### Added

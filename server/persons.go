@@ -128,8 +128,15 @@ func listPersons(c *gin.Context) {
 		return
 	}
 
+	total, err := data.CountPersons(c.Request.Context(), params)
+	if err != nil {
+		sentry.CaptureException(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	c.Writer.Header().Set("Content-type", jsonapi.MediaType)
-	if err := jsonapi.MarshalPayload(c.Writer, vos); err != nil {
+	if err := marshalListWithTotal(c.Writer, vos, total); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
 }
