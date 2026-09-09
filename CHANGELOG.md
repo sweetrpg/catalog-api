@@ -1,4 +1,11 @@
 
+## 0.35.1 - 2026-09-09
+
+### Fixed
+- Bump api-core.go v0.3.1 + catalog-data.go v0.20.1
+
+
+
 ## 0.35.0 - 2026-09-09
 
 ### Added
