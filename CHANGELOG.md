@@ -1,4 +1,11 @@
 
+## 0.36.0 - 2026-09-09
+
+### Added
+- Adopt shared api-core per-client rate limiter (#106)
+
+
+
 ## 0.35.1 - 2026-09-09
 
 ### Fixed
