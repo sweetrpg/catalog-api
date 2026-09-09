@@ -17,15 +17,11 @@ contributions, persons, publishers, reviews, studios, systems). It's a thin Gin-
   (wrong function names, cross-entity mix-ups, missing `return` after 404) were caught by code
   review, not by tests. Testing these handlers meaningfully needs either MongoDB-backed
   integration tests (matching `catalog-data.go`'s pattern) or refactoring for dependency
-  injection - neither has been done yet. `cmd/catalog-api`, `cachettl`, and `ratelimit` do have
-  unit test coverage (the latter two use `alicebob/miniredis` rather than a real Redis).
+  injection - neither has been done yet. `cmd/catalog-api` and `cachettl` do have unit test
+  coverage (`cachettl` uses `alicebob/miniredis` rather than a real Redis).
 - The volumes tag cloud endpoint (`GET /volumes/tags`) depends on `catalog-data.go >= v0.18.0`,
   which introduced `GetVolumeTags`. Older published versions of the module lack that function
   and fail at build time.
-- The `DISTRIBUTED_RATE_LIMIT_ENABLED` per-client rate limiter hasn't been validated against a
-  real dev workload yet - the legacy process-wide limiter is still the default. See
-  `openspec/changes/catalog-api-caching-rate-limiting` (in the `platform` umbrella repo) for the
-  rest of that rollout.
 
 ## Dependencies
 
@@ -41,10 +37,16 @@ log aggregation systems while keeping HTTP and application concerns separate.
 ## Caching and Rate Limiting
 
 See `platform/docs/service-conventions.md`'s Caching and Rate limiting sections for the
-Redis-backed cache readiness check, per-route TTL (`CACHE_TTLS`/`CACHE_DEFAULT_TTL`), and the
-distributed rate limiter (`DISTRIBUTED_RATE_LIMIT_ENABLED`,
-`RATE_LIMIT_CHEAP`/`RATE_LIMIT_CHEAP_WINDOW_SECONDS`,
-`RATE_LIMIT_STANDARD`/`RATE_LIMIT_STANDARD_WINDOW_SECONDS`) that replaces it once validated.
+Redis-backed cache readiness check and per-route TTL (`CACHE_TTLS`/`CACHE_DEFAULT_TTL`).
+
+Per-client/IP rate limiting is the default, via the shared `api-core.go/ratelimit` middleware:
+Redis-backed counters keyed by `X-API-Key` else client IP, `cheap` tier for `/status/*` and
+`standard` for everything else, fail-closed 503 when the Redis backend is unreachable, 429 on
+exceed. Tune with `RATE_LIMIT_CHEAP`/`RATE_LIMIT_CHEAP_WINDOW_SECONDS`/`RATE_LIMIT_STANDARD`/
+`RATE_LIMIT_STANDARD_WINDOW_SECONDS` (dev overlay keeps `standard` at 300/60 for catalog-web's
+server-to-server fan-out). The legacy `golang.org/x/time/rate` process-wide limiter and the
+`DISTRIBUTED_RATE_LIMIT_ENABLED` toggle were removed - see `platform`'s
+`openspec/changes/fix-rate-limiting-per-client-ip`.
 
 ## Committing Code
 
