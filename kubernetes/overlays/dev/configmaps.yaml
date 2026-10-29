@@ -31,7 +31,7 @@ data:
   # Per-client/IP rate limiting (platform rate-limiting capability, #106). Standard tier kept at
   # 300/60 - a deliberate override for catalog-web's server-to-server fan-out (a volume
   # detail/edit render issues 10-15+ requests), not the api-core default of 30/60.
-  RATE_LIMIT_CHEAP: "120"
+  RATE_LIMIT_CHEAP: "1200"
   RATE_LIMIT_CHEAP_WINDOW_SECONDS: "60"
   RATE_LIMIT_STANDARD: "300"
   RATE_LIMIT_STANDARD_WINDOW_SECONDS: "60"
