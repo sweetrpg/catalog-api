@@ -5,7 +5,7 @@ go 1.26.5
 require (
 	github.com/alicebob/miniredis/v2 v2.39.0
 	github.com/getsentry/sentry-go v0.49.0
-	github.com/gin-contrib/cache v1.4.4
+	github.com/gin-contrib/cache v1.4.5
 	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-gonic/gin v1.12.0
 	github.com/gomodule/redigo v1.9.3
