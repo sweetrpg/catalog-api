@@ -1,0 +1,2319 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>assets: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/sweetrpg/catalog-api/assets/client.go (0.0%)</option>
+				
+				<option value="file1">github.com/sweetrpg/catalog-api/cachettl/cachettl.go (100.0%)</option>
+				
+				<option value="file2">github.com/sweetrpg/catalog-api/cmd/backfill-canonical-user-ids/main.go (0.0%)</option>
+				
+				<option value="file3">github.com/sweetrpg/catalog-api/cmd/backfill-volume-system-titles/main.go (0.0%)</option>
+				
+				<option value="file4">github.com/sweetrpg/catalog-api/cmd/catalog-api/main.go (24.6%)</option>
+				
+				<option value="file5">github.com/sweetrpg/catalog-api/cmd/consumer/main.go (0.0%)</option>
+				
+				<option value="file6">github.com/sweetrpg/catalog-api/docs/docs.go (0.0%)</option>
+				
+				<option value="file7">github.com/sweetrpg/catalog-api/editsession/store.go (57.1%)</option>
+				
+				<option value="file8">github.com/sweetrpg/catalog-api/internal/events/consumer.go (16.7%)</option>
+				
+				<option value="file9">github.com/sweetrpg/catalog-api/internal/events/envelope.go (87.5%)</option>
+				
+				<option value="file10">github.com/sweetrpg/catalog-api/internal/events/handlers.go (0.0%)</option>
+				
+				<option value="file11">github.com/sweetrpg/catalog-api/internal/events/publisher.go (56.9%)</option>
+				
+				<option value="file12">github.com/sweetrpg/catalog-api/readiness/readiness.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Package assets is a minimal client for assets-web's authenticated asset store
+// (GET/POST/DELETE /asset/&lt;kind&gt;/&lt;id&gt;), used to promote a staged cover/sample to live (or
+// reclaim it) on volume edit session finalize/accept/reject. See durable-volume-editing in
+// sweetrpg/platform.
+package assets
+
+import (
+        "bytes"
+        "context"
+        "fmt"
+        "io"
+        "mime/multipart"
+        "net/http"
+        "net/textproto"
+        "time"
+
+        "github.com/sweetrpg/common.go/logging"
+        "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+)
+
+// Client calls assets-web's asset store endpoints.
+type Client struct {
+        baseURL string
+        http    *http.Client
+}
+
+// NewClient builds a Client against assets-web's base URL. An empty baseURL is accepted so the
+// service can still start when ASSETS_WEB_URL isn't configured; every call will then fail with
+// a transport error.
+func NewClient(baseURL string) *Client <span class="cov0" title="0">{
+        return &amp;Client{
+                baseURL: baseURL,
+                http: &amp;http.Client{
+                        Timeout:   10 * time.Second,
+                        Transport: otelhttp.NewTransport(http.DefaultTransport),
+                },
+        }
+}</span>
+
+// NotFoundError means assets-web has no asset at the given kind/id.
+type NotFoundError struct{ Kind, ID string }
+
+func (e NotFoundError) Error() string <span class="cov0" title="0">{ return fmt.Sprintf("assets: %s/%s not found", e.Kind, e.ID) }</span>
+
+// Get downloads an asset's bytes and content type.
+func (c *Client) Get(ctx context.Context, token, kind, id string) ([]byte, string, error) <span class="cov0" title="0">{
+        logging.Logger.Debug("assets.Get: enter", "kind", kind, "id", id)
+        req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/asset/"+kind+"/"+id, nil)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, "", fmt.Errorf("assets: build get request: %w", err)
+        }</span>
+        <span class="cov0" title="0">setBearerToken(req, token)
+
+        resp, err := c.http.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Get: request failed", "kind", kind, "id", id, "error", err)
+                return nil, "", fmt.Errorf("assets: get request failed: %w", err)
+        }</span>
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{ _ = resp.Body.Close() }</span>()
+
+        <span class="cov0" title="0">if resp.StatusCode == http.StatusNotFound </span><span class="cov0" title="0">{
+                logging.Logger.Warn("assets.Get: not found", "kind", kind, "id", id)
+                return nil, "", NotFoundError{Kind: kind, ID: id}
+        }</span>
+        <span class="cov0" title="0">if resp.StatusCode != http.StatusOK </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Get: unexpected status", "kind", kind, "id", id, "status", resp.StatusCode)
+                return nil, "", fmt.Errorf("assets: unexpected status %d from get %s/%s", resp.StatusCode, kind, id)
+        }</span>
+
+        <span class="cov0" title="0">body, err := io.ReadAll(resp.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, "", fmt.Errorf("assets: read get response: %w", err)
+        }</span>
+        <span class="cov0" title="0">logging.Logger.Debug("assets.Get: exit", "kind", kind, "id", id, "outcome", "ok")
+        return body, resp.Header.Get("Content-Type"), nil</span>
+}
+
+// Store uploads an asset's bytes under kind/id, overwriting any existing asset there.
+func (c *Client) Store(ctx context.Context, token, kind, id string, data []byte, contentType string) error <span class="cov0" title="0">{
+        logging.Logger.Debug("assets.Store: enter", "kind", kind, "id", id)
+        var buf bytes.Buffer
+        writer := multipart.NewWriter(&amp;buf)
+        header := textproto.MIMEHeader{}
+        header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename=%q`, id))
+        if contentType != "" </span><span class="cov0" title="0">{
+                header.Set("Content-Type", contentType)
+        }</span>
+        <span class="cov0" title="0">part, err := writer.CreatePart(header)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: build multipart form: %w", err)
+        }</span>
+        <span class="cov0" title="0">if _, err := part.Write(data); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: write multipart body: %w", err)
+        }</span>
+        <span class="cov0" title="0">if err := writer.Close(); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: close multipart form: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/asset/"+kind+"/"+id, &amp;buf)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: build store request: %w", err)
+        }</span>
+        <span class="cov0" title="0">req.Header.Set("Content-Type", writer.FormDataContentType())
+        setBearerToken(req, token)
+
+        resp, err := c.http.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Store: request failed", "kind", kind, "id", id, "error", err)
+                return fmt.Errorf("assets: store request failed: %w", err)
+        }</span>
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{ _ = resp.Body.Close() }</span>()
+
+        <span class="cov0" title="0">if resp.StatusCode != http.StatusCreated </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Store: unexpected status", "kind", kind, "id", id, "status", resp.StatusCode)
+                return fmt.Errorf("assets: unexpected status %d from store %s/%s", resp.StatusCode, kind, id)
+        }</span>
+        <span class="cov0" title="0">logging.Logger.Debug("assets.Store: exit", "kind", kind, "id", id, "outcome", "ok")
+        return nil</span>
+}
+
+// Delete removes an asset. A missing asset (404) is treated as success - the end state (no
+// asset at kind/id) is the same either way.
+func (c *Client) Delete(ctx context.Context, token, kind, id string) error <span class="cov0" title="0">{
+        logging.Logger.Debug("assets.Delete: enter", "kind", kind, "id", id)
+        req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.baseURL+"/asset/"+kind+"/"+id, nil)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("assets: build delete request: %w", err)
+        }</span>
+        <span class="cov0" title="0">setBearerToken(req, token)
+
+        resp, err := c.http.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Delete: request failed", "kind", kind, "id", id, "error", err)
+                return fmt.Errorf("assets: delete request failed: %w", err)
+        }</span>
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{ _ = resp.Body.Close() }</span>()
+
+        <span class="cov0" title="0">if resp.StatusCode != http.StatusNoContent &amp;&amp; resp.StatusCode != http.StatusNotFound </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Delete: unexpected status", "kind", kind, "id", id, "status", resp.StatusCode)
+                return fmt.Errorf("assets: unexpected status %d from delete %s/%s", resp.StatusCode, kind, id)
+        }</span>
+        <span class="cov0" title="0">logging.Logger.Debug("assets.Delete: exit", "kind", kind, "id", id, "outcome", "ok")
+        return nil</span>
+}
+
+// Promote copies a staged asset (fromKind/fromID) to a live one (toKind/toID), then deletes the
+// staged copy - the promote-then-delete step every editor/admin finalize and accepted proposal
+// performs for a referenced staged cover/sample.
+func (c *Client) Promote(ctx context.Context, token, fromKind, fromID, toKind, toID string) error <span class="cov0" title="0">{
+        logging.Logger.Debug("assets.Promote: enter", "fromKind", fromKind, "fromId", fromID, "toKind", toKind, "toId", toID)
+        data, contentType, err := c.Get(ctx, token, fromKind, fromID)
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Promote: get staged asset failed", "fromKind", fromKind, "fromId", fromID, "error", err)
+                return fmt.Errorf("assets: promote %s/%s -&gt; %s/%s: %w", fromKind, fromID, toKind, toID, err)
+        }</span>
+        <span class="cov0" title="0">if err := c.Store(ctx, token, toKind, toID, data, contentType); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Promote: store live asset failed", "toKind", toKind, "toId", toID, "error", err)
+                return fmt.Errorf("assets: promote %s/%s -&gt; %s/%s: %w", fromKind, fromID, toKind, toID, err)
+        }</span>
+        <span class="cov0" title="0">if err := c.Delete(ctx, token, fromKind, fromID); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("assets.Promote: delete staged asset failed", "fromKind", fromKind, "fromId", fromID, "error", err)
+                return fmt.Errorf("assets: promote %s/%s -&gt; %s/%s: %w", fromKind, fromID, toKind, toID, err)
+        }</span>
+        <span class="cov0" title="0">logging.Logger.Debug("assets.Promote: exit", "fromKind", fromKind, "fromId", fromID, "toKind", toKind, "toId", toID, "outcome", "ok")
+        return nil</span>
+}
+
+// setBearerToken forwards the caller's verified user token to assets-web, which authorizes the
+// write against the same user rather than trusting this service's identity. See platform's
+// api-client-auth change (openspec/changes/api-client-auth).
+func setBearerToken(req *http.Request, token string) <span class="cov0" title="0">{
+        if token != "" </span><span class="cov0" title="0">{
+                req.Header.Set("Authorization", "Bearer "+token)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Package cachettl resolves the cache TTL for a given route group, loaded once at startup
+// from the CACHE_TTLS env var so slower-changing entities and faster-changing ones aren't
+// forced onto the same cache policy.
+package cachettl
+
+import (
+        "strings"
+        "time"
+
+        "github.com/sweetrpg/catalog-api/constants"
+        "github.com/sweetrpg/common.go/logging"
+        "github.com/sweetrpg/common.go/util"
+)
+
+const defaultTTLFallback = time.Hour
+
+// Config resolves a per-route-group TTL, falling back to a configured default for any route
+// group without an explicit entry.
+type Config struct {
+        ttls       map[string]time.Duration
+        defaultTTL time.Duration
+}
+
+// Load parses CACHE_TTLS ("route=duration,route=duration", e.g. "licenses=30m,volumes=15m")
+// and CACHE_DEFAULT_TTL (a single duration string) from the environment. Malformed entries are
+// logged and skipped rather than failing startup.
+func Load() Config <span class="cov7" title="5">{
+        defaultTTL := defaultTTLFallback
+        if raw := util.GetEnv(constants.CACHE_DEFAULT_TTL, ""); raw != "" </span><span class="cov3" title="2">{
+                if d, err := time.ParseDuration(raw); err == nil </span><span class="cov1" title="1">{
+                        defaultTTL = d
+                }</span> else<span class="cov1" title="1"> {
+                        logging.Logger.Warn("Invalid CACHE_DEFAULT_TTL, using fallback default",
+                                "value", raw, "fallback", defaultTTLFallback.String(), "error", err.Error())
+                }</span>
+        }
+
+        <span class="cov7" title="5">ttls := map[string]time.Duration{}
+        raw := util.GetEnv(constants.CACHE_TTLS, "")
+        for _, entry := range strings.Split(raw, ",") </span><span class="cov10" title="9">{
+                entry = strings.TrimSpace(entry)
+                if entry == "" </span><span class="cov3" title="2">{
+                        continue</span>
+                }
+                <span class="cov8" title="7">route, value, found := strings.Cut(entry, "=")
+                if !found </span><span class="cov1" title="1">{
+                        logging.Logger.Warn("Invalid CACHE_TTLS entry, expected route=duration", "entry", entry)
+                        continue</span>
+                }
+                <span class="cov8" title="6">d, err := time.ParseDuration(strings.TrimSpace(value))
+                if err != nil </span><span class="cov1" title="1">{
+                        logging.Logger.Warn("Invalid CACHE_TTLS duration, skipping entry",
+                                "entry", entry, "error", err.Error())
+                        continue</span>
+                }
+                <span class="cov7" title="5">ttls[strings.TrimSpace(route)] = d</span>
+        }
+
+        <span class="cov7" title="5">return Config{ttls: ttls, defaultTTL: defaultTTL}</span>
+}
+
+// TTL returns the configured TTL for the given route group, or the configured default if the
+// route group has no explicit entry.
+func (c Config) TTL(route string) time.Duration <span class="cov9" title="8">{
+        if d, ok := c.ttls[route]; ok </span><span class="cov6" title="4">{
+                return d
+        }</span>
+        <span class="cov6" title="4">return c.defaultTTL</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">// Command backfill-canonical-user-ids rewrites legacy Auth0-subject values in the *_meta and
+// *_versions audit fields (created_by, updated_by, submitted_by, reviewed_by) to the canonical
+// users._id each subject maps to, using users-api's internal resolve-subjects batch endpoint.
+// Subjects that cannot be resolved to a user become the "system" actor. Idempotent: values that
+// are already 24-hex canonical ids or "system" are skipped. Dry-run by default; pass -apply to
+// write. Run once after the catalog-api release that adopts authz.Viewer.
+package main
+
+import (
+        "bytes"
+        "context"
+        "encoding/json"
+        "flag"
+        "fmt"
+        "net/http"
+        "os"
+        "regexp"
+        "time"
+
+        "github.com/joho/godotenv"
+        "github.com/sweetrpg/catalog-api/constants"
+        "github.com/sweetrpg/common.go/logging"
+        "github.com/sweetrpg/common.go/util"
+        "github.com/sweetrpg/mongodb.go/database"
+        "go.mongodb.org/mongo-driver/bson"
+)
+
+type target struct {
+        collection string
+        field      string
+}
+
+var targets = []target{
+        {"volumes_meta", "created_by"}, {"volumes_meta", "updated_by"},
+        {"publishers_meta", "created_by"}, {"publishers_meta", "updated_by"},
+        {"studios_meta", "created_by"}, {"studios_meta", "updated_by"},
+        {"persons_meta", "created_by"}, {"persons_meta", "updated_by"},
+        {"licenses_meta", "created_by"}, {"licenses_meta", "updated_by"},
+        {"volumes_versions", "submitted_by"}, {"volumes_versions", "reviewed_by"},
+        {"publishers_versions", "submitted_by"}, {"publishers_versions", "reviewed_by"},
+        {"studios_versions", "submitted_by"}, {"studios_versions", "reviewed_by"},
+        {"persons_versions", "submitted_by"}, {"persons_versions", "reviewed_by"},
+        {"licenses_versions", "submitted_by"}, {"licenses_versions", "reviewed_by"},
+}
+
+var canonicalIDRE = regexp.MustCompile(`^[0-9a-f]{24}$`)
+
+type resolveSubjectsRequest struct {
+        Subjects []string `json:"subjects"`
+}
+
+func main() <span class="cov0" title="0">{
+        _ = godotenv.Load(".env")
+        logging.Init()
+
+        apply := flag.Bool("apply", false, "write changes; default is a dry run")
+        adminToken := flag.String("users-admin-token", os.Getenv("USERS_ADMIN_TOKEN"), "admin bearer token for users-api's internal resolve-subjects endpoint")
+        flag.Parse()
+
+        database.SetupDatabase()
+        defer database.TeardownDatabase()
+
+        usersBaseURL := util.GetEnv(constants.USERS_API_URL, "")
+
+        ctx := context.Background()
+
+        distinct := map[string]struct{}{}
+        for _, t := range targets </span><span class="cov0" title="0">{
+                coll := database.Db.Collection(t.collection)
+                values, err := coll.Distinct(ctx, t.field, bson.M{})
+                if err != nil </span><span class="cov0" title="0">{
+                        logging.Logger.Error("backfill: distinct failed", "collection", t.collection, "field", t.field, "error", err.Error())
+                        return
+                }</span>
+                <span class="cov0" title="0">for _, v := range values </span><span class="cov0" title="0">{
+                        s, ok := v.(string)
+                        if !ok || s == "" || s == "system" || canonicalIDRE.MatchString(s) </span><span class="cov0" title="0">{
+                                continue</span>
+                        }
+                        <span class="cov0" title="0">distinct[s] = struct{}{}</span>
+                }
+        }
+        <span class="cov0" title="0">if len(distinct) == 0 </span><span class="cov0" title="0">{
+                logging.Logger.Info("backfill: no subject-shaped values found to resolve")
+                return
+        }</span>
+        <span class="cov0" title="0">logging.Logger.Info("backfill: distinct subjects found", "count", len(distinct))
+
+        subjects := make([]string, 0, len(distinct))
+        for s := range distinct </span><span class="cov0" title="0">{
+                subjects = append(subjects, s)
+        }</span>
+
+        <span class="cov0" title="0">resolved := map[string]string{}
+        if *adminToken == "" </span><span class="cov0" title="0">{
+                logging.Logger.Warn("backfill: no users-admin-token set, skipping subject resolution", "dry_run", !*apply)
+        }</span> else<span class="cov0" title="0"> {
+                var err error
+                resolved, err = resolveSubjects(ctx, usersBaseURL, *adminToken, subjects)
+                if err != nil </span><span class="cov0" title="0">{
+                        logging.Logger.Error("backfill: resolve subjects failed", "error", err.Error())
+                        return
+                }</span>
+        }
+
+        <span class="cov0" title="0">rewritten := map[string]string{}
+        for _, s := range subjects </span><span class="cov0" title="0">{
+                if id := resolved[s]; id != "" </span><span class="cov0" title="0">{
+                        rewritten[s] = id
+                }</span> else<span class="cov0" title="0"> {
+                        logging.Logger.Warn("backfill: unmappable subject -&gt; system", "subject", s)
+                        rewritten[s] = "system"
+                }</span>
+        }
+
+        <span class="cov0" title="0">var updated int64
+        for _, t := range targets </span><span class="cov0" title="0">{
+                coll := database.Db.Collection(t.collection)
+                for oldValue, newValue := range rewritten </span><span class="cov0" title="0">{
+                        modifier := "would update"
+                        affected := int64(0)
+                        if *apply </span><span class="cov0" title="0">{
+                                res, err := coll.UpdateMany(ctx, bson.M{t.field: oldValue}, bson.D{{Key: "$set", Value: bson.D{{Key: t.field, Value: newValue}}}})
+                                if err != nil </span><span class="cov0" title="0">{
+                                        logging.Logger.Error("backfill: update failed", "collection", t.collection, "field", t.field, "value", oldValue, "error", err.Error())
+                                        return
+                                }</span>
+                                <span class="cov0" title="0">modifier = "updated"
+                                affected = res.ModifiedCount
+                                updated += affected</span>
+                        } else<span class="cov0" title="0"> {
+                                count, err := coll.CountDocuments(ctx, bson.M{t.field: oldValue})
+                                if err != nil </span><span class="cov0" title="0">{
+                                        logging.Logger.Error("backfill: count failed", "collection", t.collection, "field", t.field, "value", oldValue, "error", err.Error())
+                                        return
+                                }</span>
+                                <span class="cov0" title="0">affected = count</span>
+                        }
+                        <span class="cov0" title="0">if affected &gt; 0 </span><span class="cov0" title="0">{
+                                logging.Logger.Info("backfill: "+modifier, "collection", t.collection, "field", t.field, "value", oldValue, "replacement", newValue, "documents", affected)
+                        }</span>
+                }
+        }
+
+        <span class="cov0" title="0">if *apply </span><span class="cov0" title="0">{
+                logging.Logger.Info("backfill: complete", "documents_updated", updated)
+        }</span> else<span class="cov0" title="0"> {
+                fmt.Println("dry run complete - pass -apply to write changes; still remaining check via task 4.4")
+        }</span>
+}
+
+func resolveSubjects(ctx context.Context, usersBaseURL, token string, subjects []string) (map[string]string, error) <span class="cov0" title="0">{
+        if usersBaseURL == "" </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("USERS_API_URL is not set")
+        }</span>
+
+        <span class="cov0" title="0">body, err := json.Marshal(resolveSubjectsRequest{Subjects: subjects})
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">client := &amp;http.Client{Timeout: 60 * time.Second}
+        req, err := http.NewRequestWithContext(ctx, http.MethodPost, usersBaseURL+"/internal/resolve-subjects", bytes.NewReader(body))
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">req.Header.Set("Authorization", "Bearer "+token)
+        req.Header.Set("Content-Type", "application/json")
+
+        resp, err := client.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{ _ = resp.Body.Close() }</span>()
+        <span class="cov0" title="0">if resp.StatusCode != http.StatusOK </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("resolve-subjects returned %s", resp.Status)
+        }</span>
+
+        <span class="cov0" title="0">out := map[string]string{}
+        if err := json.NewDecoder(resp.Body).Decode(&amp;out); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return out, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">// Command backfill-volume-system-titles populates the denormalized system_titles map on every
+// existing volume by resolving each referenced game system's current title from
+// game-systems-api once. Idempotent and safe to re-run (UpdateVolumeSystemTitleBySystem is a
+// no-op when the stored title is unchanged). Run once after deploying the sync consumer.
+package main
+
+import (
+        "context"
+        "sync"
+
+        "github.com/joho/godotenv"
+        apiutil "github.com/sweetrpg/api-core.go/util"
+        "github.com/sweetrpg/catalog-api/constants"
+        "github.com/sweetrpg/catalog-data.go/data"
+        "github.com/sweetrpg/catalog-data.go/gamesystems"
+        "github.com/sweetrpg/common.go/logging"
+        "github.com/sweetrpg/common.go/util"
+        "github.com/sweetrpg/mongodb.go/database"
+)
+
+const backfillConcurrency = 8
+
+func main() <span class="cov0" title="0">{
+        _ = godotenv.Load(".env")
+        logging.Init()
+
+        database.SetupDatabase()
+        defer database.TeardownDatabase()
+
+        data.GameSystemsClient = gamesystems.NewClient(util.GetEnv(constants.GAME_SYSTEMS_API_URL, ""))
+
+        ctx := context.Background()
+
+        volumes, err := data.QueryVolumes(ctx, apiutil.QueryParams{Limit: 100000})
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("backfill: list volumes failed", "error", err.Error())
+                return
+        }</span>
+
+        // One title lookup per distinct referenced system; UpdateVolumeSystemTitleBySystem then
+        // fans that title out to every volume that references it.
+        <span class="cov0" title="0">distinct := map[string]struct{}{}
+        for _, v := range volumes </span><span class="cov0" title="0">{
+                for _, s := range v.Systems </span><span class="cov0" title="0">{
+                        if s != nil &amp;&amp; s.ID != "" </span><span class="cov0" title="0">{
+                                distinct[s.ID] = struct{}{}
+                        }</span>
+                }
+        }
+        <span class="cov0" title="0">logging.Logger.Info("backfill: starting", "volumes", len(volumes), "distinct_systems", len(distinct))
+
+        var wg sync.WaitGroup
+        sem := make(chan struct{}, backfillConcurrency)
+        var mu sync.Mutex
+        var updated, skipped int
+
+        for id := range distinct </span><span class="cov0" title="0">{
+                wg.Add(1)
+                go func(systemID string) </span><span class="cov0" title="0">{
+                        defer wg.Done()
+                        sem &lt;- struct{}{}
+                        defer func() </span><span class="cov0" title="0">{ &lt;-sem }</span>()
+
+                        <span class="cov0" title="0">sys, err := data.GetSystem(ctx, systemID)
+                        if err != nil || sys == nil || sys.GameSystem == "" </span><span class="cov0" title="0">{
+                                logging.Logger.Warn("backfill: system unresolved, left unset", "system_id", systemID, "error", err)
+                                mu.Lock()
+                                skipped++
+                                mu.Unlock()
+                                return
+                        }</span>
+                        <span class="cov0" title="0">affected, err := data.UpdateVolumeSystemTitleBySystem(ctx, systemID, sys.GameSystem)
+                        if err != nil </span><span class="cov0" title="0">{
+                                logging.Logger.Error("backfill: update failed", "system_id", systemID, "error", err.Error())
+                                return
+                        }</span>
+                        <span class="cov0" title="0">mu.Lock()
+                        updated += len(affected)
+                        mu.Unlock()</span>
+                }(id)
+        }
+        <span class="cov0" title="0">wg.Wait()
+
+        logging.Logger.Info("backfill: done", "volume_versions_updated", updated, "systems_skipped", skipped)</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package main
+
+import (
+        "context"
+        "fmt"
+        "log"
+        "log/slog"
+        "net/http"
+        "os"
+        "strconv"
+        "strings"
+        "time"
+
+        "github.com/getsentry/sentry-go"
+        "github.com/gin-contrib/cache/persistence"
+        "github.com/gin-contrib/cors"
+        "github.com/gin-gonic/gin"
+        "github.com/gomodule/redigo/redis"
+        "github.com/grafana/pyroscope-go"
+        "github.com/joho/godotenv"
+        "github.com/penglongli/gin-metrics/ginmetrics"
+        sloggin "github.com/samber/slog-gin"
+        actuator "github.com/sinhashubham95/go-actuator"
+        swaggerfiles "github.com/swaggo/files"
+        ginSwagger "github.com/swaggo/gin-swagger"
+        apiconstants "github.com/sweetrpg/api-core.go/constants"
+        "github.com/sweetrpg/api-core.go/featureflags"
+        "github.com/sweetrpg/api-core.go/ratelimit"
+        "github.com/sweetrpg/api-core.go/tracing"
+        "github.com/sweetrpg/authz-client.go/authz"
+        "github.com/sweetrpg/catalog-api/assets"
+        "github.com/sweetrpg/catalog-api/cachettl"
+        "github.com/sweetrpg/catalog-api/constants"
+        "github.com/sweetrpg/catalog-api/docs"
+        "github.com/sweetrpg/catalog-api/editsession"
+        "github.com/sweetrpg/catalog-api/internal/events"
+        "github.com/sweetrpg/catalog-api/readiness"
+        "github.com/sweetrpg/catalog-api/server"
+        "github.com/sweetrpg/catalog-api/vocabularies"
+        "github.com/sweetrpg/catalog-data.go/data"
+        "github.com/sweetrpg/catalog-data.go/gamesystems"
+        "github.com/sweetrpg/common.go/logging"
+        "github.com/sweetrpg/common.go/util"
+        "github.com/sweetrpg/mongodb.go/database"
+        "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+)
+
+// redisConnectTimeout bounds startup/readiness pings to Redis so a stalled connection fails
+// fast instead of hanging past the caller's own timeout (same rationale as api-core.go's
+// healthCheckTimeout for Mongo).
+const redisConnectTimeout = 5 * time.Second
+
+// @title Catalog API service
+// @version 1.0
+// @description Swagger APIs
+// @termsOfService https://pilgrimagesoftware.com/terms/
+// @contact.name API Support
+// @contact.url https://sweetrpg.com
+// @contact.email admin@sweetrpg.com
+// @license.name MIT
+// @license.url https://mit-license.org/
+func main() <span class="cov0" title="0">{
+        _ = godotenv.Load(".env")
+
+        logging.Init()
+
+        setupSentry()
+
+        ff := featureflags.New(constants.ServiceName)
+
+        if stopProfiling := setupProfiling(ff); stopProfiling != nil </span><span class="cov0" title="0">{
+                defer stopProfiling()
+        }</span>
+
+        <span class="cov0" title="0">httpLogger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+        r := gin.New()
+        r.Use(sloggin.New(httpLogger))
+        r.Use(gin.Recovery())
+        // r.LoadHTMLGlob("tmpl/*")
+
+        setupTracing(r)
+        defer tracing.TeardownTracing()
+
+        // CORS
+        setupCORS(r)
+
+        // Setup Prometheus metrics
+        setupMetrics(r)
+
+        redisPool := setupRedisPool()
+        if redisPool != nil </span><span class="cov0" title="0">{
+                defer func() </span><span class="cov0" title="0">{ _ = redisPool.Close() }</span>()
+        }
+        <span class="cov0" title="0">cache := setupCache(redisPool)
+        ttls := cachettl.Load()
+        // entity_version_patch.go (publishers/studios/persons/licenses) and volumes_patch.go/
+        // volumes_versions.go have no per-route cache invalidation of their own - without this, a
+        // successful write leaves cache.CachePage's cached GET responses stale for up to the
+        // configured TTL (an hour by default), so a save looks like it silently failed until the
+        // TTL expires. See cacheInvalidationMiddleware's own doc comment for why this is a full
+        // Flush() rather than a targeted per-key delete.
+        r.Use(cacheInvalidationMiddleware(cache, redisPool))
+
+        database.SetupDatabase()
+        defer database.TeardownDatabase()
+        data.GameSystemsClient = gamesystems.NewClient(util.GetEnv(constants.GAME_SYSTEMS_API_URL, ""))
+        if err := vocabularies.EnsureIndexes(context.Background()); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("Error while ensuring vocabularies indexes", "error", err.Error())
+        }</span>
+        <span class="cov0" title="0">if err := data.EnsureVolumeVersioningIndexes(context.Background()); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("Error while ensuring volume versioning indexes", "error", err.Error())
+        }</span>
+        <span class="cov0" title="0">for _, ensure := range []struct {
+                name string
+                fn   func(context.Context) error
+        }{
+                {"license", data.EnsureLicenseVersioningIndexes},
+                {"person", data.EnsurePersonVersioningIndexes},
+                {"publisher", data.EnsurePublisherVersioningIndexes},
+                {"studio", data.EnsureStudioVersioningIndexes},
+        } </span><span class="cov0" title="0">{
+                if err := ensure.fn(context.Background()); err != nil </span><span class="cov0" title="0">{
+                        logging.Logger.Error("Error while ensuring versioning indexes", "entity", ensure.name, "error", err.Error())
+                }</span>
+        }
+        <span class="cov0" title="0">if err := vocabularies.Backfill(context.Background()); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("Error while backfilling vocabularies", "error", err.Error())
+        }</span>
+
+        // Actuator
+        <span class="cov0" title="0">setupAcuator(r)
+
+        // Swagger
+        setupSwagger(r)
+
+        // Per-client/IP rate limiter (Redis-backed, fail-closed). See api-core.go/ratelimit.
+        r.Use(ratelimit.Middleware(redisPool, ratelimit.DefaultOptions()))
+
+        authzClient := authz.NewClient(util.GetEnv(constants.AUTH_API_URL, ""), util.GetEnv(constants.USERS_API_URL, ""))
+        assetsClient := assets.NewClient(util.GetEnv(constants.ASSETS_WEB_URL, ""))
+
+        eventPublisher, err := events.NewPublisher(context.Background())
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("Failed to initialize event publisher", "error", err.Error())
+        }</span>
+        <span class="cov0" title="0">if eventPublisher != nil </span><span class="cov0" title="0">{
+                defer eventPublisher.Close()
+        }</span>
+
+        <span class="cov0" title="0">editSessionPool := setupEditSessionPool()
+        if editSessionPool != nil </span><span class="cov0" title="0">{
+                defer func() </span><span class="cov0" title="0">{ _ = editSessionPool.Close() }</span>()
+        }
+        <span class="cov0" title="0">editSessions := editsession.NewStore(editSessionPool)
+
+        server.SetupHandlers(r, cache, ttls, authzClient, assetsClient, editSessions, eventPublisher)
+
+        // Background worker: keep denormalized volume system-titles current from
+        // gamesystems.events.system.updated. Disabled (nil) when NATS_URL is unset.
+        if titleSync, err := events.NewConsumer(context.Background()); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("Failed to initialize system-title sync consumer", "error", err.Error())
+        }</span> else<span class="cov0" title="0"> if titleSync != nil </span><span class="cov0" title="0">{
+                if err := titleSync.Start(context.Background(), server.SyncSystemTitle(cache)); err != nil </span><span class="cov0" title="0">{
+                        logging.Logger.Error("Failed to start system-title sync consumer", "error", err.Error())
+                }</span> else<span class="cov0" title="0"> {
+                        defer titleSync.Stop()
+                }</span>
+        }
+
+        <span class="cov0" title="0">_ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))</span>
+}
+
+func setupSwagger(r *gin.Engine) <span class="cov0" title="0">{
+        logging.Logger.Info("Setting up Swagger...")
+
+        docs.SwaggerInfo.Version = os.Getenv(apiconstants.VERSION)
+        docs.SwaggerInfo.Host = util.GetEnv(apiconstants.INGRESS_HOST, "localhost")
+        docs.SwaggerInfo.BasePath = util.GetEnv(apiconstants.INGRESS_BASE_PATH, "/")
+        docs.SwaggerInfo.Schemes = strings.Split(util.GetEnv(apiconstants.INGRESS_SCHEMES, "http"), ",")
+        // swagger middleware to serve the API docs
+        r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+}</span>
+
+func setupCORS(r *gin.Engine) <span class="cov0" title="0">{
+        logging.Logger.Info("Setting up CORS...")
+
+        origins := util.GetEnv(constants.ALLOWED_ORIGINS, "")
+        if origins == "" </span><span class="cov0" title="0">{
+                logging.Logger.Warn("ALLOWED_ORIGINS not set, no cross-origin requests will be allowed")
+                return
+        }</span>
+
+        <span class="cov0" title="0">r.Use(cors.New(cors.Config{
+                AllowOrigins:     strings.Split(origins, ","),
+                AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+                AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+                AllowCredentials: true,
+                MaxAge:           12 * time.Hour,
+        }))</span>
+}
+
+func setupSentry() <span class="cov0" title="0">{
+        logging.Logger.Info("Setting up Sentry...")
+
+        sentryDsn, found := os.LookupEnv(apiconstants.SENTRY_DSN)
+        if found </span><span class="cov0" title="0">{
+                sentryDebug, _ := strconv.ParseBool(util.GetEnv(apiconstants.SENTRY_DEBUG, "false"))
+                err := sentry.Init(sentry.ClientOptions{
+                        Dsn:              sentryDsn,
+                        Debug:            sentryDebug,
+                        AttachStacktrace: true,
+                        EnableTracing:    true,
+                        TracesSampleRate: 1.0,
+                        TracesSampler: sentry.TracesSampler(func(ctx sentry.SamplingContext) float64 </span><span class="cov0" title="0">{
+                                if strings.Contains(ctx.Span.Name, "/status/") </span><span class="cov0" title="0">{
+                                        return 0.0
+                                }</span>
+                                <span class="cov0" title="0">return 1.0</span>
+                        }),
+                        // ProfilesSampleRate: 1.0,
+                        ServerName: constants.ServiceName,
+                })
+                <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                        logging.Logger.Error("Error while trying to initialize Sentry", "error", err.Error())
+                }</span>
+                <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{
+                        log.Print("Flushing Sentry...")
+                        sentry.Flush(2 * time.Second)
+                }</span>()
+        }
+}
+
+// setupProfiling starts continuous profiling only when the profiling-enabled
+// feature flag evaluates to true, regardless of whether
+// PYROSCOPE_SERVER_ADDRESS happens to be set - the flag is the on/off
+// control, PYROSCOPE_SERVER_ADDRESS is only the destination. See the
+// pyroscope-profiling-flag spec's three scenarios.
+func setupProfiling(ff *featureflags.Client) func() <span class="cov0" title="0">{
+        logging.Logger.Info("Setting up continuous profiling...")
+
+        if !ff.BoolFlag(context.Background(), constants.ProfilingEnabledFlag, false) </span><span class="cov0" title="0">{
+                logging.Logger.Info("profiling-enabled flag is off, continuous profiling disabled")
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">serverAddress, found := os.LookupEnv(constants.PYROSCOPE_SERVER_ADDRESS)
+        if !found </span><span class="cov0" title="0">{
+                logging.Logger.Warn("profiling-enabled flag is on but PYROSCOPE_SERVER_ADDRESS not set, continuous profiling disabled")
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">profiler, err := pyroscope.Start(pyroscope.Config{
+                ApplicationName: constants.ServiceName,
+                ServerAddress:   serverAddress,
+                TenantID:        util.GetEnv(constants.PYROSCOPE_TENANT_ID, ""),
+                Tags: map[string]string{
+                        "env": util.GetEnv(apiconstants.ENV, "dev"),
+                },
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("Error while trying to initialize continuous profiling", "error", err.Error())
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">return func() </span><span class="cov0" title="0">{
+                _ = profiler.Stop()
+        }</span>
+}
+
+func setupAcuator(r *gin.Engine) <span class="cov0" title="0">{
+        logging.Logger.Info("Setting up actuator...")
+
+        actuatorHandler := actuator.GetActuatorHandler(&amp;actuator.Config{
+                Endpoints: []int{
+                        actuator.Env,
+                        actuator.Info,
+                        actuator.Metrics,
+                        actuator.Ping,
+                        // actuator.Shutdown,
+                        actuator.ThreadDump,
+                },
+                Env:     util.GetEnv(apiconstants.ENV, "dev"),
+                Name:    constants.ServiceName,
+                Port:    util.GetEnvInt(apiconstants.PORT, 0),
+                Version: util.GetEnv(apiconstants.VERSION, "v0.0.0"),
+        })
+        ginActuatorHandler := func(ctx *gin.Context) </span><span class="cov0" title="0">{
+                actuatorHandler(ctx.Writer, ctx.Request)
+        }</span>
+        <span class="cov0" title="0">r.GET("/actuator/*endpoint", ginActuatorHandler)</span>
+}
+
+// setupRedisPool builds a shared redigo connection pool for both the rate limiter's counters
+// and the cache's startup connectivity check, when REDIS_HOST is configured. Returns nil when
+// no Redis is configured, so the service runs entirely without an external dependency.
+func setupRedisPool() *redis.Pool <span class="cov5" title="2">{
+        redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
+        if !found </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov5" title="2">redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
+        redisPass := os.Getenv(apiconstants.REDIS_PASS)
+        addr := fmt.Sprintf("%s:%s", redisHost, redisPort)
+
+        return &amp;redis.Pool{
+                MaxIdle:     5,
+                IdleTimeout: 240 * time.Second,
+                Dial: func() (redis.Conn, error) </span><span class="cov8" title="3">{
+                        c, err := redis.Dial("tcp", addr, redis.DialConnectTimeout(redisConnectTimeout))
+                        if err != nil </span><span class="cov5" title="2">{
+                                return nil, err
+                        }</span>
+                        <span class="cov1" title="1">if redisPass != "" </span><span class="cov0" title="0">{
+                                if _, err := c.Do("AUTH", redisPass); err != nil </span><span class="cov0" title="0">{
+                                        _ = c.Close()
+                                        return nil, err
+                                }</span>
+                        }
+                        <span class="cov1" title="1">return c, nil</span>
+                },
+        }
+}
+
+// editSessionRedisDB is the Redis DB index reserved for edit sessions on catalog-api's own
+// Redis instance (REDIS_HOST/_PORT/_PASS) - no separate host/port config needed, see
+// docs/frontend-conventions.md's Redis registry in sweetrpg/platform.
+const editSessionRedisDB = 2
+
+// setupEditSessionPool builds a second redigo pool against the same Redis instance as
+// setupRedisPool, but selecting editSessionRedisDB - a separate pool (not a shared one with a
+// per-command SELECT) so cache/rate-limit connections can never accidentally read/write edit
+// session keys or vice versa. Returns nil when no Redis is configured, matching
+// setupRedisPool's behavior.
+func setupEditSessionPool() *redis.Pool <span class="cov0" title="0">{
+        redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
+        if !found </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
+        redisPass := os.Getenv(apiconstants.REDIS_PASS)
+        addr := fmt.Sprintf("%s:%s", redisHost, redisPort)
+
+        return &amp;redis.Pool{
+                MaxIdle:     5,
+                IdleTimeout: 240 * time.Second,
+                Dial: func() (redis.Conn, error) </span><span class="cov0" title="0">{
+                        dialOpts := []redis.DialOption{
+                                redis.DialConnectTimeout(redisConnectTimeout),
+                                redis.DialDatabase(editSessionRedisDB),
+                        }
+                        if redisPass != "" </span><span class="cov0" title="0">{
+                                // DialPassword, not a manual AUTH after Dial - DialDatabase's SELECT runs
+                                // during Dial() itself, before any command this func could issue afterward;
+                                // against a password-protected Redis that SELECT would fail pre-auth. Passing
+                                // the password as a DialOption lets redigo order AUTH before SELECT internally.
+                                dialOpts = append(dialOpts, redis.DialPassword(redisPass))
+                        }</span>
+                        <span class="cov0" title="0">return redis.Dial("tcp", addr, dialOpts...)</span>
+                },
+        }
+}
+
+// setupCache builds the response cache store and, when REDIS_HOST is configured, registers the
+// Redis pool with readiness so /status/health live-pings it on every call (see
+// readiness.CacheReady) instead of trusting a boot-time snapshot - a Redis outage that resolves
+// on its own then lets readiness recover without a pod restart. Also does one startup ping
+// purely to log early if Redis is unreachable at boot; that ping no longer determines
+// readiness by itself.
+func setupCache(redisPool *redis.Pool) persistence.CacheStore <span class="cov8" title="3">{
+        logging.Logger.Info("Setting up query cache...")
+
+        redisHost, found := os.LookupEnv(apiconstants.REDIS_HOST)
+        if !found </span><span class="cov1" title="1">{
+                readiness.SetCachePool(nil)
+                return persistence.NewInMemoryStore(time.Hour)
+        }</span>
+
+        <span class="cov5" title="2">redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
+        redisPass := os.Getenv(apiconstants.REDIS_PASS)
+        cache := persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), redisPass, time.Hour)
+
+        readiness.SetCachePool(redisPool)
+
+        ctx, cancel := context.WithTimeout(context.Background(), redisConnectTimeout)
+        defer cancel()
+        if err := ratelimit.Ping(ctx, redisPool); err != nil </span><span class="cov1" title="1">{
+                logging.Logger.Error("REDIS_HOST is configured but unreachable at startup; readiness will keep live-checking on each /status/health call",
+                        "redis_host", redisHost, "error", err.Error())
+        }</span>
+
+        <span class="cov5" title="2">return cache</span>
+}
+
+func setupTracing(r *gin.Engine) <span class="cov0" title="0">{
+        logging.Logger.Info("Setting up tracing...")
+
+        // Teardown is deferred by the caller (main), not here - deferring it in this function
+        // would run it as soon as this function returns, shutting down the tracer provider
+        // before the server ever serves a request, silently dropping every span.
+        tracing.SetupTracing(constants.ServiceName)
+        r.Use(otelgin.Middleware(constants.ServiceName))
+}</span>
+
+func setupMetrics(r *gin.Engine) <span class="cov0" title="0">{
+        logging.Logger.Info("Setting up metrics endpoint...")
+
+        m := ginmetrics.GetMonitor()
+        m.SetMetricPath("/metrics")
+        m.SetSlowTime(10)
+        m.SetDuration([]float64{0.1, 0.3, 1.2, 5, 10})
+        m.Use(r)
+}</span>
+
+// cacheInvalidationMiddleware flushes the response cache after any write (POST/PATCH/PUT/
+// DELETE) that succeeds (2xx status). A full flush rather than a targeted per-key delete:
+// gin-contrib/cache's page-cache key is derived from the full request URL (including query
+// string), which every read route (list with filters, single-record GET, sub-resource GETs)
+// would need reconstructing to invalidate precisely - not worth the complexity against this
+// service's write volume, which is low (admin/editor entity edits, not a hot path).
+//
+// This does NOT call persistence.RedisStore's own Flush() - that issues Redis FLUSHALL, which
+// wipes every logical DB on the server, not just the cache's own (DB 0). This service shares
+// its Redis instance with the edit-session store (DB 2, see setupEditSessionPool) specifically
+// so cache/rate-limit and edit-session data can't collide - a FLUSHALL from here would erase
+// every in-flight edit session on every write, platform-wide. When Redis is configured, this
+// issues FLUSHDB directly against redisPool (which, like the cache, is never SELECTed off DB
+// 0), scoped to only the response cache. When Redis isn't configured (in-memory fallback),
+// store.Flush() is safe - persistence.MemoryStore's Flush() only clears its own local map.
+func cacheInvalidationMiddleware(store persistence.CacheStore, redisPool *redis.Pool) gin.HandlerFunc <span class="cov10" title="4">{
+        return func(c *gin.Context) </span><span class="cov10" title="4">{
+                c.Next()
+                if !isCacheInvalidatingMethod(c.Request.Method) </span><span class="cov1" title="1">{
+                        return
+                }</span>
+                <span class="cov8" title="3">if status := c.Writer.Status(); status &lt; 200 || status &gt;= 300 </span><span class="cov1" title="1">{
+                        return
+                }</span>
+                <span class="cov5" title="2">if redisPool == nil </span><span class="cov1" title="1">{
+                        if err := store.Flush(); err != nil </span><span class="cov0" title="0">{
+                                logging.Logger.Warn("failed to flush response cache after write", "error", err.Error())
+                        }</span>
+                        <span class="cov1" title="1">return</span>
+                }
+                <span class="cov1" title="1">conn := redisPool.Get()
+                defer func() </span><span class="cov1" title="1">{ _ = conn.Close() }</span>()
+                <span class="cov1" title="1">if _, err := conn.Do("FLUSHDB"); err != nil </span><span class="cov0" title="0">{
+                        logging.Logger.Warn("failed to flush response cache after write", "error", err.Error())
+                }</span>
+        }
+}
+
+func isCacheInvalidatingMethod(method string) bool <span class="cov10" title="4">{
+        switch method </span>{
+        case http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete:<span class="cov8" title="3">
+                return true</span>
+        default:<span class="cov1" title="1">
+                return false</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">// Command consumer runs the system-title sync JetStream consumer as a standalone process, for
+// local development without the full catalog-api server. In production the same consumer runs
+// as a background worker of cmd/catalog-api.
+package main
+
+import (
+        "context"
+        "os"
+        "os/signal"
+        "syscall"
+
+        "github.com/joho/godotenv"
+        "github.com/sweetrpg/catalog-api/internal/events"
+        "github.com/sweetrpg/catalog-api/server"
+        "github.com/sweetrpg/common.go/logging"
+        "github.com/sweetrpg/mongodb.go/database"
+)
+
+func main() <span class="cov0" title="0">{
+        _ = godotenv.Load(".env")
+        logging.Init()
+
+        database.SetupDatabase()
+        defer database.TeardownDatabase()
+
+        consumer, err := events.NewConsumer(context.Background())
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("consumer: init failed", "error", err.Error())
+                os.Exit(1)
+        }</span>
+        <span class="cov0" title="0">if consumer == nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("consumer: NATS_URL not set")
+                os.Exit(1)
+        }</span>
+        <span class="cov0" title="0">defer consumer.Stop()
+
+        // No cache store here - a standalone consumer only updates stored titles; the catalog-api
+        // server process owns cache invalidation.
+        if err := consumer.Start(context.Background(), server.SyncSystemTitle(nil)); err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("consumer: start failed", "error", err.Error())
+                os.Exit(1)
+        }</span>
+        <span class="cov0" title="0">logging.Logger.Info("consumer: running, press Ctrl-C to stop")
+
+        sig := make(chan os.Signal, 1)
+        signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+        &lt;-sig
+        logging.Logger.Info("consumer: shutting down")</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">// Package docs Code generated by swaggo/swag. DO NOT EDIT
+package docs
+
+import "github.com/swaggo/swag"
+
+const docTemplate = `{
+    "schemes": {{ marshal .Schemes }},
+    "swagger": "2.0",
+    "info": {
+        "description": "{{escape .Description}}",
+        "title": "{{.Title}}",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://mit-license.org/"
+        },
+        "version": "{{.Version}}"
+    },
+    "host": "{{.Host}}",
+    "basePath": "{{.BasePath}}",
+    "paths": {
+        "/contributions": {
+            "get": {
+                "description": "Lists the contributions in the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contributions"
+                ],
+                "summary": "List contributions",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/contributions/{id}": {
+            "get": {
+                "description": "Get the details of a contribution from the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "contributions"
+                ],
+                "summary": "Get a contribution",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Contribution ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/licenses": {
+            "get": {
+                "description": "Lists the licenses in the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "licenses"
+                ],
+                "summary": "List licenses",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/licenses/{id}": {
+            "get": {
+                "description": "Get the details of a license from the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "licenses"
+                ],
+                "summary": "Get a license",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "License ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/licenses/{id}/volumes": {
+            "get": {
+                "description": "Gets all the volumes associated with a particular license",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "licenses"
+                ],
+                "summary": "Get license volumes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "License ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/persons": {
+            "get": {
+                "description": "Lists the persons in the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "persons"
+                ],
+                "summary": "List persons",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/persons/{id}": {
+            "get": {
+                "description": "Get the details of a person from the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "persons"
+                ],
+                "summary": "Get a person",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Person ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/publishers": {
+            "get": {
+                "description": "Lists the publishers in the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "publishers"
+                ],
+                "summary": "List publishers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/publishers/{id}": {
+            "get": {
+                "description": "Get the details of a publisher from the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "publishers"
+                ],
+                "summary": "Get a publisher",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Publisher ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/reviews": {
+            "get": {
+                "description": "Lists the reviews in the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "List reviews",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/reviews/{id}": {
+            "get": {
+                "description": "Get the details of a review from the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Get a review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Review ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/status/health": {
+            "get": {
+                "description": "Health check",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/status/ping": {
+            "get": {
+                "description": "Ping",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status"
+                ],
+                "summary": "Ping",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/studios": {
+            "get": {
+                "description": "Lists the studios in the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "studios"
+                ],
+                "summary": "List studios",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/studios/{id}": {
+            "get": {
+                "description": "Get the details of a studio from the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "studios"
+                ],
+                "summary": "Get a studio",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Studio ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/systems": {
+            "get": {
+                "description": "Lists the systems in the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "systems"
+                ],
+                "summary": "List systems",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/systems/{id}": {
+            "get": {
+                "description": "Get the details of a system from the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "systems"
+                ],
+                "summary": "Get a system",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/volumes": {
+            "get": {
+                "description": "Lists the volumes in the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "List volumes",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/volumes/{id}": {
+            "get": {
+                "description": "Get the details of a volume from the database.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Get a volume",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        }
+    }
+}`
+
+// SwaggerInfo holds exported Swagger Info so clients can modify it
+var SwaggerInfo = &amp;swag.Spec{
+        Version:          "1.0",
+        Host:             "localhost:8000",
+        BasePath:         "/",
+        Schemes:          []string{"http", "https"},
+        Title:            "Catalog API service",
+        Description:      "Testing Swagger APIs.",
+        InfoInstanceName: "swagger",
+        SwaggerTemplate:  docTemplate,
+        LeftDelim:        "{{",
+        RightDelim:       "}}",
+}
+
+func init() <span class="cov0" title="0">{
+        swag.Register(SwaggerInfo.InstanceName(), SwaggerInfo)
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">// Package editsession reads/deletes the shared, session-backed volume edit state that
+// catalog-web writes to Redis (REDIS_DB=2 on catalog-api's own Redis instance - see
+// docs/frontend-conventions.md's edit-session schema in sweetrpg/platform). catalog-api reads
+// a session at finalize time and deletes it once finalize completes; the one exception to
+// "catalog-api never creates a session" is pull-back (task 5.4), which recreates a pending
+// proposal's diff as a fresh session so the submitter can resume editing it.
+package editsession
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "time"
+
+        "github.com/gomodule/redigo/redis"
+        "github.com/sweetrpg/common.go/logging"
+)
+
+// KeyPrefix is the Redis key namespace for edit sessions: "edit-session:&lt;userId&gt;:&lt;recordType&gt;".
+const KeyPrefix = "edit-session"
+
+// Session mirrors the JSON schema catalog-web writes.
+type Session struct {
+        RecordID           string         `json:"recordId"`
+        Fields             map[string]any `json:"fields"`
+        StagedCoverAssetId string         `json:"stagedCoverAssetId,omitempty"`
+        SampleAssetIds     []string       `json:"sampleAssetIds,omitempty"`
+        CreatedAt          time.Time      `json:"createdAt"`
+        UpdatedAt          time.Time      `json:"updatedAt"`
+}
+
+// Key returns the Redis key for a user's in-flight session on a given record type.
+func Key(userID, recordType string) string <span class="cov10" title="8">{
+        return fmt.Sprintf("%s:%s:%s", KeyPrefix, userID, recordType)
+}</span>
+
+// Store reads/deletes edit sessions against a Redis pool already selecting REDIS_DB=2.
+type Store struct {
+        pool *redis.Pool
+}
+
+// NewStore wraps pool - the caller is responsible for the pool already dialing REDIS_DB=2.
+func NewStore(pool *redis.Pool) *Store <span class="cov7" title="4">{
+        return &amp;Store{pool: pool}
+}</span>
+
+// Get fetches a user's in-flight session for recordType, or nil if none exists.
+func (s *Store) Get(ctx context.Context, userID, recordType string) (*Session, error) <span class="cov4" title="2">{
+        logging.Logger.Debug("editsession.Get: enter", "userId", userID, "recordType", recordType)
+        conn, err := s.pool.GetContext(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("editsession: get connection: %w", err)
+        }</span>
+        <span class="cov4" title="2">defer func() </span><span class="cov4" title="2">{ _ = conn.Close() }</span>()
+
+        <span class="cov4" title="2">raw, err := redis.Bytes(conn.Do("GET", Key(userID, recordType)))
+        if err == redis.ErrNil </span><span class="cov1" title="1">{
+                logging.Logger.Debug("editsession.Get: exit", "userId", userID, "recordType", recordType, "outcome", "miss")
+                return nil, nil
+        }</span>
+        <span class="cov1" title="1">if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("editsession: get %s: %w", Key(userID, recordType), err)
+        }</span>
+
+        <span class="cov1" title="1">var session Session
+        if err := json.Unmarshal(raw, &amp;session); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("editsession: unmarshal %s: %w", Key(userID, recordType), err)
+        }</span>
+        <span class="cov1" title="1">logging.Logger.Debug("editsession.Get: exit", "userId", userID, "recordType", recordType, "outcome", "hit", "recordId", session.RecordID)
+        return &amp;session, nil</span>
+}
+
+// Set writes userID's session for recordType, overwriting any existing one. Used only by
+// pull-back (task 5.4) - every other session write comes from catalog-web directly.
+func (s *Store) Set(ctx context.Context, userID, recordType string, session Session) error <span class="cov0" title="0">{
+        logging.Logger.Debug("editsession.Set: enter", "userId", userID, "recordType", recordType)
+        conn, err := s.pool.GetContext(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("editsession: get connection: %w", err)
+        }</span>
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{ _ = conn.Close() }</span>()
+
+        <span class="cov0" title="0">raw, err := json.Marshal(session)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("editsession: marshal session for %s: %w", Key(userID, recordType), err)
+        }</span>
+        <span class="cov0" title="0">if _, err := conn.Do("SET", Key(userID, recordType), raw); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("editsession: set %s: %w", Key(userID, recordType), err)
+        }</span>
+        <span class="cov0" title="0">logging.Logger.Debug("editsession.Set: exit", "userId", userID, "recordType", recordType, "outcome", "ok")
+        return nil</span>
+}
+
+// Delete removes a user's in-flight session for recordType. A missing session is not an error.
+func (s *Store) Delete(ctx context.Context, userID, recordType string) error <span class="cov4" title="2">{
+        logging.Logger.Debug("editsession.Delete: enter", "userId", userID, "recordType", recordType)
+        conn, err := s.pool.GetContext(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("editsession: get connection: %w", err)
+        }</span>
+        <span class="cov4" title="2">defer func() </span><span class="cov4" title="2">{ _ = conn.Close() }</span>()
+
+        <span class="cov4" title="2">if _, err := conn.Do("DEL", Key(userID, recordType)); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("editsession: delete %s: %w", Key(userID, recordType), err)
+        }</span>
+        <span class="cov4" title="2">logging.Logger.Debug("editsession.Delete: exit", "userId", userID, "recordType", recordType, "outcome", "ok")
+        return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package events
+
+import (
+        "context"
+        "encoding/json"
+        "errors"
+        "fmt"
+        "os"
+
+        "github.com/nats-io/nats.go"
+        "github.com/nats-io/nats.go/jetstream"
+        "github.com/sweetrpg/common.go/logging"
+        "github.com/sweetrpg/common.go/util"
+)
+
+const (
+        systemEventsStream     = "GAMESYSTEMS_EVENTS"
+        systemTitleSyncDurable = "catalog-api-system-title-sync"
+        systemUpdatedSubject   = "gamesystems.events.system.updated"
+)
+
+// SystemUpdateHandler applies one gamesystems.events.system.updated event. Returning an error
+// Naks the message so JetStream redelivers it; the handler MUST be idempotent.
+type SystemUpdateHandler func(ctx context.Context, systemID, title string) error
+
+// Consumer binds catalog-api's durable pull consumer on the game-systems events stream and
+// dispatches system.updated events to a handler.
+type Consumer struct {
+        conn *nats.Conn
+        js   jetstream.JetStream
+        cc   jetstream.ConsumeContext
+}
+
+// NewConsumer builds a Consumer from the environment (same NATS_URL / NATS_CREDS /
+// NATS_USER+NATS_PASSWORD scheme as the publisher). Returns (nil, nil) when NATS_URL is unset so
+// the caller treats sync as disabled rather than a startup error.
+func NewConsumer(ctx context.Context) (*Consumer, error) <span class="cov0" title="0">{
+        natsURL := util.GetEnv("NATS_URL", "")
+        if natsURL == "" </span><span class="cov0" title="0">{
+                logging.Logger.Warn("NATS_URL not set; system-title sync consumer disabled")
+                return nil, nil
+        }</span>
+
+        <span class="cov0" title="0">opts := []nats.Option{}
+        if creds := os.Getenv("NATS_CREDS"); creds != "" </span><span class="cov0" title="0">{
+                opts = append(opts, nats.UserCredentials(creds))
+        }</span> else<span class="cov0" title="0"> if user := os.Getenv("NATS_USER"); user != "" </span><span class="cov0" title="0">{
+                opts = append(opts, nats.UserInfo(user, os.Getenv("NATS_PASSWORD")))
+        }</span>
+
+        <span class="cov0" title="0">conn, err := nats.Connect(natsURL, opts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("nats connect: %w", err)
+        }</span>
+        <span class="cov0" title="0">js, err := jetstream.New(conn)
+        if err != nil </span><span class="cov0" title="0">{
+                conn.Close()
+                return nil, fmt.Errorf("jetstream: %w", err)
+        }</span>
+        <span class="cov0" title="0">return &amp;Consumer{conn: conn, js: js}, nil</span>
+}
+
+// Start binds the durable (declared as a NACK CRD in sweetrpg/infrastructure; created here as a
+// fallback for local runs without NACK) and begins delivering events to handle in the
+// background. It returns once the subscription is established.
+func (c *Consumer) Start(ctx context.Context, handle SystemUpdateHandler) error <span class="cov0" title="0">{
+        if c == nil </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">cons, err := c.js.Consumer(ctx, systemEventsStream, systemTitleSyncDurable)
+        if errors.Is(err, jetstream.ErrConsumerNotFound) </span><span class="cov0" title="0">{
+                cons, err = c.js.CreateOrUpdateConsumer(ctx, systemEventsStream, jetstream.ConsumerConfig{
+                        Durable:       systemTitleSyncDurable,
+                        FilterSubject: systemUpdatedSubject,
+                        AckPolicy:     jetstream.AckExplicitPolicy,
+                })
+        }</span>
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("bind consumer %s/%s: %w", systemEventsStream, systemTitleSyncDurable, err)
+        }</span>
+
+        <span class="cov0" title="0">cc, err := cons.Consume(func(msg jetstream.Msg) </span><span class="cov0" title="0">{
+                if herr := dispatchSystemUpdate(ctx, msg, handle); herr != nil </span><span class="cov0" title="0">{
+                        logging.Logger.Error("system-title sync: handler failed, event will redeliver",
+                                "subject", msg.Subject(), "error", herr)
+                        _ = msg.Nak()
+                        return
+                }</span>
+                <span class="cov0" title="0">_ = msg.Ack()</span>
+        })
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("consume: %w", err)
+        }</span>
+        <span class="cov0" title="0">c.cc = cc
+        logging.Logger.Info("system-title sync consumer bound", "stream", systemEventsStream, "durable", systemTitleSyncDurable)
+        return nil</span>
+}
+
+// dispatchSystemUpdate decodes the message and invokes handle. A malformed envelope is dropped
+// (returns nil -&gt; Ack) rather than poisoning the durable; a handler error propagates (-&gt; Nak).
+func dispatchSystemUpdate(ctx context.Context, msg jetstream.Msg, handle SystemUpdateHandler) error <span class="cov0" title="0">{
+        systemID, title, ok := decodeSystemUpdate(msg.Data())
+        if !ok </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+        <span class="cov0" title="0">return handle(ctx, systemID, title)</span>
+}
+
+// decodeSystemUpdate parses a raw event body into (systemID, title). ok is false for an
+// undecodable envelope or one that is not a system.updated with a non-empty entity_id - the
+// caller acks and moves on in that case.
+func decodeSystemUpdate(body []byte) (systemID, title string, ok bool) <span class="cov10" title="5">{
+        var env Envelope
+        if err := json.Unmarshal(body, &amp;env); err != nil </span><span class="cov1" title="1">{
+                logging.Logger.Error("system-title sync: undecodable envelope, dropping", "error", err)
+                return "", "", false
+        }</span>
+        <span class="cov8" title="4">if env.Action != "updated" || env.EntityID == "" </span><span class="cov7" title="3">{
+                return "", "", false
+        }</span>
+        <span class="cov1" title="1">var payload struct {
+                Title string `json:"title"`
+        }
+        _ = json.Unmarshal(env.Data, &amp;payload)
+        return env.EntityID, payload.Title, true</span>
+}
+
+// Stop halts delivery and closes the connection.
+func (c *Consumer) Stop() <span class="cov0" title="0">{
+        if c == nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">if c.cc != nil </span><span class="cov0" title="0">{
+                c.cc.Stop()
+        }</span>
+        <span class="cov0" title="0">if c.conn != nil </span><span class="cov0" title="0">{
+                c.conn.Close()
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package events
+
+import (
+        "encoding/json"
+        "time"
+)
+
+// Envelope is the JSON event payload published to NATS JetStream.
+// Fields: event_id (UUID string), occurred_at (RFC3339), source ("catalog-api"),
+// entity_type, entity_id, action, revision (entity's post-change version, 0 for delete),
+// data (object; for volume.updated include at least the current title; may be empty for delete).
+type Envelope struct {
+        EventID    string          `json:"event_id"`
+        OccurredAt string          `json:"occurred_at"`
+        Source     string          `json:"source"`
+        EntityType string          `json:"entity_type"`
+        EntityID   string          `json:"entity_id"`
+        Action     string          `json:"action"`
+        Revision   int             `json:"revision"`
+        Data       json.RawMessage `json:"data"`
+}
+
+// NewEnvelope creates a new event envelope with all required fields.
+// eventID should be a UUID string, occurredAt is RFC3339 formatted, revision is the
+// entity's post-change version (0 for delete), and data is arbitrary JSON (may be null).
+func NewEnvelope(eventID, entityType, entityID, action string, revision int, data interface{}) (*Envelope, error) <span class="cov10" title="5">{
+        var rawData json.RawMessage
+        if data != nil </span><span class="cov8" title="4">{
+                b, err := json.Marshal(data)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov8" title="4">rawData = b</span>
+        } else<span class="cov1" title="1"> {
+                rawData = json.RawMessage("null")
+        }</span>
+
+        <span class="cov10" title="5">return &amp;Envelope{
+                EventID:    eventID,
+                OccurredAt: time.Now().UTC().Format(time.RFC3339),
+                Source:     "catalog-api",
+                EntityType: entityType,
+                EntityID:   entityID,
+                Action:     action,
+                Revision:   revision,
+                Data:       rawData,
+        }, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package events
+
+import (
+        "github.com/gin-gonic/gin"
+        "github.com/sweetrpg/catalog-objects.go/vo"
+        "github.com/sweetrpg/common.go/logging"
+)
+
+// PublishLicenseEvent publishes a license entity event.
+func PublishLicenseEvent(pub *Publisher) func(c *gin.Context, id string, revision int, action string, data vo.LicenseVO) <span class="cov0" title="0">{
+        return func(c *gin.Context, id string, revision int, action string, data vo.LicenseVO) </span><span class="cov0" title="0">{
+                if pub == nil </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">ctx := c.Request.Context()
+                switch action </span>{
+                case "created":<span class="cov0" title="0">
+                        pub.PublishEntityCreated(ctx, "license", id, revision, data)</span>
+                case "updated":<span class="cov0" title="0">
+                        pub.PublishEntityUpdated(ctx, "license", id, revision, data)</span>
+                case "deleted":<span class="cov0" title="0">
+                        pub.PublishEntityDeleted(ctx, "license", id)</span>
+                default:<span class="cov0" title="0">
+                        logging.Logger.Warn("PublishLicenseEvent: unknown action", "entity_id", id, "action", action)</span>
+                }
+        }
+}
+
+// PublishPersonEvent publishes a person entity event.
+func PublishPersonEvent(pub *Publisher) func(c *gin.Context, id string, revision int, action string, data vo.PersonVO) <span class="cov0" title="0">{
+        return func(c *gin.Context, id string, revision int, action string, data vo.PersonVO) </span><span class="cov0" title="0">{
+                if pub == nil </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">ctx := c.Request.Context()
+                switch action </span>{
+                case "created":<span class="cov0" title="0">
+                        pub.PublishEntityCreated(ctx, "person", id, revision, data)</span>
+                case "updated":<span class="cov0" title="0">
+                        pub.PublishEntityUpdated(ctx, "person", id, revision, data)</span>
+                case "deleted":<span class="cov0" title="0">
+                        pub.PublishEntityDeleted(ctx, "person", id)</span>
+                default:<span class="cov0" title="0">
+                        logging.Logger.Warn("PublishPersonEvent: unknown action", "entity_id", id, "action", action)</span>
+                }
+        }
+}
+
+// PublishPublisherEvent publishes a publisher entity event.
+func PublishPublisherEvent(pub *Publisher) func(c *gin.Context, id string, revision int, action string, data vo.PublisherVO) <span class="cov0" title="0">{
+        return func(c *gin.Context, id string, revision int, action string, data vo.PublisherVO) </span><span class="cov0" title="0">{
+                if pub == nil </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">ctx := c.Request.Context()
+                switch action </span>{
+                case "created":<span class="cov0" title="0">
+                        pub.PublishEntityCreated(ctx, "publisher", id, revision, data)</span>
+                case "updated":<span class="cov0" title="0">
+                        pub.PublishEntityUpdated(ctx, "publisher", id, revision, data)</span>
+                case "deleted":<span class="cov0" title="0">
+                        pub.PublishEntityDeleted(ctx, "publisher", id)</span>
+                default:<span class="cov0" title="0">
+                        logging.Logger.Warn("PublishPublisherEvent: unknown action", "entity_id", id, "action", action)</span>
+                }
+        }
+}
+
+// PublishStudioEvent publishes a studio entity event.
+func PublishStudioEvent(pub *Publisher) func(c *gin.Context, id string, revision int, action string, data vo.StudioVO) <span class="cov0" title="0">{
+        return func(c *gin.Context, id string, revision int, action string, data vo.StudioVO) </span><span class="cov0" title="0">{
+                if pub == nil </span><span class="cov0" title="0">{
+                        return
+                }</span>
+                <span class="cov0" title="0">ctx := c.Request.Context()
+                switch action </span>{
+                case "created":<span class="cov0" title="0">
+                        pub.PublishEntityCreated(ctx, "studio", id, revision, data)</span>
+                case "updated":<span class="cov0" title="0">
+                        pub.PublishEntityUpdated(ctx, "studio", id, revision, data)</span>
+                case "deleted":<span class="cov0" title="0">
+                        pub.PublishEntityDeleted(ctx, "studio", id)</span>
+                default:<span class="cov0" title="0">
+                        logging.Logger.Warn("PublishStudioEvent: unknown action", "entity_id", id, "action", action)</span>
+                }
+        }
+}
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package events
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "os"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/nats-io/nats.go"
+        "github.com/nats-io/nats.go/jetstream"
+        "github.com/sweetrpg/common.go/logging"
+        "github.com/sweetrpg/common.go/util"
+)
+
+// Publisher publishes entity-change events to NATS JetStream.
+type Publisher struct {
+        conn           *nats.Conn
+        js             jetstream.JetStream
+        publishTimeout time.Duration
+}
+
+// NewPublisher creates a new NATS JetStream publisher from environment configuration.
+// NATS_URL: NATS server URL (e.g., "nats://localhost:4222")
+// NATS_CREDS: path to credentials file (optional, empty/unset for no-auth)
+// PUBLISH_TIMEOUT_MS: milliseconds to wait for publish (default 3000)
+func NewPublisher(ctx context.Context) (*Publisher, error) <span class="cov1" title="1">{
+        natsURL := util.GetEnv("NATS_URL", "")
+        if natsURL == "" </span><span class="cov0" title="0">{
+                logging.Logger.Warn("NATS_URL not set; event publishing disabled")
+                return nil, nil
+        }</span>
+
+        <span class="cov1" title="1">opts := []nats.Option{}
+        if creds := os.Getenv("NATS_CREDS"); creds != "" </span><span class="cov0" title="0">{
+                opts = append(opts, nats.UserCredentials(creds))
+        }</span> else<span class="cov1" title="1"> if user := os.Getenv("NATS_USER"); user != "" </span><span class="cov0" title="0">{
+                opts = append(opts, nats.UserInfo(user, os.Getenv("NATS_PASSWORD")))
+        }</span>
+
+        <span class="cov1" title="1">conn, err := nats.Connect(natsURL, opts...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("nats connect: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">js, err := jetstream.New(conn)
+        if err != nil </span><span class="cov0" title="0">{
+                conn.Close()
+                return nil, fmt.Errorf("jetstream: %w", err)
+        }</span>
+
+        <span class="cov1" title="1">timeoutMs := util.GetEnvInt("PUBLISH_TIMEOUT_MS", 3000)
+
+        p := &amp;Publisher{
+                conn:           conn,
+                js:             js,
+                publishTimeout: time.Duration(timeoutMs) * time.Millisecond,
+        }
+
+        logging.Logger.Info("Publisher initialized", "nats_url", natsURL, "publish_timeout_ms", timeoutMs)
+        return p, nil</span>
+}
+
+// Close closes the NATS connection.
+func (p *Publisher) Close() <span class="cov10" title="2">{
+        if p != nil &amp;&amp; p.conn != nil </span><span class="cov1" title="1">{
+                p.conn.Close()
+        }</span>
+}
+
+// PublishEntityCreated publishes a created event for an entity.
+// data is the entity's current state.
+func (p *Publisher) PublishEntityCreated(ctx context.Context, entityType, entityID string, revision int, data interface{}) <span class="cov1" title="1">{
+        if p == nil || p.conn == nil </span><span class="cov1" title="1">{
+                return
+        }</span>
+
+        <span class="cov0" title="0">eventID := uuid.NewString()
+        envelope, err := NewEnvelope(eventID, entityType, entityID, "created", revision, data)
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("PublishEntityCreated: envelope creation failed", "entity_type", entityType, "entity_id", entityID, "error", err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">p.publishWithFallback(ctx, entityType, "created", eventID, envelope)</span>
+}
+
+// PublishEntityUpdated publishes an updated event for an entity.
+// data is the entity's current state (for volume.updated must include title).
+func (p *Publisher) PublishEntityUpdated(ctx context.Context, entityType, entityID string, revision int, data interface{}) <span class="cov10" title="2">{
+        if p == nil || p.conn == nil </span><span class="cov1" title="1">{
+                return
+        }</span>
+
+        <span class="cov1" title="1">eventID := uuid.NewString()
+        envelope, err := NewEnvelope(eventID, entityType, entityID, "updated", revision, data)
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("PublishEntityUpdated: envelope creation failed", "entity_type", entityType, "entity_id", entityID, "error", err)
+                return
+        }</span>
+
+        <span class="cov1" title="1">p.publishWithFallback(ctx, entityType, "updated", eventID, envelope)</span>
+}
+
+// PublishEntityDeleted publishes a deleted event for an entity.
+// revision is 0 for delete, data may be empty.
+func (p *Publisher) PublishEntityDeleted(ctx context.Context, entityType, entityID string) <span class="cov1" title="1">{
+        if p == nil || p.conn == nil </span><span class="cov1" title="1">{
+                return
+        }</span>
+
+        <span class="cov0" title="0">eventID := uuid.NewString()
+        envelope, err := NewEnvelope(eventID, entityType, entityID, "deleted", 0, nil)
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("PublishEntityDeleted: envelope creation failed", "entity_type", entityType, "entity_id", entityID, "error", err)
+                return
+        }</span>
+
+        <span class="cov0" title="0">p.publishWithFallback(ctx, entityType, "deleted", eventID, envelope)</span>
+}
+
+// publishWithFallback publishes the envelope with a bounded timeout and fails open:
+// on error/timeout/unreachable broker, logs the dropped event and returns success.
+func (p *Publisher) publishWithFallback(ctx context.Context, entityType, action, eventID string, envelope *Envelope) <span class="cov1" title="1">{
+        subject := fmt.Sprintf("catalog.events.%s.%s", entityType, action)
+
+        body, err := json.Marshal(envelope)
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("publishWithFallback: marshal failed", "entity_type", entityType, "entity_id", envelope.EntityID, "action", action, "error", err)
+                return
+        }</span>
+
+        // Bounded publish timeout
+        <span class="cov1" title="1">ctx, cancel := context.WithTimeout(ctx, p.publishTimeout)
+        defer cancel()
+
+        // ponytail: fail-open on timeout/error. Alternative: in-process queue with goroutine retry,
+        // but unbounded growth + restarts lose queued events. No retry is correct here.
+        _, err = p.js.Publish(ctx, subject, body, jetstream.WithMsgID(eventID))
+        if err != nil </span><span class="cov0" title="0">{
+                logging.Logger.Error("PublishEntityEvent: publish failed (event dropped)", "subject", subject, "entity_id", envelope.EntityID, "event_id", eventID, "error", err)
+                return
+        }</span>
+
+        <span class="cov1" title="1">logging.Logger.Info("PublishEntityEvent: published", "subject", subject, "entity_id", envelope.EntityID, "event_id", eventID)</span>
+}
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">// Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
+// api-core.go's HealthHandler already covers) so /status/health can fail loud instead of the
+// service silently degrading to an uncached or unlimited mode.
+package readiness
+
+import (
+        "context"
+        "sync/atomic"
+
+        "github.com/gomodule/redigo/redis"
+        "github.com/sweetrpg/api-core.go/ratelimit"
+)
+
+var cachePool atomic.Pointer[redis.Pool]
+
+// SetCachePool records the Redis pool CacheReady live-pings on each call. Pass nil when no
+// cache backend is configured (REDIS_HOST unset) - CacheReady then reports true, since the
+// in-memory fallback store has no external dependency to fail.
+func SetCachePool(pool *redis.Pool) <span class="cov10" title="3">{
+        cachePool.Store(pool)
+}</span>
+
+// CacheReady live-pings the configured cache backend rather than returning a cached boot-time
+// result - a Redis outage that resolves on its own should let readiness recover without
+// requiring a pod restart.
+func CacheReady(ctx context.Context) bool <span class="cov10" title="3">{
+        pool := cachePool.Load()
+        if pool == nil </span><span class="cov1" title="1">{
+                return true
+        }</span>
+        <span class="cov6" title="2">return ratelimit.Ping(ctx, pool) == nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
