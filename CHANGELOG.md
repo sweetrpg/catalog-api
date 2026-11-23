@@ -1,4 +1,13 @@
 
+## 0.36.2 - 2026-11-23
+
+### Fixed
+- Size the merged title map from one input
+- Set ndots 2 on API pods
+- Bump catalog-data.go to v0.20.2
+
+
+
 ## 0.36.1 - 2026-10-29
 
 ### Fixed
