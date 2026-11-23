@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"maps"
 
 	"github.com/gin-contrib/cache/persistence"
 	"github.com/sweetrpg/catalog-api/internal/events"
@@ -46,13 +47,9 @@ func resolveSystemTitles(ctx context.Context, systemIDs []string, hint map[strin
 // mergeTitleHints overlays a request-supplied hint on the volume's existing stored titles, so a
 // system whose reference is unchanged keeps its current title if the write-time lookup fails.
 func mergeTitleHints(existing, reqHint map[string]string) map[string]string {
-	merged := make(map[string]string, len(existing)+len(reqHint))
-	for k, v := range existing {
-		merged[k] = v
-	}
-	for k, v := range reqHint {
-		merged[k] = v
-	}
+	merged := make(map[string]string, len(existing))
+	maps.Copy(merged, existing)
+	maps.Copy(merged, reqHint)
 	return merged
 }
 
