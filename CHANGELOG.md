@@ -1,4 +1,11 @@
 
+## 0.36.3 - 2026-11-23
+
+### Fixed
+- Bump catalog-data.go to v0.20.3 and catalog-objects.go to v0.6.1
+
+
+
 ## 0.36.2 - 2026-11-23
 
 ### Fixed
