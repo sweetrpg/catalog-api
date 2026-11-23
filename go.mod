@@ -23,7 +23,7 @@ require (
 	github.com/swaggo/swag v1.16.6
 	github.com/sweetrpg/api-core.go v0.4.0
 	github.com/sweetrpg/authz-client.go v0.2.0
-	github.com/sweetrpg/catalog-data.go v0.20.1
+	github.com/sweetrpg/catalog-data.go v0.20.2
 	github.com/sweetrpg/catalog-objects.go v0.6.0
 	github.com/sweetrpg/common.go v0.0.16
 	github.com/sweetrpg/model-core.go v0.1.0
@@ -126,7 +126,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.46.0 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.46.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.47.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.uber.org/mock v0.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
