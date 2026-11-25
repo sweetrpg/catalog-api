@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -77,5 +78,69 @@ func TestPublishBudgetBoundsTotalDelayPerRequest(t *testing.T) {
 		if got := received(); got != request {
 			t.Errorf("broker received %d publishes after request %d, want %d", got, request, request)
 		}
+	}
+}
+
+// slowBroker acknowledges every publish after delay. It returns a counter of the publishes it
+// acknowledged.
+func slowBroker(t *testing.T, delay time.Duration) (url string, acked func() int) {
+	t.Helper()
+	s, err := natsserver.NewServer(&natsserver.Options{Host: "127.0.0.1", Port: -1})
+	if err != nil {
+		t.Fatalf("new NATS server: %v", err)
+	}
+	go s.Start()
+	if !s.ReadyForConnections(5 * time.Second) {
+		t.Fatal("NATS server not ready")
+	}
+	t.Cleanup(s.Shutdown)
+	conn, err := nats.Connect(s.ClientURL())
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	t.Cleanup(conn.Close)
+	var count atomic.Int64
+	if _, err := conn.Subscribe("catalog.events.>", func(m *nats.Msg) {
+		time.Sleep(delay)
+		count.Add(1)
+		if err := m.Respond([]byte(`{"stream":"catalog","seq":1}`)); err != nil {
+			t.Errorf("ack: %v", err)
+		}
+	}); err != nil {
+		t.Fatalf("subscribe: %v", err)
+	}
+	if err := conn.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+	return s.ClientURL(), func() int { return int(count.Load()) }
+}
+
+func TestPublishBudgetIgnoresSuccessfulPublishes(t *testing.T) {
+	url, acked := slowBroker(t, 20*time.Millisecond)
+	t.Setenv("NATS_URL", url)
+	t.Setenv("NATS_CREDS", "")
+	t.Setenv("PUBLISH_TIMEOUT_MS", "200")
+	pub, err := NewPublisher(context.Background())
+	if err != nil {
+		t.Fatalf("NewPublisher: %v", err)
+	}
+	t.Cleanup(pub.Close)
+
+	r := gin.New()
+	r.Use(PublishBudget())
+	r.POST("/loop", func(c *gin.Context) {
+		for i := range 20 {
+			pub.PublishEntityCreated(c.Request.Context(), "person", strconv.Itoa(i), 1, nil)
+		}
+	})
+
+	start := time.Now()
+	r.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/loop", nil))
+
+	if elapsed := time.Since(start); elapsed <= 200*time.Millisecond {
+		t.Fatalf("publishes took %v, need more than the 200ms budget to prove anything", elapsed)
+	}
+	if got := acked(); got != 20 {
+		t.Errorf("broker acknowledged %d publishes, want all 20", got)
 	}
 }

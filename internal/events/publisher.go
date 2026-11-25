@@ -131,19 +131,19 @@ func (p *Publisher) publishWithFallback(ctx context.Context, entityType, action,
 		return
 	}
 
-	// Bounded publish timeout, shared by all of one request's publishes (see PublishBudget)
+	// Bounded publish timeout, shared by all of one request's failed publishes (see PublishBudget)
 	timeout, done := publishAllowance(ctx, p.publishTimeout)
 	if timeout <= 0 {
 		logging.Logger.Error("PublishEntityEvent: request publish budget spent (event dropped)", "subject", subject, "entity_id", envelope.EntityID, "event_id", eventID)
 		return
 	}
-	defer done()
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	// ponytail: fail-open on timeout/error. Alternative: in-process queue with goroutine retry,
 	// but unbounded growth + restarts lose queued events. No retry is correct here.
 	_, err = p.js.Publish(ctx, subject, body, jetstream.WithMsgID(eventID))
+	done(err)
 	if err != nil {
 		logging.Logger.Error("PublishEntityEvent: publish failed (event dropped)", "subject", subject, "entity_id", envelope.EntityID, "event_id", eventID, "error", err)
 		return
