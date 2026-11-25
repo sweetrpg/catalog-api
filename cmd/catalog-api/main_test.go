@@ -37,7 +37,7 @@ func TestSetupCacheReportsReadyWhenRedisReachable(t *testing.T) {
 	}
 }
 
-func TestSetupCacheFailsReadinessWhenRedisUnreachable(t *testing.T) {
+func TestSetupCacheReportsCacheDownWhenRedisUnreachable(t *testing.T) {
 	mr := miniredis.RunT(t)
 	host, port := mr.Host(), mr.Port()
 	mr.Close()
