@@ -334,6 +334,7 @@ func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, 
 			if _, err := data.DeleteContribution(c.Request.Context(), contribution.ID); err != nil {
 				return nil, err
 			}
+			volumeEventPublisher.PublishEntityDeleted(c.Request.Context(), "contribution", contribution.ID)
 			affected[contribution.Person.ID] = true
 		}
 	}
@@ -342,8 +343,15 @@ func applyCreditsDiff(c *gin.Context, volumeID string, desired []creditRequest, 
 		if _, ok := have[key]; ok {
 			continue
 		}
-		if _, err := data.AddContribution(c.Request.Context(), key.personID, volumeID, key.roleType, updatedBy); err != nil {
+		contributionID, err := data.AddContribution(c.Request.Context(), key.personID, volumeID, key.roleType, updatedBy)
+		if err != nil {
 			return nil, err
+		}
+		if contributionID != nil {
+			// Contributions are unversioned: created is always revision 1.
+			volumeEventPublisher.PublishEntityCreated(c.Request.Context(), "contribution", *contributionID, 1, map[string]interface{}{
+				"personId": key.personID, "volumeId": volumeID, "role": key.roleType,
+			})
 		}
 		affected[key.personID] = true
 	}

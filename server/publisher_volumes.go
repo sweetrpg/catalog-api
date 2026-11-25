@@ -150,6 +150,12 @@ func setVolumeHasPublisher(c *gin.Context, volumeID, publisherID string, add boo
 	volume.Publishers = publishers
 	volume.UpdatedBy = updatedBy
 
-	_, err = data.UpdateVolume(c.Request.Context(), volumeID, volume, catalogmodels.VersionStateLive)
-	return err
+	version, err := data.UpdateVolume(c.Request.Context(), volumeID, volume, catalogmodels.VersionStateLive)
+	if err != nil {
+		return err
+	}
+	if version != nil {
+		publishVolumeUpdated(c, volumeID, volume.Title, version.Version)
+	}
+	return nil
 }

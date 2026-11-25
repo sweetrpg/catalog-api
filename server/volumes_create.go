@@ -98,6 +98,9 @@ func createVolume(c *gin.Context, store persistence.CacheStore) {
 		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "create_failed", Message: "no id returned"})
 		return
 	}
+	volumeEventPublisher.PublishEntityCreated(c.Request.Context(), "volume", *id, 1, map[string]interface{}{
+		"title": req.Title,
+	})
 	invalidateCachedPaths(store, "/volumes", "/volumes/"+*id, "/publishers", "/studios", "/systems")
 
 	result, err := data.GetVolume(c.Request.Context(), *id)

@@ -432,6 +432,7 @@ func setCurrentVolumeVersion(c *gin.Context) {
 		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
 		return
 	}
+	publishCurrentVolume(c, id)
 	logging.Logger.Info("setCurrentVolumeVersion: exit", "id", id, "version", version, "outcome", "ok")
 
 	c.JSON(http.StatusOK, result)
