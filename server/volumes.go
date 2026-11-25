@@ -226,6 +226,8 @@ func restoreVolume(c *gin.Context, store persistence.CacheStore) {
 	}
 	invalidateCachedPaths(store, "/volumes", "/volumes/"+id)
 
+	publishCurrentVolume(c, id)
+
 	result, err := data.GetVolume(c.Request.Context(), id)
 	if err != nil {
 		logging.Logger.Error("restoreVolume: post-restore query failed", "id", id, "error", err)
