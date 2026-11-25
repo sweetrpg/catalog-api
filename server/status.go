@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	apicores "github.com/sweetrpg/api-core.go/server"
-	_ "github.com/sweetrpg/api-core.go/vo"
+	"github.com/sweetrpg/api-core.go/vo"
 	"github.com/sweetrpg/catalog-api/readiness"
 	"github.com/sweetrpg/common.go/logging"
 )
@@ -53,7 +53,7 @@ func healthHandler(c *gin.Context) {
 	// }
 
 	// Run the cache check concurrently with api-core.go's Mongo checks rather than after them -
-	// the k8s readinessProbe here has its own 10s timeout, matching api-core.go's Mongo budget
+	// health callers allow 10s, matching api-core.go's Mongo budget
 	// alone; stacking the cache ping on top sequentially could push total handler time past
 	// that window and fail the probe on latency even when every individual check would have
 	// succeeded.
@@ -64,21 +64,21 @@ func healthHandler(c *gin.Context) {
 
 	resp := apicores.HealthHandler(c.Request.Context())
 
-	// Fold the cache backend's reachability into the same readiness signal Mongo already
-	// reports, so a configured-but-unreachable Redis surfaces as a failing readiness probe
-	// (Degraded in ArgoCD) instead of a silent cache-miss-only degradation. Live-pinged on
-	// every call rather than trusting a boot-time snapshot, so a Redis outage that resolves
-	// lets readiness recover without a pod restart.
-	if !<-cacheReadyCh {
-		resp.Messages = append(resp.Messages, "cache backend unreachable")
-		resp.Errors++
-	}
+	noteCacheStatus(&resp, <-cacheReadyCh)
 
 	status := http.StatusOK
 	if resp.Errors > 0 {
 		status = http.StatusServiceUnavailable
 	}
 	c.JSON(status, resp)
+}
+
+// noteCacheStatus reports an unreachable cache without counting it as an error: the service
+// serves uncached, so a Redis outage must not fail health.
+func noteCacheStatus(resp *vo.HealthResponseVO, ready bool) {
+	if !ready {
+		resp.Messages = append(resp.Messages, "cache backend unreachable")
+	}
 }
 
 // Ping the application.
