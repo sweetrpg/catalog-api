@@ -164,6 +164,7 @@ func bulkCreateEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin
 				results[i] = bulkCreateResult{Error: &msg}
 				continue
 			}
+			publishCurrentEntity(c, cfg, *id, "created", 1)
 			results[i] = bulkCreateResult{Success: true, ID: id}
 		}
 
@@ -338,6 +339,7 @@ func restoreEntity[T any, V any](cfg entityVersionAPIConfig[T, V], store persist
 			return
 		}
 		invalidateCachedPaths(store, cfg.listPath, cfg.listPath+"/"+id)
+		publishCurrentEntity(c, cfg, id, "updated", 0)
 		result, err := cfg.get(c, id)
 		if err != nil {
 			sentry.CaptureException(err)
@@ -498,6 +500,7 @@ func setCurrentEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin
 			c.JSON(http.StatusNotFound, apiv.ErrorVO{})
 			return
 		}
+		publishCurrentEntity(c, cfg, id, "updated", cfg.versionNumber(result))
 		c.JSON(http.StatusOK, result)
 	}
 }

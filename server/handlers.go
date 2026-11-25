@@ -11,6 +11,8 @@ import (
 )
 
 func SetupHandlers(g *gin.Engine, cache persistence.CacheStore, ttls cachettl.Config, authzClient *authz.Client, assetsClient *assets.Client, editSessions *editsession.Store, eventPublisher *events.Publisher) {
+	// Must precede route registration: gin applies middleware only to routes added after it.
+	g.Use(events.PublishBudget())
 	setupContributionHandlers(g, cache, ttls)
 	setupLicenseHandlers(g, cache, ttls, authzClient, eventPublisher)
 	setupPersonHandlers(g, cache, ttls, authzClient, eventPublisher)

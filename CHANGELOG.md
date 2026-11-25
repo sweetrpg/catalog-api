@@ -1,4 +1,18 @@
 
+## 0.37.0 - 2026-11-25
+
+### Added
+- Publish the missing catalog change events
+
+
+### Fixed
+- Serve uncached when Redis is unavailable
+- Bound total publish delay per request
+- Charge the publish budget only for failed publishes
+- Make the Docs workflow generate and push swagger docs
+
+
+
 ## 0.36.4 - 2026-11-25
 
 ### Fixed

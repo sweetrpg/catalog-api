@@ -1,15 +1,522 @@
-basePath: /
-host: localhost:8000
+definitions:
+  server.acceptVersionRequest:
+    properties:
+      fields:
+        description: |-
+          Fields lists which changed field names to accept; the rest are left unaccepted. Nil (the
+          key omitted entirely) means accept every changed field.
+        items:
+          type: string
+        type: array
+    type: object
+  server.addVocabularyRequest:
+    properties:
+      value:
+        type: string
+    type: object
+  server.catalogStatsResponse:
+    properties:
+      licenses:
+        $ref: '#/definitions/server.typeStatsVO'
+      persons:
+        $ref: '#/definitions/server.typeStatsVO'
+      publishers:
+        $ref: '#/definitions/server.typeStatsVO'
+      studios:
+        $ref: '#/definitions/server.typeStatsVO'
+      systems:
+        $ref: '#/definitions/server.typeStatsVO'
+      volumes:
+        $ref: '#/definitions/server.typeStatsVO'
+    type: object
+  server.createVolumeRequest:
+    properties:
+      coverAssetId:
+        type: string
+      description:
+        type: string
+      format:
+        type: string
+      notes:
+        type: string
+      properties:
+        items:
+          $ref: '#/definitions/server.propertyRequest'
+        type: array
+      publisherIds:
+        items:
+          type: string
+        type: array
+      sampleAssetIds:
+        items:
+          type: string
+        type: array
+      studioIds:
+        items:
+          type: string
+        type: array
+      systemIds:
+        items:
+          type: string
+        type: array
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  server.creditRequest:
+    properties:
+      contributionType:
+        type: string
+      personId:
+        type: string
+    type: object
+  server.patchVolumeRequest:
+    properties:
+      coverAssetId:
+        type: string
+      credits:
+        items:
+          $ref: '#/definitions/server.creditRequest'
+        type: array
+      description:
+        type: string
+      format:
+        type: string
+      notes:
+        type: string
+      properties:
+        items:
+          $ref: '#/definitions/server.propertyRequest'
+        type: array
+      publisherIds:
+        items:
+          type: string
+        type: array
+      sampleAssetIds:
+        items:
+          type: string
+        type: array
+      studioIds:
+        items:
+          type: string
+        type: array
+      systemIds:
+        items:
+          type: string
+        type: array
+      systemTitles:
+        additionalProperties:
+          type: string
+        description: |-
+          SystemTitles is an advisory id->title hint from the caller (e.g. the edit dialog's
+          already-loaded system names); catalog-api overwrites it from an authoritative
+          game-systems-api lookup when reachable, and falls back to it only when that lookup fails.
+        type: object
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  server.pendingStagedAssetsResponse:
+    properties:
+      coverAssetIds:
+        items:
+          type: string
+        type: array
+      sampleAssetIds:
+        items:
+          type: string
+        type: array
+    type: object
+  server.propertyRequest:
+    properties:
+      kind:
+        type: string
+      name:
+        type: string
+      value:
+        type: string
+    type: object
+  server.pullBackVersionResponse:
+    properties:
+      recordId:
+        type: string
+      status:
+        type: string
+    type: object
+  server.rejectVersionRequest:
+    properties:
+      note:
+        type: string
+    type: object
+  server.reviewVersionResponse:
+    properties:
+      conflicts:
+        items:
+          type: string
+        type: array
+      state:
+        type: string
+      version:
+        type: integer
+    type: object
+  server.setSubmissionCapRequest:
+    properties:
+      cap:
+        type: integer
+    type: object
+  server.submissionCapResponse:
+    properties:
+      cap:
+        type: integer
+      userId:
+        type: string
+    type: object
+  server.submittedVersionResponse:
+    properties:
+      message:
+        type: string
+      state:
+        type: string
+      version:
+        type: integer
+    type: object
+  server.typeStatsMostRecentVO:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  server.typeStatsVO:
+    properties:
+      count:
+        type: integer
+      last_updated:
+        type: string
+      most_recent:
+        $ref: '#/definitions/server.typeStatsMostRecentVO'
+    type: object
+  server.vocabularyResponse:
+    properties:
+      type:
+        type: string
+      values:
+        items:
+          type: string
+        type: array
+    type: object
+  vo.ErrorVO:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  vo.HealthResponseVO:
+    properties:
+      collections:
+        items:
+          type: string
+        type: array
+      database:
+        type: string
+      errors:
+        type: integer
+      messages:
+        items:
+          type: string
+        type: array
+      ping:
+        type: string
+    type: object
+  vo.LicenseVO:
+    properties:
+      availability:
+        type: string
+      created_at:
+        description: |-
+          Audit fields are direct fields, not an embedded modelcore.AuditableVO: google/jsonapi
+          v1.0.0 skips untagged struct fields, so an embedded struct never reaches the wire.
+          Times are RFC 3339 strings, which is what catalog-web's decoder expects.
+        type: string
+      created_by:
+        type: string
+      deed:
+        type: string
+      deleted_at:
+        type: string
+      deleted_by:
+        type: string
+      id:
+        type: string
+      legal_code:
+        type: string
+      notes:
+        type: string
+      properties:
+        items:
+          $ref: '#/definitions/vo.PropertyVO'
+        type: array
+      short_title:
+        type: string
+      status:
+        type: string
+      tags:
+        items:
+          $ref: '#/definitions/vo.TagVO'
+        type: array
+      title:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      version:
+        type: string
+      website:
+        type: string
+    type: object
+  vo.PingResponseVO:
+    properties:
+      date:
+        type: string
+      hostname:
+        type: string
+    type: object
+  vo.PropertyVO:
+    properties:
+      kind:
+        type: string
+      name:
+        type: string
+      value:
+        type: string
+    type: object
+  vo.PublisherVO:
+    properties:
+      address:
+        type: string
+      created_at:
+        description: |-
+          Audit fields are direct fields, not an embedded modelcore.AuditableVO: google/jsonapi
+          v1.0.0 skips untagged struct fields, so an embedded struct never reaches the wire.
+          Times are RFC 3339 strings, which is what catalog-web's decoder expects.
+        type: string
+      created_by:
+        type: string
+      deleted_at:
+        type: string
+      deleted_by:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      notes:
+        type: string
+      properties:
+        items:
+          $ref: '#/definitions/vo.PropertyVO'
+        type: array
+      tags:
+        items:
+          $ref: '#/definitions/vo.TagVO'
+        type: array
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      website:
+        type: string
+    type: object
+  vo.StudioVO:
+    properties:
+      created_at:
+        description: |-
+          Audit fields are direct fields, not an embedded modelcore.AuditableVO: google/jsonapi
+          v1.0.0 skips untagged struct fields, so an embedded struct never reaches the wire.
+          Times are RFC 3339 strings, which is what catalog-web's decoder expects.
+        type: string
+      created_by:
+        type: string
+      deleted_at:
+        type: string
+      deleted_by:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      notes:
+        type: string
+      properties:
+        items:
+          $ref: '#/definitions/vo.PropertyVO'
+        type: array
+      tags:
+        items:
+          $ref: '#/definitions/vo.TagVO'
+        type: array
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      website:
+        type: string
+    type: object
+  vo.SystemVO:
+    properties:
+      created_at:
+        description: |-
+          Audit fields are direct fields, not an embedded modelcore.AuditableVO: google/jsonapi
+          v1.0.0 skips untagged struct fields, so an embedded struct never reaches the wire.
+          Times are RFC 3339 strings, which is what catalog-web's decoder expects.
+        type: string
+      created_by:
+        type: string
+      deleted_at:
+        type: string
+      deleted_by:
+        type: string
+      edition:
+        type: string
+      game_system:
+        description: |-
+          GameSystem holds the game system's display name (e.g. "Dungeons & Dragons") - tagged
+          "name" on the wire, not "game_system", so catalog-api-client.swift's generic
+          NamedAttributes decoder (name ?? title ?? "Untitled") picks it up the same way it
+          already does for Publisher/Studio/Person/License.
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      tags:
+        items:
+          $ref: '#/definitions/vo.TagVO'
+        type: array
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  vo.TagVO:
+    properties:
+      name:
+        type: string
+      value:
+        type: string
+    type: object
+  vo.VersionState:
+    enum:
+    - submitted
+    - live
+    - archived
+    - rejected
+    - partially_accepted
+    - withdrawn
+    type: string
+    x-enum-varnames:
+    - VersionStateSubmitted
+    - VersionStateLive
+    - VersionStateArchived
+    - VersionStateRejected
+    - VersionStatePartiallyAccepted
+    - VersionStateWithdrawn
+  vo.VolumeVersionVO:
+    properties:
+      baseVersion:
+        type: integer
+      coverAssetId:
+        type: string
+      description:
+        type: string
+      format:
+        type: string
+      id:
+        type: string
+      licenses:
+        items:
+          $ref: '#/definitions/vo.LicenseVO'
+        type: array
+      notes:
+        type: string
+      properties:
+        items:
+          $ref: '#/definitions/vo.PropertyVO'
+        type: array
+      publishers:
+        items:
+          $ref: '#/definitions/vo.PublisherVO'
+        type: array
+      recordId:
+        type: string
+      resultingVersion:
+        type: integer
+      reviewNote:
+        type: string
+      reviewedAt:
+        type: string
+      reviewedBy:
+        type: string
+      sampleAssetIds:
+        items:
+          type: string
+        type: array
+      stagedCoverAssetId:
+        description: |-
+          StagedCoverAssetId/StagedSampleAssetIds mirror VolumeVersion's staged fields - see that
+          model's doc comment.
+        type: string
+      stagedSampleAssetIds:
+        items:
+          type: string
+        type: array
+      state:
+        $ref: '#/definitions/vo.VersionState'
+      studios:
+        items:
+          $ref: '#/definitions/vo.StudioVO'
+        type: array
+      submittedAt:
+        type: string
+      submittedBy:
+        type: string
+      systemTitles:
+        additionalProperties:
+          type: string
+        description: 'SystemTitles: denormalized system display names keyed by system
+          ID - see VolumeVO.'
+        type: object
+      systems:
+        items:
+          $ref: '#/definitions/vo.SystemVO'
+        type: array
+      tags:
+        items:
+          $ref: '#/definitions/vo.TagVO'
+        type: array
+      title:
+        type: string
+      version:
+        type: integer
+    type: object
 info:
   contact:
-    email: support@swagger.io
+    email: admin@sweetrpg.com
     name: API Support
-    url: http://www.swagger.io/support
-  description: Testing Swagger APIs.
+    url: https://sweetrpg.com
+  description: Swagger APIs
   license:
     name: MIT
     url: https://mit-license.org/
-  termsOfService: http://swagger.io/terms/
+  termsOfService: https://pilgrimagesoftware.com/terms/
   title: Catalog API service
   version: "1.0"
 paths:
@@ -24,7 +531,8 @@ paths:
           schema: {}
         "500":
           description: Internal Server Error
-          schema: {}
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
       summary: List contributions
       tags:
       - contributions
@@ -115,6 +623,31 @@ paths:
       summary: Get license volumes
       tags:
       - licenses
+  /licenses/search:
+    get:
+      description: Finds licenses whose title contains the query string - backs autocomplete/picker
+        inputs.
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Search licenses
+      tags:
+      - licenses
   /persons:
     get:
       description: Lists the persons in the database.
@@ -152,6 +685,55 @@ paths:
           description: Internal Server Error
           schema: {}
       summary: Get a person
+      tags:
+      - persons
+  /persons/{id}/volumes:
+    get:
+      description: Gets all the volumes a particular person has contributed to
+      parameters:
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get person volumes
+      tags:
+      - persons
+  /persons/search:
+    get:
+      description: Finds persons whose name contains the query string - backs autocomplete/picker
+        inputs.
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Search persons
       tags:
       - persons
   /publishers:
@@ -193,6 +775,55 @@ paths:
       summary: Get a publisher
       tags:
       - publishers
+  /publishers/{id}/volumes:
+    get:
+      description: Gets all the volumes associated with a particular publisher
+      parameters:
+      - description: Publisher ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get publisher volumes
+      tags:
+      - publishers
+  /publishers/search:
+    get:
+      description: Finds publishers whose name contains the query string - backs autocomplete/picker
+        inputs.
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Search publishers
+      tags:
+      - publishers
   /reviews:
     get:
       description: Lists the reviews in the database.
@@ -232,6 +863,42 @@ paths:
       summary: Get a review
       tags:
       - reviews
+  /staged-assets/pending:
+    get:
+      description: Internal, unauthenticated (matches other GET list endpoints) -
+        called by
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.pendingStagedAssetsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: List staged asset ids referenced by a pending submission
+      tags:
+      - staged-assets
+  /stats:
+    get:
+      description: Returns catalog-wide summary stats (per-entity-type count, most
+        recent update, and most recently added record) in a single call, rather than
+        requiring a caller to page through every entity type itself.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.catalogStatsResponse'
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get catalog stats
+      tags:
+      - stats
   /status/health:
     get:
       description: Health check
@@ -240,7 +907,8 @@ paths:
       responses:
         "200":
           description: OK
-          schema: {}
+          schema:
+            $ref: '#/definitions/vo.HealthResponseVO'
       summary: Health check
       tags:
       - status
@@ -252,7 +920,8 @@ paths:
       responses:
         "200":
           description: OK
-          schema: {}
+          schema:
+            $ref: '#/definitions/vo.PingResponseVO'
       summary: Ping
       tags:
       - status
@@ -295,6 +964,55 @@ paths:
       summary: Get a studio
       tags:
       - studios
+  /studios/{id}/volumes:
+    get:
+      description: Gets all the volumes associated with a particular studio
+      parameters:
+      - description: Studio ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get studio volumes
+      tags:
+      - studios
+  /studios/search:
+    get:
+      description: Finds studios whose name contains the query string - backs autocomplete/picker
+        inputs.
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Search studios
+      tags:
+      - studios
   /systems:
     get:
       description: Lists the systems in the database.
@@ -334,6 +1052,126 @@ paths:
       summary: Get a system
       tags:
       - systems
+  /systems/search:
+    get:
+      description: Finds game systems whose name contains the query string - backs
+        autocomplete/picker inputs.
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Search systems
+      tags:
+      - systems
+  /users/{userId}/submission-cap:
+    put:
+      consumes:
+      - application/json
+      description: admin only. Omit "cap" (or pass null) to clear the override, falling
+        the user back to the platform default.
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      - description: Cap to set, or null to clear
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/server.setSubmissionCapRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.submissionCapResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: Set a user's submission cap override
+      tags:
+      - users
+  /vocabularies/{type}:
+    get:
+      description: Lists every value in the given shared vocabulary (contribution-type,
+        property-name, or format). Format is editor/admin only.
+      parameters:
+      - description: Vocabulary type
+        in: path
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.vocabularyResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: List a vocabulary's values
+      tags:
+      - vocabularies
+    post:
+      consumes:
+      - application/json
+      description: Adds a new value to the given shared vocabulary. Editor/admin only
+        for every type.
+      parameters:
+      - description: Vocabulary type
+        in: path
+        name: type
+        required: true
+        type: string
+      - description: Value to add
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/server.addVocabularyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/server.vocabularyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: Add a value to a vocabulary
+      tags:
+      - vocabularies
   /volumes:
     get:
       description: Lists the volumes in the database.
@@ -349,7 +1187,59 @@ paths:
       summary: List volumes
       tags:
       - volumes
+    post:
+      consumes:
+      - application/json
+      description: Creates a new volume. Like POST /publishers, a brand-new record
+        is live immediately for every write role - there is no prior version for a
+        submission to be reviewed against. Title is required.
+      parameters:
+      - description: Volume to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/server.createVolumeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema: {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: Create a volume
+      tags:
+      - volumes
   /volumes/{id}:
+    delete:
+      description: Soft-deletes a volume, hiding it from list/browse/picker reads
+        without removing it.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Delete a volume
+      tags:
+      - volumes
     get:
       description: Get the details of a volume from the database.
       parameters:
@@ -373,7 +1263,445 @@ paths:
       summary: Get a volume
       tags:
       - volumes
-schemes:
-- http
-- https
+    patch:
+      consumes:
+      - application/json
+      description: admin/editor roles create a new version that goes live immediately;
+        submitter-only roles create a submitted version for review instead.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/server.patchVolumeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/server.submittedVersionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: Edit a volume
+      tags:
+      - volumes
+  /volumes/{id}/contributions:
+    get:
+      description: |-
+        Lists every contribution (person credit) for a single volume, filtered at the
+        query layer rather than by fetching the whole /contributions collection.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get volume contributions
+      tags:
+      - volumes
+  /volumes/{id}/finalize-session:
+    post:
+      description: Reads the caller's in-flight edit session for this volume. admin/editor
+        roles apply it directly (promoting any staged cover/samples to live); submitter
+        roles create a submitted version referencing the staged assets without promoting
+        them.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/server.submittedVersionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: Finalize a volume edit session
+      tags:
+      - volumes
+  /volumes/{id}/restore:
+    post:
+      description: Clears a soft-deleted volume's deletion, returning it to normal
+        read paths.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "404":
+          description: Not Found
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Restore a volume
+      tags:
+      - volumes
+  /volumes/{id}/reviews:
+    get:
+      description: |-
+        Lists every review for a single volume, filtered at the query layer rather than
+        by fetching the whole /reviews collection. catalog-data has no ReviewsByVolume
+        helper, so this scopes the shared QueryReviews with a volume_id $in filter -
+        same approach as getPublisherVolumes.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema: {}
+        "400":
+          description: Bad Request
+          schema: {}
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get volume reviews
+      tags:
+      - volumes
+  /volumes/{id}/versions:
+    get:
+      description: Every version for this volume, newest first.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/vo.VolumeVersionVO'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: List a volume's versions
+      tags:
+      - volumes
+  /volumes/{id}/versions/{version}:
+    get:
+      description: One version's full field snapshot, regardless of whether it's current.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Version number
+        in: path
+        name: version
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/vo.VolumeVersionVO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: Get a volume version
+      tags:
+      - volumes
+  /volumes/{id}/versions/{version}/accept:
+    post:
+      consumes:
+      - application/json
+      description: editor/admin only. Omit "fields" to accept every changed field.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Submitted version number
+        in: path
+        name: version
+        required: true
+        type: integer
+      - description: Fields to accept
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/server.acceptVersionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.reviewVersionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: Accept a submitted volume version
+      tags:
+      - volumes
+  /volumes/{id}/versions/{version}/current:
+    post:
+      description: admin only. Marks the given version live and archives whichever
+        version was previously current.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Version number to make current
+        in: path
+        name: version
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/vo.VolumeVersionVO'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: Set a volume's current version
+      tags:
+      - volumes
+  /volumes/{id}/versions/{version}/pull-back:
+    post:
+      description: submitter only, and only their own submissions. Fails with 409
+        if the caller already has an in-flight session for this record type.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Submitted version number
+        in: path
+        name: version
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.pullBackVersionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: Pull a submitted volume version back into an edit session
+      tags:
+      - volumes
+  /volumes/{id}/versions/{version}/reject:
+    post:
+      consumes:
+      - application/json
+      description: editor/admin only.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Submitted version number
+        in: path
+        name: version
+        required: true
+        type: integer
+      - description: Optional review note
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/server.rejectVersionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.reviewVersionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: Reject a submitted volume version
+      tags:
+      - volumes
+  /volumes/{id}/versions/{version}/retract:
+    post:
+      description: submitter only, and only their own submissions.
+      parameters:
+      - description: Volume ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Submitted version number
+        in: path
+        name: version
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.reviewVersionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vo.ErrorVO'
+      summary: Retract a submitted volume version
+      tags:
+      - volumes
+  /volumes/tags:
+    get:
+      description: Returns the distinct tag names on live volumes, most-used first,
+        capped by limit. The tag cloud drops its low-frequency tail, so callers pass
+        a limit to control how many tags come back.
+      parameters:
+      - description: Maximum number of tags to return (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal Server Error
+          schema: {}
+      summary: Get volume tags
+      tags:
+      - volumes
 swagger: "2.0"

@@ -9,11 +9,11 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "http://swagger.io/terms/",
+        "termsOfService": "https://pilgrimagesoftware.com/terms/",
         "contact": {
             "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@swagger.io"
+            "url": "https://sweetrpg.com",
+            "email": "admin@sweetrpg.com"
         },
         "license": {
             "name": "MIT",
@@ -41,7 +41,9 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
-                        "schema": {}
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
                     }
                 }
             }
@@ -94,6 +96,41 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/licenses/search": {
+            "get": {
+                "description": "Finds licenses whose title contains the query string - backs autocomplete/picker inputs.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "licenses"
+                ],
+                "summary": "Search licenses",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {}
                     },
                     "500": {
@@ -195,6 +232,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/persons/search": {
+            "get": {
+                "description": "Finds persons whose name contains the query string - backs autocomplete/picker inputs.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "persons"
+                ],
+                "summary": "Search persons",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
         "/persons/{id}": {
             "get": {
                 "description": "Get the details of a person from the database.",
@@ -205,6 +277,41 @@ const docTemplate = `{
                     "persons"
                 ],
                 "summary": "Get a person",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Person ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/persons/{id}/volumes": {
+            "get": {
+                "description": "Gets all the volumes a particular person has contributed to",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "persons"
+                ],
+                "summary": "Get person volumes",
                 "parameters": [
                     {
                         "type": "string",
@@ -252,6 +359,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/publishers/search": {
+            "get": {
+                "description": "Finds publishers whose name contains the query string - backs autocomplete/picker inputs.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "publishers"
+                ],
+                "summary": "Search publishers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
         "/publishers/{id}": {
             "get": {
                 "description": "Get the details of a publisher from the database.",
@@ -262,6 +404,41 @@ const docTemplate = `{
                     "publishers"
                 ],
                 "summary": "Get a publisher",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Publisher ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/publishers/{id}/volumes": {
+            "get": {
+                "description": "Gets all the volumes associated with a particular publisher",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "publishers"
+                ],
+                "summary": "Get publisher volumes",
                 "parameters": [
                     {
                         "type": "string",
@@ -344,6 +521,56 @@ const docTemplate = `{
                 }
             }
         },
+        "/staged-assets/pending": {
+            "get": {
+                "description": "Internal, unauthenticated (matches other GET list endpoints) - called by",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "staged-assets"
+                ],
+                "summary": "List staged asset ids referenced by a pending submission",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.pendingStagedAssetsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        },
+        "/stats": {
+            "get": {
+                "description": "Returns catalog-wide summary stats (per-entity-type count, most recent update, and most recently added record) in a single call, rather than requiring a caller to page through every entity type itself.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stats"
+                ],
+                "summary": "Get catalog stats",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.catalogStatsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
         "/status/health": {
             "get": {
                 "description": "Health check",
@@ -357,7 +584,9 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {}
+                        "schema": {
+                            "$ref": "#/definitions/vo.HealthResponseVO"
+                        }
                     }
                 }
             }
@@ -375,7 +604,9 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {}
+                        "schema": {
+                            "$ref": "#/definitions/vo.PingResponseVO"
+                        }
                     }
                 }
             }
@@ -402,6 +633,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/studios/search": {
+            "get": {
+                "description": "Finds studios whose name contains the query string - backs autocomplete/picker inputs.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "studios"
+                ],
+                "summary": "Search studios",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
         "/studios/{id}": {
             "get": {
                 "description": "Get the details of a studio from the database.",
@@ -412,6 +678,41 @@ const docTemplate = `{
                     "studios"
                 ],
                 "summary": "Get a studio",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Studio ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/studios/{id}/volumes": {
+            "get": {
+                "description": "Gets all the volumes associated with a particular studio",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "studios"
+                ],
+                "summary": "Get studio volumes",
                 "parameters": [
                     {
                         "type": "string",
@@ -459,6 +760,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/systems/search": {
+            "get": {
+                "description": "Finds game systems whose name contains the query string - backs autocomplete/picker inputs.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "systems"
+                ],
+                "summary": "Search systems",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
         "/systems/{id}": {
             "get": {
                 "description": "Get the details of a system from the database.",
@@ -494,6 +830,145 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/{userId}/submission-cap": {
+            "put": {
+                "description": "admin only. Omit \"cap\" (or pass null) to clear the override, falling the user back to the platform default.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Set a user's submission cap override",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cap to set, or null to clear",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/server.setSubmissionCapRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.submissionCapResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        },
+        "/vocabularies/{type}": {
+            "get": {
+                "description": "Lists every value in the given shared vocabulary (contribution-type, property-name, or format). Format is editor/admin only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vocabularies"
+                ],
+                "summary": "List a vocabulary's values",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vocabulary type",
+                        "name": "type",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.vocabularyResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Adds a new value to the given shared vocabulary. Editor/admin only for every type.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vocabularies"
+                ],
+                "summary": "Add a value to a vocabulary",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Vocabulary type",
+                        "name": "type",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Value to add",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/server.addVocabularyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/server.vocabularyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        },
         "/volumes": {
             "get": {
                 "description": "Lists the volumes in the database.",
@@ -508,6 +983,83 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new volume. Like POST /publishers, a brand-new record is live immediately for every write role - there is no prior version for a submission to be reviewed against. Title is required.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Create a volume",
+                "parameters": [
+                    {
+                        "description": "Volume to create",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/server.createVolumeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {}
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        },
+        "/volumes/tags": {
+            "get": {
+                "description": "Returns the distinct tag names on live volumes, most-used first, capped by limit. The tag cloud drops its low-frequency tail, so callers pass a limit to control how many tags come back.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Get volume tags",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of tags to return (default 20, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
                     },
                     "500": {
                         "description": "Internal Server Error",
@@ -549,6 +1101,1371 @@ const docTemplate = `{
                         "schema": {}
                     }
                 }
+            },
+            "delete": {
+                "description": "Soft-deletes a volume, hiding it from list/browse/picker reads without removing it.",
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Delete a volume",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            },
+            "patch": {
+                "description": "admin/editor roles create a new version that goes live immediately; submitter-only roles create a submitted version for review instead.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Edit a volume",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to change",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/server.patchVolumeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/server.submittedVersionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        },
+        "/volumes/{id}/contributions": {
+            "get": {
+                "description": "Lists every contribution (person credit) for a single volume, filtered at the\nquery layer rather than by fetching the whole /contributions collection.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Get volume contributions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/volumes/{id}/finalize-session": {
+            "post": {
+                "description": "Reads the caller's in-flight edit session for this volume. admin/editor roles apply it directly (promoting any staged cover/samples to live); submitter roles create a submitted version referencing the staged assets without promoting them.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Finalize a volume edit session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/server.submittedVersionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        },
+        "/volumes/{id}/restore": {
+            "post": {
+                "description": "Clears a soft-deleted volume's deletion, returning it to normal read paths.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Restore a volume",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/volumes/{id}/reviews": {
+            "get": {
+                "description": "Lists every review for a single volume, filtered at the query layer rather than\nby fetching the whole /reviews collection. catalog-data has no ReviewsByVolume\nhelper, so this scopes the shared QueryReviews with a volume_id $in filter -\nsame approach as getPublisherVolumes.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Get volume reviews",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {}
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {}
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {}
+                    }
+                }
+            }
+        },
+        "/volumes/{id}/versions": {
+            "get": {
+                "description": "Every version for this volume, newest first.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "List a volume's versions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/vo.VolumeVersionVO"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        },
+        "/volumes/{id}/versions/{version}": {
+            "get": {
+                "description": "One version's full field snapshot, regardless of whether it's current.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Get a volume version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Version number",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/vo.VolumeVersionVO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        },
+        "/volumes/{id}/versions/{version}/accept": {
+            "post": {
+                "description": "editor/admin only. Omit \"fields\" to accept every changed field.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Accept a submitted volume version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Submitted version number",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to accept",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/server.acceptVersionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.reviewVersionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        },
+        "/volumes/{id}/versions/{version}/current": {
+            "post": {
+                "description": "admin only. Marks the given version live and archives whichever version was previously current.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Set a volume's current version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Version number to make current",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/vo.VolumeVersionVO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        },
+        "/volumes/{id}/versions/{version}/pull-back": {
+            "post": {
+                "description": "submitter only, and only their own submissions. Fails with 409 if the caller already has an in-flight session for this record type.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Pull a submitted volume version back into an edit session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Submitted version number",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.pullBackVersionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        },
+        "/volumes/{id}/versions/{version}/reject": {
+            "post": {
+                "description": "editor/admin only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Reject a submitted volume version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Submitted version number",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optional review note",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/server.rejectVersionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.reviewVersionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        },
+        "/volumes/{id}/versions/{version}/retract": {
+            "post": {
+                "description": "submitter only, and only their own submissions.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "volumes"
+                ],
+                "summary": "Retract a submitted volume version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Volume ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Submitted version number",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/server.reviewVersionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vo.ErrorVO"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "server.acceptVersionRequest": {
+            "type": "object",
+            "properties": {
+                "fields": {
+                    "description": "Fields lists which changed field names to accept; the rest are left unaccepted. Nil (the\nkey omitted entirely) means accept every changed field.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "server.addVocabularyRequest": {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.catalogStatsResponse": {
+            "type": "object",
+            "properties": {
+                "licenses": {
+                    "$ref": "#/definitions/server.typeStatsVO"
+                },
+                "persons": {
+                    "$ref": "#/definitions/server.typeStatsVO"
+                },
+                "publishers": {
+                    "$ref": "#/definitions/server.typeStatsVO"
+                },
+                "studios": {
+                    "$ref": "#/definitions/server.typeStatsVO"
+                },
+                "systems": {
+                    "$ref": "#/definitions/server.typeStatsVO"
+                },
+                "volumes": {
+                    "$ref": "#/definitions/server.typeStatsVO"
+                }
+            }
+        },
+        "server.createVolumeRequest": {
+            "type": "object",
+            "properties": {
+                "coverAssetId": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "format": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "properties": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/server.propertyRequest"
+                    }
+                },
+                "publisherIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "sampleAssetIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "studioIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "systemIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.creditRequest": {
+            "type": "object",
+            "properties": {
+                "contributionType": {
+                    "type": "string"
+                },
+                "personId": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.patchVolumeRequest": {
+            "type": "object",
+            "properties": {
+                "coverAssetId": {
+                    "type": "string"
+                },
+                "credits": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/server.creditRequest"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "format": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "properties": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/server.propertyRequest"
+                    }
+                },
+                "publisherIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "sampleAssetIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "studioIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "systemIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "systemTitles": {
+                    "description": "SystemTitles is an advisory id-\u003etitle hint from the caller (e.g. the edit dialog's\nalready-loaded system names); catalog-api overwrites it from an authoritative\ngame-systems-api lookup when reachable, and falls back to it only when that lookup fails.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.pendingStagedAssetsResponse": {
+            "type": "object",
+            "properties": {
+                "coverAssetIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "sampleAssetIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "server.propertyRequest": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.pullBackVersionResponse": {
+            "type": "object",
+            "properties": {
+                "recordId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.rejectVersionRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.reviewVersionResponse": {
+            "type": "object",
+            "properties": {
+                "conflicts": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "state": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "server.setSubmissionCapRequest": {
+            "type": "object",
+            "properties": {
+                "cap": {
+                    "type": "integer"
+                }
+            }
+        },
+        "server.submissionCapResponse": {
+            "type": "object",
+            "properties": {
+                "cap": {
+                    "type": "integer"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.submittedVersionResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "server.typeStatsMostRecentVO": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "server.typeStatsVO": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "last_updated": {
+                    "type": "string"
+                },
+                "most_recent": {
+                    "$ref": "#/definitions/server.typeStatsMostRecentVO"
+                }
+            }
+        },
+        "server.vocabularyResponse": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "vo.ErrorVO": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "vo.HealthResponseVO": {
+            "type": "object",
+            "properties": {
+                "collections": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "database": {
+                    "type": "string"
+                },
+                "errors": {
+                    "type": "integer"
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ping": {
+                    "type": "string"
+                }
+            }
+        },
+        "vo.LicenseVO": {
+            "type": "object",
+            "properties": {
+                "availability": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "description": "Audit fields are direct fields, not an embedded modelcore.AuditableVO: google/jsonapi\nv1.0.0 skips untagged struct fields, so an embedded struct never reaches the wire.\nTimes are RFC 3339 strings, which is what catalog-web's decoder expects.",
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "deed": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "deleted_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "legal_code": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "properties": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.PropertyVO"
+                    }
+                },
+                "short_title": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.TagVO"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                },
+                "website": {
+                    "type": "string"
+                }
+            }
+        },
+        "vo.PingResponseVO": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "hostname": {
+                    "type": "string"
+                }
+            }
+        },
+        "vo.PropertyVO": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "vo.PublisherVO": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "description": "Audit fields are direct fields, not an embedded modelcore.AuditableVO: google/jsonapi\nv1.0.0 skips untagged struct fields, so an embedded struct never reaches the wire.\nTimes are RFC 3339 strings, which is what catalog-web's decoder expects.",
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "deleted_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "properties": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.PropertyVO"
+                    }
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.TagVO"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                },
+                "website": {
+                    "type": "string"
+                }
+            }
+        },
+        "vo.StudioVO": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "Audit fields are direct fields, not an embedded modelcore.AuditableVO: google/jsonapi\nv1.0.0 skips untagged struct fields, so an embedded struct never reaches the wire.\nTimes are RFC 3339 strings, which is what catalog-web's decoder expects.",
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "deleted_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "properties": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.PropertyVO"
+                    }
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.TagVO"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                },
+                "website": {
+                    "type": "string"
+                }
+            }
+        },
+        "vo.SystemVO": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "Audit fields are direct fields, not an embedded modelcore.AuditableVO: google/jsonapi\nv1.0.0 skips untagged struct fields, so an embedded struct never reaches the wire.\nTimes are RFC 3339 strings, which is what catalog-web's decoder expects.",
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "deleted_by": {
+                    "type": "string"
+                },
+                "edition": {
+                    "type": "string"
+                },
+                "game_system": {
+                    "description": "GameSystem holds the game system's display name (e.g. \"Dungeons \u0026 Dragons\") - tagged\n\"name\" on the wire, not \"game_system\", so catalog-api-client.swift's generic\nNamedAttributes decoder (name ?? title ?? \"Untitled\") picks it up the same way it\nalready does for Publisher/Studio/Person/License.",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.TagVO"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "vo.TagVO": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "vo.VersionState": {
+            "type": "string",
+            "enum": [
+                "submitted",
+                "live",
+                "archived",
+                "rejected",
+                "partially_accepted",
+                "withdrawn"
+            ],
+            "x-enum-varnames": [
+                "VersionStateSubmitted",
+                "VersionStateLive",
+                "VersionStateArchived",
+                "VersionStateRejected",
+                "VersionStatePartiallyAccepted",
+                "VersionStateWithdrawn"
+            ]
+        },
+        "vo.VolumeVersionVO": {
+            "type": "object",
+            "properties": {
+                "baseVersion": {
+                    "type": "integer"
+                },
+                "coverAssetId": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "format": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "licenses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.LicenseVO"
+                    }
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "properties": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.PropertyVO"
+                    }
+                },
+                "publishers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.PublisherVO"
+                    }
+                },
+                "recordId": {
+                    "type": "string"
+                },
+                "resultingVersion": {
+                    "type": "integer"
+                },
+                "reviewNote": {
+                    "type": "string"
+                },
+                "reviewedAt": {
+                    "type": "string"
+                },
+                "reviewedBy": {
+                    "type": "string"
+                },
+                "sampleAssetIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "stagedCoverAssetId": {
+                    "description": "StagedCoverAssetId/StagedSampleAssetIds mirror VolumeVersion's staged fields - see that\nmodel's doc comment.",
+                    "type": "string"
+                },
+                "stagedSampleAssetIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "state": {
+                    "$ref": "#/definitions/vo.VersionState"
+                },
+                "studios": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.StudioVO"
+                    }
+                },
+                "submittedAt": {
+                    "type": "string"
+                },
+                "submittedBy": {
+                    "type": "string"
+                },
+                "systemTitles": {
+                    "description": "SystemTitles: denormalized system display names keyed by system ID - see VolumeVO.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "systems": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.SystemVO"
+                    }
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/vo.TagVO"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
             }
         }
     }
@@ -557,11 +2474,11 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8000",
-	BasePath:         "/",
-	Schemes:          []string{"http", "https"},
+	Host:             "",
+	BasePath:         "",
+	Schemes:          []string{},
 	Title:            "Catalog API service",
-	Description:      "Testing Swagger APIs.",
+	Description:      "Swagger APIs",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

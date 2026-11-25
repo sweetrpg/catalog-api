@@ -50,6 +50,10 @@ import (
 // healthCheckTimeout for Mongo).
 const redisConnectTimeout = 5 * time.Second
 
+// cacheRedisTimeout bounds each dial, read and write on the cache/rate-limit pool. A cached
+// route makes several Redis calls per miss, so a stalled Redis must give up fast.
+const cacheRedisTimeout = 500 * time.Millisecond
+
 // @title Catalog API service
 // @version 1.0
 // @description Swagger APIs
@@ -308,7 +312,8 @@ func setupRedisPool() *redis.Pool {
 		MaxIdle:     5,
 		IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", addr, redis.DialConnectTimeout(redisConnectTimeout))
+			c, err := redis.Dial("tcp", addr, redis.DialConnectTimeout(cacheRedisTimeout),
+				redis.DialReadTimeout(cacheRedisTimeout), redis.DialWriteTimeout(cacheRedisTimeout))
 			if err != nil {
 				return nil, err
 			}
@@ -365,8 +370,8 @@ func setupEditSessionPool() *redis.Pool {
 
 // setupCache builds the response cache store and, when REDIS_HOST is configured, registers the
 // Redis pool with readiness so /status/health live-pings it on every call (see
-// readiness.CacheReady) instead of trusting a boot-time snapshot - a Redis outage that resolves
-// on its own then lets readiness recover without a pod restart. Also does one startup ping
+// readiness.CacheReady) instead of trusting a boot-time snapshot. An unreachable cache is
+// reported there but does not fail health; cached routes serve uncached. Also does one startup ping
 // purely to log early if Redis is unreachable at boot; that ping no longer determines
 // readiness by itself.
 func setupCache(redisPool *redis.Pool) persistence.CacheStore {
@@ -378,16 +383,14 @@ func setupCache(redisPool *redis.Pool) persistence.CacheStore {
 		return persistence.NewInMemoryStore(time.Hour)
 	}
 
-	redisPort := util.GetEnv(apiconstants.REDIS_PORT, "6379")
-	redisPass := os.Getenv(apiconstants.REDIS_PASS)
-	cache := persistence.NewRedisCache(fmt.Sprintf("%s:%s", redisHost, redisPort), redisPass, time.Hour)
+	cache := persistence.NewRedisCacheWithPool(redisPool, time.Hour)
 
 	readiness.SetCachePool(redisPool)
 
 	ctx, cancel := context.WithTimeout(context.Background(), redisConnectTimeout)
 	defer cancel()
 	if err := ratelimit.Ping(ctx, redisPool); err != nil {
-		logging.Logger.Error("REDIS_HOST is configured but unreachable at startup; readiness will keep live-checking on each /status/health call",
+		logging.Logger.Error("REDIS_HOST is configured but unreachable at startup; the response cache is skipped until it recovers",
 			"redis_host", redisHost, "error", err.Error())
 	}
 

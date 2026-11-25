@@ -1,6 +1,6 @@
 // Package readiness tracks the reachability of backend dependencies (beyond Mongo, which
-// api-core.go's HealthHandler already covers) so /status/health can fail loud instead of the
-// service silently degrading to an uncached or unlimited mode.
+// api-core.go's HealthHandler already covers) so /status/health can report
+// a degraded cache.
 package readiness
 
 import (
