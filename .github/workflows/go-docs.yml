@@ -1,20 +1,22 @@
 name: Docs
 
-concurrency: ci
+concurrency:
+    group: docs-${{ github.ref }}
+    cancel-in-progress: true
 
+# No path filter: dependency bumps in go.mod and hand edits to docs/ also make docs stale.
 on:
+    pull_request:
+        branches: [develop]
     push:
         branches: [develop]
-        paths:
-            - "**/*.go"
-            - "!docs/**"
     workflow_dispatch:
 
 permissions:
     contents: read
 
 jobs:
-    tests:
+    check:
         name: ${{ matrix.name }}
         runs-on: ${{ matrix.os }}
         strategy:
@@ -26,34 +28,21 @@ jobs:
                           os: ubuntu-latest,
                       }
         steps:
-            # develop's ruleset lets only the CI app push without a PR.
-            - uses: actions/create-github-app-token@v3
-              id: ci_token
-              with:
-                app-id: ${{ secrets.SRPG_CI_APP_ID }}
-                private-key: ${{ secrets.SRPG_CI_PRIVATE_KEY }}
             - uses: actions/checkout@v7
-              with:
-                fetch-depth: 0
-                token: ${{ steps.ci_token.outputs.token }}
             - name: Set up Go
               uses: actions/setup-go@v7
               with:
                 go-version-file: go.mod
-            - name: Generate docs
+            - name: Check docs are current
               env:
-                CHECKOUT_REF: ${{ github.head_ref || github.ref_name }}
+                SWAG: go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -d cmd/catalog-api/,server/ --parseDependency
               run: |
-                    git config --global user.email "ci@sweetrpg.com"
-                    git config --global user.name "SweetRPG Depedency Updater"
-                    git checkout "$CHECKOUT_REF"
-
-                    go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -d cmd/catalog-api/,server/ --parseDependency
-
-                    git add docs/
-                    if git diff --cached --quiet; then
-                        echo "docs are up to date"
-                        exit 0
+                    $SWAG
+                    stale=$(git status --porcelain --untracked-files=all -- docs/)
+                    if [ -n "$stale" ]; then
+                        echo "$stale"
+                        git diff --stat -- docs/
+                        echo "::error::docs/ is out of date. Run this, then commit docs/: $SWAG"
+                        exit 1
                     fi
-                    git commit -m "Generate docs"
-                    git push origin
+                    echo "docs are up to date"
