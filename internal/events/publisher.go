@@ -131,8 +131,14 @@ func (p *Publisher) publishWithFallback(ctx context.Context, entityType, action,
 		return
 	}
 
-	// Bounded publish timeout
-	ctx, cancel := context.WithTimeout(ctx, p.publishTimeout)
+	// Bounded publish timeout, shared by all of one request's publishes (see PublishBudget)
+	timeout, done := publishAllowance(ctx, p.publishTimeout)
+	if timeout <= 0 {
+		logging.Logger.Error("PublishEntityEvent: request publish budget spent (event dropped)", "subject", subject, "entity_id", envelope.EntityID, "event_id", eventID)
+		return
+	}
+	defer done()
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	// ponytail: fail-open on timeout/error. Alternative: in-process queue with goroutine retry,
