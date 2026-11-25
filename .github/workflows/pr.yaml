@@ -14,4 +14,7 @@ jobs:
     uses: sweetrpg/github-actions/.github/workflows/go-ci.yaml@master
     with:
       publish-coverage: false
+      mongodb-version: "8.0"
+      # GOFLAGS=-v lists each test in the log, so a package that ran nothing is visible.
+      test-env: '{"TEST_DB_URI": "mongodb://localhost:27017/unit-tests", "TEST_COLLECTION": "unit-tests", "GOFLAGS": "-v"}'
     secrets: inherit

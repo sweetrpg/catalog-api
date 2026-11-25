@@ -72,6 +72,12 @@ go vet ./...
 go test -v -coverprofile coverage.out ./...
 ```
 
+The `server`, `submissioncap`, and `vocabularies` tests need a MongoDB and fail without one:
+
+```bash
+TEST_DB_URI=mongodb://localhost:27017/unit-tests TEST_COLLECTION=unit-tests go test ./...
+```
+
 ## Releases
 
 See `RELEASE.md`. Summary: trigger `prepare-release.yaml` (`workflow_dispatch` against

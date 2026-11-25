@@ -2,6 +2,7 @@ package vocabularies
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -12,7 +13,8 @@ import (
 
 func TestMain(m *testing.M) {
 	if os.Getenv("TEST_DB_URI") == "" {
-		os.Exit(0)
+		fmt.Fprintln(os.Stderr, "TEST_DB_URI is unset: these tests need a MongoDB, e.g. TEST_DB_URI=mongodb://localhost:27017/unit-tests")
+		os.Exit(1)
 	}
 	_ = os.Setenv(constants.DB_URI, os.Getenv("TEST_DB_URI"))
 	logging.Init()
