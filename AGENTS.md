@@ -78,6 +78,15 @@ The `server`, `submissioncap`, and `vocabularies` tests need a MongoDB and fail 
 TEST_DB_URI=mongodb://localhost:27017/unit-tests TEST_COLLECTION=unit-tests go test ./...
 ```
 
+## API Docs
+
+`docs/` is generated and committed. After changing handler annotations, API types, or
+`go.mod`, regenerate it and commit the result; the Docs workflow fails if it's stale:
+
+```bash
+go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -d cmd/catalog-api/,server/ --parseDependency
+```
+
 ## Releases
 
 See `RELEASE.md`. Summary: trigger `prepare-release.yaml` (`workflow_dispatch` against
