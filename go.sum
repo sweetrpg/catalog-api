@@ -303,8 +303,8 @@ github.com/sweetrpg/api-core.go v0.4.0 h1:zfiJDuGJV5XFovcBnfqRg/oPlexj38o8tiAcv+
 github.com/sweetrpg/api-core.go v0.4.0/go.mod h1:UfSX3+lTzM07p9Wt42O5zD0BOVCMOVL81ggXvKXEMHY=
 github.com/sweetrpg/authz-client.go v0.2.0 h1:HYzR872fxO/JvSgdWPvdc67bI/5OgmbNNHrGb1QOMX0=
 github.com/sweetrpg/authz-client.go v0.2.0/go.mod h1:D5v5R+rW71cy298b7dMaAPTtWpkAntqGMFN3vQdkaSA=
-github.com/sweetrpg/catalog-data.go v0.20.5 h1:xFP9oGQYZ6PRAW1jGFvZdRnx0WVQLsln6UrytCGbXgE=
-github.com/sweetrpg/catalog-data.go v0.20.5/go.mod h1:KrXq/9D5YwWWfCcPccTe34enuKqZ0EI19Z8FrxmybZc=
+github.com/sweetrpg/catalog-data.go v0.21.0 h1:uQ3jmA3qYKbRBePx/dR2fGPR/foUfWc8QL9o1e2sjU8=
+github.com/sweetrpg/catalog-data.go v0.21.0/go.mod h1:KrXq/9D5YwWWfCcPccTe34enuKqZ0EI19Z8FrxmybZc=
 github.com/sweetrpg/catalog-objects.go v0.6.1 h1:Bk4nDF2Fs9WgJKgTU+0qYelIWZIVHBm6zsp8PcxBZt4=
 github.com/sweetrpg/catalog-objects.go v0.6.1/go.mod h1:CcDeIiB7lywiRfjGwnn+cnl/DKDlZZRPhrDF4PvSCnw=
 github.com/sweetrpg/common.go v0.0.16 h1:XT8PwUXz0BOMIITXLjw3G6rEjjRUEs0Xs4+R9o2fVBk=

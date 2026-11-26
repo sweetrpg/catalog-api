@@ -160,17 +160,8 @@ func main() {
 
 	server.SetupHandlers(r, cache, ttls, authzClient, assetsClient, editSessions, eventPublisher)
 
-	// Background worker: keep denormalized volume system-titles current from
-	// gamesystems.events.system.updated. Disabled (nil) when NATS_URL is unset.
-	if titleSync, err := events.NewConsumer(context.Background()); err != nil {
-		logging.Logger.Error("Failed to initialize system-title sync consumer", "error", err.Error())
-	} else if titleSync != nil {
-		if err := titleSync.Start(context.Background(), server.SyncSystemTitle(cache)); err != nil {
-			logging.Logger.Error("Failed to start system-title sync consumer", "error", err.Error())
-		} else {
-			defer titleSync.Stop()
-		}
-	}
+	stopSystemSync := startSystemSync(cache, redisPool)
+	defer stopSystemSync()
 
 	_ = r.Run(util.GetEnv(apiconstants.BIND_ADDRESS, ":8000"))
 }
@@ -423,15 +414,6 @@ func setupMetrics(r *gin.Engine) {
 // string), which every read route (list with filters, single-record GET, sub-resource GETs)
 // would need reconstructing to invalidate precisely - not worth the complexity against this
 // service's write volume, which is low (admin/editor entity edits, not a hot path).
-//
-// This does NOT call persistence.RedisStore's own Flush() - that issues Redis FLUSHALL, which
-// wipes every logical DB on the server, not just the cache's own (DB 0). This service shares
-// its Redis instance with the edit-session store (DB 2, see setupEditSessionPool) specifically
-// so cache/rate-limit and edit-session data can't collide - a FLUSHALL from here would erase
-// every in-flight edit session on every write, platform-wide. When Redis is configured, this
-// issues FLUSHDB directly against redisPool (which, like the cache, is never SELECTed off DB
-// 0), scoped to only the response cache. When Redis isn't configured (in-memory fallback),
-// store.Flush() is safe - persistence.MemoryStore's Flush() only clears its own local map.
 func cacheInvalidationMiddleware(store persistence.CacheStore, redisPool *redis.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
@@ -441,17 +423,31 @@ func cacheInvalidationMiddleware(store persistence.CacheStore, redisPool *redis.
 		if status := c.Writer.Status(); status < 200 || status >= 300 {
 			return
 		}
-		if redisPool == nil {
-			if err := store.Flush(); err != nil {
-				logging.Logger.Warn("failed to flush response cache after write", "error", err.Error())
-			}
-			return
+		flushResponseCache(store, redisPool)
+	}
+}
+
+// flushResponseCache clears the response cache.
+//
+// This does NOT call persistence.RedisStore's own Flush() - that issues Redis FLUSHALL, which
+// wipes every logical DB on the server, not just the cache's own (DB 0). This service shares
+// its Redis instance with the edit-session store (DB 2, see setupEditSessionPool) specifically
+// so cache/rate-limit and edit-session data can't collide - a FLUSHALL from here would erase
+// every in-flight edit session on every write, platform-wide. When Redis is configured, this
+// issues FLUSHDB directly against redisPool (which, like the cache, is never SELECTed off DB
+// 0), scoped to only the response cache. When Redis isn't configured (in-memory fallback),
+// store.Flush() is safe - persistence.MemoryStore's Flush() only clears its own local map.
+func flushResponseCache(store persistence.CacheStore, redisPool *redis.Pool) {
+	if redisPool == nil {
+		if err := store.Flush(); err != nil {
+			logging.Logger.Warn("failed to flush response cache", "error", err.Error())
 		}
-		conn := redisPool.Get()
-		defer func() { _ = conn.Close() }()
-		if _, err := conn.Do("FLUSHDB"); err != nil {
-			logging.Logger.Warn("failed to flush response cache after write", "error", err.Error())
-		}
+		return
+	}
+	conn := redisPool.Get()
+	defer func() { _ = conn.Close() }()
+	if _, err := conn.Do("FLUSHDB"); err != nil {
+		logging.Logger.Warn("failed to flush response cache", "error", err.Error())
 	}
 }
 

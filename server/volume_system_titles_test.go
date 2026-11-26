@@ -3,8 +3,10 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 
 	"github.com/gin-contrib/cache"
@@ -39,24 +41,30 @@ func withGameSystemsClient(t *testing.T, baseURL string) {
 	t.Cleanup(func() { data.GameSystemsClient = prev })
 }
 
-func TestResolveSystemTitlesFromGameSystemsAPI(t *testing.T) {
-	withGameSystemsClient(t, fakeGameSystemsAPI(t, "sysA", "Numenera", http.StatusNotFound))
+func TestResolveSystemRefsStoresTheDocumentID(t *testing.T) {
+	withGameSystemsClient(t, fakeGameSystemsAPI(t, "slug-a", "Numenera", http.StatusNotFound))
 
-	titles := resolveSystemTitles(context.Background(), []string{"sysA"}, nil)
-	if titles["sysA"] != "Numenera" {
-		t.Fatalf("titles = %v, want sysA -> Numenera", titles)
+	// The fake answers /systems/slug-a with record_id meta-slug-a; the repeat must collapse.
+	refs, titles := resolveSystemRefs(context.Background(), []*vo.SystemVO{{ID: "slug-a"}, {ID: "slug-a"}, {ID: "unknown"}}, nil)
+
+	if got := systemIDsOf(refs); !slices.Equal(got, []string{"meta-slug-a", "unknown"}) {
+		t.Errorf("refs = %v, want [meta-slug-a unknown]", got)
+	}
+	if !maps.Equal(titles, map[string]string{"meta-slug-a": "Numenera"}) {
+		t.Errorf("titles = %v, want meta-slug-a -> Numenera", titles)
 	}
 }
 
-func TestResolveSystemTitlesUnreachableFallsBackToHint(t *testing.T) {
+func TestResolveSystemRefsUnreachableFallsBackToHint(t *testing.T) {
 	withGameSystemsClient(t, fakeGameSystemsAPI(t, "known", "Known", http.StatusInternalServerError))
+	requested := []*vo.SystemVO{{ID: "sysA"}}
 
-	titles := resolveSystemTitles(context.Background(), []string{"sysA"}, map[string]string{"sysA": "Hinted"})
-	if titles["sysA"] != "Hinted" {
-		t.Errorf("with hint: got %v, want sysA -> Hinted", titles)
+	refs, titles := resolveSystemRefs(context.Background(), requested, map[string]string{"sysA": "Hinted"})
+	if titles["sysA"] != "Hinted" || !slices.Equal(systemIDsOf(refs), []string{"sysA"}) {
+		t.Errorf("with hint: refs %v titles %v, want sysA -> Hinted", systemIDsOf(refs), titles)
 	}
 
-	noHint := resolveSystemTitles(context.Background(), []string{"sysA"}, nil)
+	_, noHint := resolveSystemRefs(context.Background(), requested, nil)
 	if _, present := noHint["sysA"]; present {
 		t.Errorf("no hint + unreachable: expected sysA left unset, got %v", noHint)
 	}
