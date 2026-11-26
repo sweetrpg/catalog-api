@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"slices"
 	"testing"
@@ -59,7 +60,16 @@ func TestCreateVolumeStoresDocumentIDAndTitle(t *testing.T) {
 		t.Fatalf("create status = %d: %s", rec.Code, rec.Body.String())
 	}
 
-	volume, err := data.GetVolume(t.Context(), decodeVolume(t, rec.Body.Bytes()).ID)
+	// decodeVolume can't be used here: google/jsonapi can't unmarshal the systemTitles map.
+	var created struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("decode create response: %v", err)
+	}
+	volume, err := data.GetVolume(t.Context(), created.Data.ID)
 	if err != nil {
 		t.Fatalf("GetVolume: %v", err)
 	}
