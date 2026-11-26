@@ -1,4 +1,19 @@
 
+## 0.38.0 - 2026-11-26
+
+### Added
+- Remove references to deleted game systems
+
+
+### Documentation
+- Add the feature work checkpoint pointer
+
+
+### Fixed
+- Build the catalog-api package, not only main.go
+
+
+
 ## 0.37.0 - 2026-11-25
 
 ### Added
