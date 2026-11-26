@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
+	"sync"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -19,36 +20,37 @@ const (
 	systemUpdatedSubject   = "gamesystems.events.system.updated"
 )
 
+// bindRetryDelay is how long to wait before retrying a durable that couldn't be bound.
+var bindRetryDelay = 5 * time.Second
+
 // SystemUpdateHandler applies one gamesystems.events.system.updated event. Returning an error
 // Naks the message so JetStream redelivers it; the handler MUST be idempotent.
 type SystemUpdateHandler func(ctx context.Context, systemID, title string) error
 
-// Consumer binds catalog-api's durable pull consumer on the game-systems events stream and
-// dispatches system.updated events to a handler.
+// Consumer binds catalog-api's durable pull consumers on the game-systems events stream.
 type Consumer struct {
-	conn *nats.Conn
-	js   jetstream.JetStream
-	cc   jetstream.ConsumeContext
+	conn   *nats.Conn
+	js     jetstream.JetStream
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	mu       sync.Mutex
+	consumes []jetstream.ConsumeContext
+	binding  sync.WaitGroup
 }
 
 // NewConsumer builds a Consumer from the environment (same NATS_URL / NATS_CREDS /
 // NATS_USER+NATS_PASSWORD scheme as the publisher). Returns (nil, nil) when NATS_URL is unset so
-// the caller treats sync as disabled rather than a startup error.
+// the caller treats sync as disabled rather than a startup error. An unreachable broker is not
+// an error: the connection keeps retrying.
 func NewConsumer(ctx context.Context) (*Consumer, error) {
 	natsURL := util.GetEnv("NATS_URL", "")
 	if natsURL == "" {
-		logging.Logger.Warn("NATS_URL not set; system-title sync consumer disabled")
+		logging.Logger.Warn("NATS_URL not set; game system event consumers disabled")
 		return nil, nil
 	}
 
-	opts := []nats.Option{}
-	if creds := os.Getenv("NATS_CREDS"); creds != "" {
-		opts = append(opts, nats.UserCredentials(creds))
-	} else if user := os.Getenv("NATS_USER"); user != "" {
-		opts = append(opts, nats.UserInfo(user, os.Getenv("NATS_PASSWORD")))
-	}
-
-	conn, err := nats.Connect(natsURL, opts...)
+	conn, err := nats.Connect(natsURL, connectOptions()...)
 	if err != nil {
 		return nil, fmt.Errorf("nats connect: %w", err)
 	}
@@ -57,31 +59,18 @@ func NewConsumer(ctx context.Context) (*Consumer, error) {
 		conn.Close()
 		return nil, fmt.Errorf("jetstream: %w", err)
 	}
-	return &Consumer{conn: conn, js: js}, nil
+	ctx, cancel := context.WithCancel(ctx)
+	return &Consumer{conn: conn, js: js, ctx: ctx, cancel: cancel}, nil
 }
 
-// Start binds the durable (declared as a NACK CRD in sweetrpg/infrastructure; created here as a
-// fallback for local runs without NACK) and begins delivering events to handle in the
-// background. It returns once the subscription is established.
-func (c *Consumer) Start(ctx context.Context, handle SystemUpdateHandler) error {
+// Start consumes system.updated events on the title-sync durable. It returns at once and binds
+// in the background, retrying until the broker and stream are available.
+func (c *Consumer) Start(handle SystemUpdateHandler) {
 	if c == nil {
-		return nil
+		return
 	}
-
-	cons, err := c.js.Consumer(ctx, systemEventsStream, systemTitleSyncDurable)
-	if errors.Is(err, jetstream.ErrConsumerNotFound) {
-		cons, err = c.js.CreateOrUpdateConsumer(ctx, systemEventsStream, jetstream.ConsumerConfig{
-			Durable:       systemTitleSyncDurable,
-			FilterSubject: systemUpdatedSubject,
-			AckPolicy:     jetstream.AckExplicitPolicy,
-		})
-	}
-	if err != nil {
-		return fmt.Errorf("bind consumer %s/%s: %w", systemEventsStream, systemTitleSyncDurable, err)
-	}
-
-	cc, err := cons.Consume(func(msg jetstream.Msg) {
-		if herr := dispatchSystemUpdate(ctx, msg, handle); herr != nil {
+	c.consume(systemTitleSyncDurable, systemUpdatedSubject, func(msg jetstream.Msg) {
+		if herr := dispatchSystemUpdate(c.ctx, msg, handle); herr != nil {
 			logging.Logger.Error("system-title sync: handler failed, event will redeliver",
 				"subject", msg.Subject(), "error", herr)
 			_ = msg.Nak()
@@ -89,11 +78,50 @@ func (c *Consumer) Start(ctx context.Context, handle SystemUpdateHandler) error 
 		}
 		_ = msg.Ack()
 	})
-	if err != nil {
-		return fmt.Errorf("consume: %w", err)
+}
+
+// consume binds durable in the background and delivers its messages to receive.
+func (c *Consumer) consume(durable, subject string, receive jetstream.MessageHandler) {
+	c.binding.Add(1)
+	go func() {
+		defer c.binding.Done()
+		for {
+			err := c.bind(durable, subject, receive)
+			if err == nil {
+				logging.Logger.Info("consumer bound", "stream", systemEventsStream, "durable", durable)
+				return
+			}
+			logging.Logger.Warn("consumer not bound, will retry", "durable", durable, "error", err)
+			select {
+			case <-c.ctx.Done():
+				return
+			case <-time.After(bindRetryDelay):
+			}
+		}
+	}()
+}
+
+// bind attaches to the durable (declared as a NACK CRD in sweetrpg/infrastructure; created here
+// as a fallback for local runs without NACK) and starts delivery.
+func (c *Consumer) bind(durable, subject string, receive jetstream.MessageHandler) error {
+	cons, err := c.js.Consumer(c.ctx, systemEventsStream, durable)
+	if errors.Is(err, jetstream.ErrConsumerNotFound) {
+		cons, err = c.js.CreateOrUpdateConsumer(c.ctx, systemEventsStream, jetstream.ConsumerConfig{
+			Durable:       durable,
+			FilterSubject: subject,
+			AckPolicy:     jetstream.AckExplicitPolicy,
+		})
 	}
-	c.cc = cc
-	logging.Logger.Info("system-title sync consumer bound", "stream", systemEventsStream, "durable", systemTitleSyncDurable)
+	if err != nil {
+		return err
+	}
+	cc, err := cons.Consume(receive)
+	if err != nil {
+		return err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.consumes = append(c.consumes, cc)
 	return nil
 }
 
@@ -131,8 +159,12 @@ func (c *Consumer) Stop() {
 	if c == nil {
 		return
 	}
-	if c.cc != nil {
-		c.cc.Stop()
+	c.cancel()
+	c.binding.Wait()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	for _, cc := range c.consumes {
+		cc.Stop()
 	}
 	if c.conn != nil {
 		c.conn.Close()

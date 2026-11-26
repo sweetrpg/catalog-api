@@ -1,4 +1,4 @@
-// Command consumer runs the system-title sync JetStream consumer as a standalone process, for
+// Command consumer runs the game system JetStream consumers (title sync and reference cleanup) as a standalone process, for
 // local development without the full catalog-api server. In production the same consumer runs
 // as a background worker of cmd/catalog-api.
 package main
@@ -34,12 +34,10 @@ func main() {
 	}
 	defer consumer.Stop()
 
-	// No cache store here - a standalone consumer only updates stored titles; the catalog-api
-	// server process owns cache invalidation.
-	if err := consumer.Start(context.Background(), server.SyncSystemTitle(nil)); err != nil {
-		logging.Logger.Error("consumer: start failed", "error", err.Error())
-		os.Exit(1)
-	}
+	// No cache or publisher here - a standalone consumer only updates stored data; the
+	// catalog-api server process owns cache invalidation and change events.
+	consumer.Start(server.SyncSystemTitle(nil))
+	consumer.StartDeletes(server.CleanupDeletedSystem(nil))
 	logging.Logger.Info("consumer: running, press Ctrl-C to stop")
 
 	sig := make(chan os.Signal, 1)

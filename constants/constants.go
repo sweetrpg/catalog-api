@@ -34,6 +34,10 @@ const (
 	// http://api-v1.sweetrpg-game-systems.svc.cluster.local:8000), the system of record a
 	// volume's system references resolve against. See game-systems-service in sweetrpg/platform.
 	GAME_SYSTEMS_API_URL = "GAME_SYSTEMS_API_URL"
+
+	// DELETED_SYSTEM_RECONCILE_INTERVAL is how often references to deleted game systems are
+	// reconciled, as a Go duration (default 15m).
+	DELETED_SYSTEM_RECONCILE_INTERVAL = "DELETED_SYSTEM_RECONCILE_INTERVAL"
 )
 
 // Value constants

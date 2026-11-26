@@ -21,6 +21,20 @@ scripts/run-docker-local.sh
 Brings up the service plus its MongoDB and Redis dependencies via `docker/docker-compose.yml`.
 Swagger UI is served at `/swagger/index.html` once running.
 
+## Deleted game systems
+
+When `game-systems-api` deletes a system, this service removes its own references to it from
+volumes and keeps a tombstone so they can't return (PADR-0047). Two paths feed that cleanup:
+
+- the `catalog-api-system-reference-cleanup` consumer of `gamesystems.events.system.deleted`;
+- a reconciler that reads `GET /deleted-systems` from `GAME_SYSTEMS_API_URL` at startup and
+  every `DELETED_SYSTEM_RECONCILE_INTERVAL` (Go duration, default `15m`), which recovers
+  dropped events. It sends no credential.
+
+NATS isn't needed to serve requests. If it's down, even at startup, publishing and the consumers
+reconnect when it returns, and reconciliation keeps working over HTTP. `go run ./cmd/consumer`
+runs the game system consumers without the API server.
+
 ## Known gaps
 
 - `catalog-data.go`'s Volume entity is the only one with a write path, and `Update`/`Delete`

@@ -235,8 +235,8 @@ func applyVolumePatch(
 	if req.SystemTitles != nil {
 		reqHint = *req.SystemTitles
 	}
-	updated.SystemTitles = resolveSystemTitles(
-		c.Request.Context(), systemIDsOf(updated.Systems), mergeTitleHints(existing.SystemTitles, reqHint),
+	updated.Systems, updated.SystemTitles = resolveSystemRefs(
+		c.Request.Context(), updated.Systems, mergeTitleHints(existing.SystemTitles, reqHint),
 	)
 
 	if req.Credits != nil {

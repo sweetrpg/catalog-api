@@ -22,26 +22,42 @@ func systemIDsOf(systems []*vo.SystemVO) []string {
 	return ids
 }
 
-// resolveSystemTitles builds the denormalized title map for a volume's system references,
-// resolving each against game-systems-api. A system that can't be resolved (404 or unreachable)
-// falls back to the caller-supplied hint, and if there is no hint it is left unset - stored as
-// an empty title, which renders the ID and is corrected later by the sync consumer. This never
-// returns an error: an unresolvable system must not block a volume write.
-func resolveSystemTitles(ctx context.Context, systemIDs []string, hint map[string]string) map[string]string {
-	titles := make(map[string]string, len(systemIDs))
-	for _, id := range systemIDs {
-		sys, err := data.GetSystem(ctx, id)
-		switch {
-		case err == nil && sys != nil && sys.GameSystem != "":
-			titles[id] = sys.GameSystem
-		case hint[id] != "":
-			titles[id] = hint[id]
-		default:
-			logging.Logger.Warn("resolveSystemTitles: system title unavailable at write time",
-				"system_id", id, "error", err)
+// resolveSystemRefs resolves a volume's system references against game-systems-api. It returns
+// the references, with each resolved one rewritten to the system's document ID (a caller may
+// send the system_id slug) and duplicates dropped, plus the denormalized title map keyed the
+// same way. A system that can't be resolved (404 or unreachable) keeps the ID it came with and
+// falls back to the caller-supplied hint; with no hint it has no title, which renders the ID and
+// is corrected later by the sync consumer. This never returns an error: an unresolvable system
+// must not block a volume write. Deleted systems are dropped by the data layer.
+func resolveSystemRefs(ctx context.Context, refs []*vo.SystemVO, hint map[string]string) ([]*vo.SystemVO, map[string]string) {
+	resolved := make([]*vo.SystemVO, 0, len(refs))
+	titles := make(map[string]string, len(refs))
+	seen := make(map[string]bool, len(refs))
+	for _, requested := range systemIDsOf(refs) {
+		id, title := requested, hint[requested]
+		sys, err := data.GetSystem(ctx, requested)
+		if err == nil && sys != nil {
+			if sys.ID != "" {
+				id = sys.ID
+			}
+			if sys.GameSystem != "" {
+				title = sys.GameSystem
+			}
+		}
+		if title == "" {
+			logging.Logger.Warn("resolveSystemRefs: system title unavailable at write time",
+				"system_id", requested, "error", err)
+		}
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		resolved = append(resolved, &vo.SystemVO{ID: id})
+		if title != "" {
+			titles[id] = title
 		}
 	}
-	return titles
+	return resolved, titles
 }
 
 // mergeTitleHints overlays a request-supplied hint on the volume's existing stored titles, so a
