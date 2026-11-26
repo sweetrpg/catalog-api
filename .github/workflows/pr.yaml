@@ -18,3 +18,19 @@ jobs:
       # GOFLAGS=-v lists each test in the log, so a package that ran nothing is visible.
       test-env: '{"TEST_DB_URI": "mongodb://localhost:27017/unit-tests", "TEST_COLLECTION": "unit-tests", "GOFLAGS": "-v"}'
     secrets: inherit
+
+  # docker-build.yml only runs after merge, so a Dockerfile that can't build would first fail on
+  # develop. Build one platform here and push nothing.
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          cache-from: type=gha,scope=catalog-api-linux-amd64
