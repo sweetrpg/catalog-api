@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,14 +31,7 @@ func NewPublisher(ctx context.Context) (*Publisher, error) {
 		return nil, nil
 	}
 
-	opts := []nats.Option{}
-	if creds := os.Getenv("NATS_CREDS"); creds != "" {
-		opts = append(opts, nats.UserCredentials(creds))
-	} else if user := os.Getenv("NATS_USER"); user != "" {
-		opts = append(opts, nats.UserInfo(user, os.Getenv("NATS_PASSWORD")))
-	}
-
-	conn, err := nats.Connect(natsURL, opts...)
+	conn, err := nats.Connect(natsURL, connectOptions()...)
 	if err != nil {
 		return nil, fmt.Errorf("nats connect: %w", err)
 	}

@@ -84,6 +84,7 @@ func createVolume(c *gin.Context, store persistence.CacheStore) {
 	for _, id := range req.SystemIDs {
 		newVolume.Systems = append(newVolume.Systems, &vo.SystemVO{ID: id})
 	}
+	newVolume.Systems, newVolume.SystemTitles = resolveSystemRefs(c.Request.Context(), newVolume.Systems, nil)
 	newVolume.CreatedBy = subject
 	newVolume.UpdatedBy = subject
 
