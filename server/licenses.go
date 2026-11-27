@@ -38,11 +38,11 @@ var licenseVersionConfig = entityVersionAPIConfig[vo.LicenseVO, vo.LicenseVersio
 	createVersion: func(c *gin.Context, id string, entity *vo.LicenseVO, state catalogmodels.VersionState) (*vo.LicenseVersionVO, error) {
 		return data.UpdateLicense(c.Request.Context(), id, entity, state)
 	},
-	listVersions: func(c *gin.Context, id string) ([]*vo.LicenseVersionVO, error) {
-		return data.ListLicenseVersions(c.Request.Context(), id)
+	listVersions: func(c *gin.Context, id string, reader data.VersionReader) ([]*vo.LicenseVersionVO, error) {
+		return data.ListLicenseVersions(c.Request.Context(), id, reader)
 	},
-	getVersion: func(c *gin.Context, id string, version int) (*vo.LicenseVersionVO, error) {
-		return data.GetLicenseVersion(c.Request.Context(), id, version)
+	getVersion: func(c *gin.Context, id string, version int, reader data.VersionReader) (*vo.LicenseVersionVO, error) {
+		return data.GetLicenseVersion(c.Request.Context(), id, version, reader)
 	},
 	acceptVersion: func(c *gin.Context, id string, version int, selectedFields []string, reviewedBy string, reviewNote *string) (*vo.LicenseVersionVO, []string, error) {
 		return data.AcceptLicenseVersion(c.Request.Context(), id, version, selectedFields, reviewedBy, reviewNote)
@@ -135,8 +135,9 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cach
 	g.GET("/licenses/search", cache.CachePage(store, ttl, searchLicenses))
 	g.GET("/licenses/:id", cache.CachePage(store, ttl, getLicense))
 	g.GET("/licenses/:id/volumes", cache.CachePage(store, ttl, getLicenseVolumes))
-	g.GET("/licenses/:id/versions", listEntityVersions(licenseVersionConfig))
-	g.GET("/licenses/:id/versions/:version", getEntityVersion(licenseVersionConfig))
+	versionReads := resolveVersionReader(authzClient)
+	g.GET("/licenses/:id/versions", versionReads, listEntityVersions(licenseVersionConfig))
+	g.GET("/licenses/:id/versions/:version", versionReads, getEntityVersion(licenseVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
 	g.POST("/licenses", writeRoles, createEntityVersion(licenseVersionConfig, store))

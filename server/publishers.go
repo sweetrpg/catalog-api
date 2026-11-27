@@ -36,11 +36,11 @@ var publisherVersionConfig = entityVersionAPIConfig[vo.PublisherVO, vo.Publisher
 	createVersion: func(c *gin.Context, id string, entity *vo.PublisherVO, state catalogmodels.VersionState) (*vo.PublisherVersionVO, error) {
 		return data.UpdatePublisher(c.Request.Context(), id, entity, state)
 	},
-	listVersions: func(c *gin.Context, id string) ([]*vo.PublisherVersionVO, error) {
-		return data.ListPublisherVersions(c.Request.Context(), id)
+	listVersions: func(c *gin.Context, id string, reader data.VersionReader) ([]*vo.PublisherVersionVO, error) {
+		return data.ListPublisherVersions(c.Request.Context(), id, reader)
 	},
-	getVersion: func(c *gin.Context, id string, version int) (*vo.PublisherVersionVO, error) {
-		return data.GetPublisherVersion(c.Request.Context(), id, version)
+	getVersion: func(c *gin.Context, id string, version int, reader data.VersionReader) (*vo.PublisherVersionVO, error) {
+		return data.GetPublisherVersion(c.Request.Context(), id, version, reader)
 	},
 	acceptVersion: func(c *gin.Context, id string, version int, selectedFields []string, reviewedBy string, reviewNote *string) (*vo.PublisherVersionVO, []string, error) {
 		return data.AcceptPublisherVersion(c.Request.Context(), id, version, selectedFields, reviewedBy, reviewNote)
@@ -92,8 +92,9 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls ca
 	g.GET("/publishers/search", cache.CachePage(store, ttl, searchPublishers))
 	g.GET("/publishers/:id", cache.CachePage(store, ttl, getPublisher))
 	g.GET("/publishers/:id/volumes", cache.CachePage(store, ttl, getPublisherVolumes))
-	g.GET("/publishers/:id/versions", listEntityVersions(publisherVersionConfig))
-	g.GET("/publishers/:id/versions/:version", getEntityVersion(publisherVersionConfig))
+	versionReads := resolveVersionReader(authzClient)
+	g.GET("/publishers/:id/versions", versionReads, listEntityVersions(publisherVersionConfig))
+	g.GET("/publishers/:id/versions/:version", versionReads, getEntityVersion(publisherVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
 	g.POST("/publishers", writeRoles, createEntityVersion(publisherVersionConfig, store))

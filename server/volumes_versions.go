@@ -58,7 +58,7 @@ func listVolumeVersions(c *gin.Context) {
 	id := c.Param("id")
 	logging.Logger.Debug("listVolumeVersions: enter", "id", id)
 
-	versions, err := data.ListVolumeVersions(c.Request.Context(), id)
+	versions, err := data.ListVolumeVersions(c.Request.Context(), id, versionReader(c))
 	if err != nil {
 		logging.Logger.Error("listVolumeVersions: query failed", "id", id, "error", err)
 		sentry.CaptureException(err)
@@ -91,7 +91,7 @@ func getVolumeVersion(c *gin.Context) {
 	}
 	logging.Logger.Debug("getVolumeVersion: enter", "id", id, "version", version)
 
-	result, err := data.GetVolumeVersion(c.Request.Context(), id, version)
+	result, err := data.GetVolumeVersion(c.Request.Context(), id, version, versionReader(c))
 	if err != nil {
 		logging.Logger.Error("getVolumeVersion: query failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
@@ -143,7 +143,7 @@ func acceptVolumeVersion(c *gin.Context, assetsClient *assets.Client) {
 		selectedFields = *req.Fields
 	}
 
-	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version)
+	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version, internalReader)
 	if err != nil {
 		logging.Logger.Error("acceptVolumeVersion: version lookup failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
@@ -313,7 +313,7 @@ func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
 	sessionKey := authz.Subject(c)
 	logging.Logger.Debug("pullBackVolumeVersion: enter", "id", id, "version", version, "userId", userID)
 
-	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version)
+	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version, roleReader(c))
 	if err != nil {
 		logging.Logger.Error("pullBackVolumeVersion: version lookup failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)

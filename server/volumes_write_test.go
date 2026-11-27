@@ -497,7 +497,7 @@ func TestPatchVolumeSubmitterCannotSetEditorOnlyFields(t *testing.T) {
 	if got.Title != "Original Title" {
 		t.Errorf("live Title = %q, want unchanged - the whole request should be rejected, not partially applied", got.Title)
 	}
-	versions, err := data.ListVolumeVersions(t.Context(), seed.ID)
+	versions, err := data.ListVolumeVersions(t.Context(), seed.ID, internalReader)
 	if err != nil {
 		t.Fatalf("ListVolumeVersions() error = %v", err)
 	}
@@ -530,7 +530,7 @@ func TestPatchVolumeSubmitterCreatesSubmittedVersionWithoutTouchingLiveRecord(t 
 		t.Errorf("live Title = %q, want unchanged %q", got.Title, "Original Title")
 	}
 
-	version, err := data.GetVolumeVersion(t.Context(), seed.ID, 2)
+	version, err := data.GetVolumeVersion(t.Context(), seed.ID, 2, internalReader)
 	if err != nil {
 		t.Fatalf("GetVolumeVersion() error = %v", err)
 	}
@@ -632,7 +632,7 @@ func TestAcceptSubsetOfFieldsDerivesNewVersion(t *testing.T) {
 		t.Errorf("Description = %q, want unchanged", got.Description)
 	}
 
-	original, err := data.GetVolumeVersion(t.Context(), seed.ID, 2)
+	original, err := data.GetVolumeVersion(t.Context(), seed.ID, 2, internalReader)
 	if err != nil {
 		t.Fatalf("GetVolumeVersion() error = %v", err)
 	}
@@ -665,7 +665,7 @@ func TestRejectVolumeVersion(t *testing.T) {
 		t.Errorf("live Title = %q, want unchanged", got.Title)
 	}
 
-	version, err := data.GetVolumeVersion(t.Context(), seed.ID, 2)
+	version, err := data.GetVolumeVersion(t.Context(), seed.ID, 2, internalReader)
 	if err != nil {
 		t.Fatalf("GetVolumeVersion() error = %v", err)
 	}

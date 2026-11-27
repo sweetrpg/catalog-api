@@ -36,11 +36,11 @@ var personVersionConfig = entityVersionAPIConfig[vo.PersonVO, vo.PersonVersionVO
 	createVersion: func(c *gin.Context, id string, entity *vo.PersonVO, state catalogmodels.VersionState) (*vo.PersonVersionVO, error) {
 		return data.UpdatePerson(c.Request.Context(), id, entity, state)
 	},
-	listVersions: func(c *gin.Context, id string) ([]*vo.PersonVersionVO, error) {
-		return data.ListPersonVersions(c.Request.Context(), id)
+	listVersions: func(c *gin.Context, id string, reader data.VersionReader) ([]*vo.PersonVersionVO, error) {
+		return data.ListPersonVersions(c.Request.Context(), id, reader)
 	},
-	getVersion: func(c *gin.Context, id string, version int) (*vo.PersonVersionVO, error) {
-		return data.GetPersonVersion(c.Request.Context(), id, version)
+	getVersion: func(c *gin.Context, id string, version int, reader data.VersionReader) (*vo.PersonVersionVO, error) {
+		return data.GetPersonVersion(c.Request.Context(), id, version, reader)
 	},
 	acceptVersion: func(c *gin.Context, id string, version int, selectedFields []string, reviewedBy string, reviewNote *string) (*vo.PersonVersionVO, []string, error) {
 		return data.AcceptPersonVersion(c.Request.Context(), id, version, selectedFields, reviewedBy, reviewNote)
@@ -82,8 +82,9 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.GET("/persons/search", cache.CachePage(store, ttl, searchPersons))
 	g.GET("/persons/:id", cache.CachePage(store, ttl, getPerson))
 	g.GET("/persons/:id/volumes", cache.CachePage(store, ttl, getPersonVolumes))
-	g.GET("/persons/:id/versions", listEntityVersions(personVersionConfig))
-	g.GET("/persons/:id/versions/:version", getEntityVersion(personVersionConfig))
+	versionReads := resolveVersionReader(authzClient)
+	g.GET("/persons/:id/versions", versionReads, listEntityVersions(personVersionConfig))
+	g.GET("/persons/:id/versions/:version", versionReads, getEntityVersion(personVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
 	g.POST("/persons", writeRoles, createEntityVersion(personVersionConfig, store))

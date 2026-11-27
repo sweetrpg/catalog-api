@@ -41,7 +41,7 @@ func TestCleanupDeletedSystemRemovesAnnouncesAndFlushesOnce(t *testing.T) {
 	if flushes != 1 {
 		t.Errorf("flushes = %d, want 1: redelivery changes nothing", flushes)
 	}
-	if versions, err := data.ListVolumeVersions(ctx, *id); err != nil || len(versions) != 2 {
+	if versions, err := data.ListVolumeVersions(ctx, *id, internalReader); err != nil || len(versions) != 2 {
 		t.Errorf("versions = %d, err %v, want 2", len(versions), err)
 	}
 

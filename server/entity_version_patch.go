@@ -11,6 +11,7 @@ import (
 	"github.com/google/jsonapi"
 	apiv "github.com/sweetrpg/api-core.go/vo"
 	"github.com/sweetrpg/authz-client.go/authz"
+	"github.com/sweetrpg/catalog-data.go/data"
 	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/common.go/logging"
 )
@@ -51,8 +52,8 @@ type entityVersionAPIConfig[T any, V any] struct {
 	get               func(c *gin.Context, id string) (*T, error)
 	create            func(c *gin.Context, entity *T, createdBy string) (*string, error)
 	createVersion     func(c *gin.Context, id string, entity *T, state catalogmodels.VersionState) (*V, error)
-	listVersions      func(c *gin.Context, id string) ([]*V, error)
-	getVersion        func(c *gin.Context, id string, version int) (*V, error)
+	listVersions      func(c *gin.Context, id string, reader data.VersionReader) ([]*V, error)
+	getVersion        func(c *gin.Context, id string, version int, reader data.VersionReader) (*V, error)
 	acceptVersion     func(c *gin.Context, id string, version int, selectedFields []string, reviewedBy string, reviewNote *string) (*V, []string, error)
 	rejectVersion     func(c *gin.Context, id string, version int, reviewedBy string, reviewNote *string) error
 	retractVersion    func(c *gin.Context, id string, version int, submitterID string) (*V, error)
@@ -366,7 +367,7 @@ func entityVersionParam(c *gin.Context) (int, bool) {
 // listEntityVersions lists a record's version history, newest first.
 func listEntityVersions[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		versions, err := cfg.listVersions(c, c.Param("id"))
+		versions, err := cfg.listVersions(c, c.Param("id"), versionReader(c))
 		if err != nil {
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})
@@ -383,7 +384,7 @@ func getEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.Handle
 		if !ok {
 			return
 		}
-		result, err := cfg.getVersion(c, c.Param("id"), version)
+		result, err := cfg.getVersion(c, c.Param("id"), version, versionReader(c))
 		if err != nil {
 			sentry.CaptureException(err)
 			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "query_failed", Message: err.Error()})

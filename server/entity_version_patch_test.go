@@ -165,7 +165,7 @@ func TestAddStudioThenListAndGetVersions(t *testing.T) {
 	r := newStudioTestRouter(t, []string{authz.RoleEditor})
 	doPatch(t, r, "/studios/"+studioID, map[string]string{"name": "V2"})
 
-	versions, err := data.ListStudioVersions(t.Context(), studioID)
+	versions, err := data.ListStudioVersions(t.Context(), studioID, internalReader)
 	if err != nil {
 		t.Fatalf("ListStudioVersions() error = %v", err)
 	}

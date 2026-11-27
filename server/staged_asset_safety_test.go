@@ -89,7 +89,7 @@ func TestFinalizeRefusesUnexpectedStagedIDs(t *testing.T) {
 				if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "invalid_staged_asset") {
 					t.Fatalf("status = %d, body: %s", rec.Code, rec.Body.String())
 				}
-				versions, err := data.ListVolumeVersions(t.Context(), seed.ID)
+				versions, err := data.ListVolumeVersions(t.Context(), seed.ID, internalReader)
 				if err != nil || len(versions) != 1 {
 					t.Fatalf("versions = %d, err = %v, want only the seed version", len(versions), err)
 				}
@@ -112,7 +112,7 @@ func TestAcceptKeepsStagedFilesWhenACopyFails(t *testing.T) {
 	if !assetExists(t, deps.AssetsURL, "cover-staged", testOwner) {
 		t.Error("staged cover deleted by a failed accept")
 	}
-	got, err := data.GetVolumeVersion(t.Context(), seed.ID, 2)
+	got, err := data.GetVolumeVersion(t.Context(), seed.ID, 2, internalReader)
 	if err != nil || got.State != "submitted" {
 		t.Fatalf("version = %+v, err = %v, want still submitted", got, err)
 	}
@@ -134,7 +134,7 @@ func TestAcceptDeletesStagedFilesOnlyAfterPublishing(t *testing.T) {
 	var statesAtDelete []string
 	assetsURL := failingAssets(t, deps.AssetsURL, func(r *http.Request) bool {
 		if r.Method == http.MethodDelete {
-			got, err := data.GetVolumeVersion(r.Context(), seed.ID, 2)
+			got, err := data.GetVolumeVersion(r.Context(), seed.ID, 2, internalReader)
 			if err == nil {
 				statesAtDelete = append(statesAtDelete, string(got.State))
 			}
