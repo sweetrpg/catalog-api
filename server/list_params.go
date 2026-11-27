@@ -19,7 +19,7 @@ type listFields struct {
 
 // q is catalog-data's multi-field search term; only the types that expand it accept it.
 var (
-	volumeFields       = listFields{filter: []string{"q", "title", "tags.value"}, sort: []string{"title"}}
+	volumeFields       = listFields{filter: []string{"q", "title", "tags.name", "tags.value"}, sort: []string{"title"}}
 	namedFields        = listFields{filter: []string{"q", "name"}, sort: []string{"name"}}
 	licenseFields      = listFields{filter: []string{"q", "title"}, sort: []string{"title"}}
 	contributionFields = listFields{filter: []string{"volume_id"}}

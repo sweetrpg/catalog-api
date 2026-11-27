@@ -82,7 +82,7 @@ func TestListRoutesRefuseUnlistedParameters(t *testing.T) {
 
 func TestListFieldSetsAcceptExactlyTheirFields(t *testing.T) {
 	want := map[string]struct{ filters, sorts string }{
-		"/volumes":       {"q title tags.value", "title"},
+		"/volumes":       {"q title tags.name tags.value", "title"},
 		"/publishers":    {"q name", "name"},
 		"/studios":       {"q name", "name"},
 		"/persons":       {"q name", "name"},
