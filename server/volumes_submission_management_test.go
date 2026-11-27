@@ -124,7 +124,7 @@ func TestRetractChangesStatusWithoutAffectingLiveRecord(t *testing.T) {
 		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
 	}
 
-	version, err := data.GetVolumeVersion(t.Context(), seed.ID, finalized.Version)
+	version, err := data.GetVolumeVersion(t.Context(), seed.ID, finalized.Version, internalReader)
 	if err != nil {
 		t.Fatalf("GetVolumeVersion() error = %v", err)
 	}
@@ -155,7 +155,7 @@ func TestPullBackCreatesSessionAndRetractsSource(t *testing.T) {
 		t.Fatalf("status = %d, want %d, body: %s", rec.Code, http.StatusOK, rec.Body.String())
 	}
 
-	version, err := data.GetVolumeVersion(t.Context(), seed.ID, finalized.Version)
+	version, err := data.GetVolumeVersion(t.Context(), seed.ID, finalized.Version, internalReader)
 	if err != nil {
 		t.Fatalf("GetVolumeVersion() error = %v", err)
 	}
@@ -209,7 +209,7 @@ func TestPullBackConflictsWithExistingSession(t *testing.T) {
 
 	// The version must be untouched - "creates the session and retracts the source, or does
 	// neither".
-	version, err := data.GetVolumeVersion(t.Context(), seed.ID, finalized.Version)
+	version, err := data.GetVolumeVersion(t.Context(), seed.ID, finalized.Version, internalReader)
 	if err != nil {
 		t.Fatalf("GetVolumeVersion() error = %v", err)
 	}

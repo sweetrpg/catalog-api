@@ -36,11 +36,11 @@ var studioVersionConfig = entityVersionAPIConfig[vo.StudioVO, vo.StudioVersionVO
 	createVersion: func(c *gin.Context, id string, entity *vo.StudioVO, state catalogmodels.VersionState) (*vo.StudioVersionVO, error) {
 		return data.UpdateStudio(c.Request.Context(), id, entity, state)
 	},
-	listVersions: func(c *gin.Context, id string) ([]*vo.StudioVersionVO, error) {
-		return data.ListStudioVersions(c.Request.Context(), id)
+	listVersions: func(c *gin.Context, id string, reader data.VersionReader) ([]*vo.StudioVersionVO, error) {
+		return data.ListStudioVersions(c.Request.Context(), id, reader)
 	},
-	getVersion: func(c *gin.Context, id string, version int) (*vo.StudioVersionVO, error) {
-		return data.GetStudioVersion(c.Request.Context(), id, version)
+	getVersion: func(c *gin.Context, id string, version int, reader data.VersionReader) (*vo.StudioVersionVO, error) {
+		return data.GetStudioVersion(c.Request.Context(), id, version, reader)
 	},
 	acceptVersion: func(c *gin.Context, id string, version int, selectedFields []string, reviewedBy string, reviewNote *string) (*vo.StudioVersionVO, []string, error) {
 		return data.AcceptStudioVersion(c.Request.Context(), id, version, selectedFields, reviewedBy, reviewNote)
@@ -88,8 +88,9 @@ func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 	g.GET("/studios/search", cache.CachePage(store, ttl, searchStudios))
 	g.GET("/studios/:id", cache.CachePage(store, ttl, getStudio))
 	g.GET("/studios/:id/volumes", cache.CachePage(store, ttl, getStudioVolumes))
-	g.GET("/studios/:id/versions", listEntityVersions(studioVersionConfig))
-	g.GET("/studios/:id/versions/:version", getEntityVersion(studioVersionConfig))
+	versionReads := resolveVersionReader(authzClient)
+	g.GET("/studios/:id/versions", versionReads, listEntityVersions(studioVersionConfig))
+	g.GET("/studios/:id/versions/:version", versionReads, getEntityVersion(studioVersionConfig))
 
 	writeRoles := authz.RequireAnyRole(authzClient, constants.ServiceName, authz.RoleAdmin, authz.RoleEditor, authz.RoleSubmitter)
 	g.POST("/studios", writeRoles, createEntityVersion(studioVersionConfig, store))

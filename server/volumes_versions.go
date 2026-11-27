@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -58,7 +59,7 @@ func listVolumeVersions(c *gin.Context) {
 	id := c.Param("id")
 	logging.Logger.Debug("listVolumeVersions: enter", "id", id)
 
-	versions, err := data.ListVolumeVersions(c.Request.Context(), id)
+	versions, err := data.ListVolumeVersions(c.Request.Context(), id, versionReader(c))
 	if err != nil {
 		logging.Logger.Error("listVolumeVersions: query failed", "id", id, "error", err)
 		sentry.CaptureException(err)
@@ -91,7 +92,7 @@ func getVolumeVersion(c *gin.Context) {
 	}
 	logging.Logger.Debug("getVolumeVersion: enter", "id", id, "version", version)
 
-	result, err := data.GetVolumeVersion(c.Request.Context(), id, version)
+	result, err := data.GetVolumeVersion(c.Request.Context(), id, version, versionReader(c))
 	if err != nil {
 		logging.Logger.Error("getVolumeVersion: query failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
@@ -143,7 +144,7 @@ func acceptVolumeVersion(c *gin.Context, assetsClient *assets.Client) {
 		selectedFields = *req.Fields
 	}
 
-	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version)
+	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version, internalReader)
 	if err != nil {
 		logging.Logger.Error("acceptVolumeVersion: version lookup failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
@@ -269,6 +270,11 @@ func retractVolumeVersion(c *gin.Context) {
 	logging.Logger.Debug("retractVolumeVersion: enter", "id", id, "version", version)
 
 	retracted, err := data.RetractVolumeVersion(c.Request.Context(), id, version, authz.Viewer(c))
+	if errors.Is(err, data.ErrVersionNotFound) {
+		logging.Logger.Debug("retractVolumeVersion: exit", "id", id, "version", version, "outcome", "not_found")
+		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
+		return
+	}
 	if err != nil {
 		logging.Logger.Error("retractVolumeVersion: retract failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
@@ -313,7 +319,7 @@ func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
 	sessionKey := authz.Subject(c)
 	logging.Logger.Debug("pullBackVolumeVersion: enter", "id", id, "version", version, "userId", userID)
 
-	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version)
+	submitted, err := data.GetVolumeVersion(c.Request.Context(), id, version, roleReader(c))
 	if err != nil {
 		logging.Logger.Error("pullBackVolumeVersion: version lookup failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
@@ -374,6 +380,11 @@ func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
 		// without the other.
 		if delErr := editSessions.Delete(c.Request.Context(), sessionKey, recordTypeVolume); delErr != nil {
 			sentry.CaptureException(delErr)
+		}
+		if errors.Is(err, data.ErrVersionNotFound) {
+			logging.Logger.Debug("pullBackVolumeVersion: exit", "id", id, "outcome", "not_found")
+			c.JSON(http.StatusNotFound, apiv.ErrorVO{})
+			return
 		}
 		logging.Logger.Error("pullBackVolumeVersion: retract failed after session creation, session rolled back", "id", id, "version", version, "userId", userID, "error", err)
 		sentry.CaptureException(err)

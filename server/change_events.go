@@ -23,7 +23,7 @@ func publishCurrentVolume(c *gin.Context, id string) {
 		logging.Logger.Error("volume.updated event dropped: volume lookup failed", "entity_id", id, "error", err)
 		return
 	}
-	versions, err := data.ListVolumeVersions(c.Request.Context(), id)
+	versions, err := data.ListVolumeVersions(c.Request.Context(), id, internalReader)
 	if err != nil {
 		logging.Logger.Error("volume.updated event dropped: version lookup failed", "entity_id", id, "error", err)
 		return
@@ -49,7 +49,7 @@ func publishCurrentEntity[T any, V any](c *gin.Context, cfg entityVersionAPIConf
 		return
 	}
 	if revision == 0 {
-		versions, err := cfg.listVersions(c, id)
+		versions, err := cfg.listVersions(c, id, internalReader)
 		if err != nil {
 			logging.Logger.Error("entity event dropped: version lookup failed", "entity_type", cfg.recordType, "entity_id", id, "action", action, "error", err)
 			return
