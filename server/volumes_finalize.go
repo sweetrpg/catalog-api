@@ -92,42 +92,33 @@ func finalizeVolumeSession(
 		return
 	}
 
+	// Check staged ids before anything is read or stored.
+	if err := validateStagedIDs(sessionKey, session.StagedCoverAssetId, session.SampleAssetIds); err != nil {
+		logging.Logger.Warn("finalizeVolumeSession: invalid staged asset", "userId", userID, "volumeId", volumeID, "error", err)
+		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "invalid_staged_asset", Message: err.Error()})
+		return
+	}
+
 	roles := authz.Roles(c)
 	if authz.HasRole(roles, authz.RoleAdmin) || authz.HasRole(roles, authz.RoleEditor) {
 		logging.Logger.Info("finalizeVolumeSession: editor path", "userId", userID, "volumeId", volumeID)
-		if session.StagedCoverAssetId != "" {
-			logging.Logger.Info("finalizeVolumeSession: promoting staged cover", "volumeId", volumeID, "stagedCoverAssetId", session.StagedCoverAssetId)
-			if err := assetsClient.Promote(c.Request.Context(), authz.Token(c), "cover-staged", session.StagedCoverAssetId, "cover", volumeID); err != nil {
-				logging.Logger.Error("finalizeVolumeSession: staged cover promote failed", "volumeId", volumeID, "stagedCoverAssetId", session.StagedCoverAssetId, "error", err)
-				sentry.CaptureException(err)
-				c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "cover_promote_failed", Message: err.Error()})
-				return
-			}
-			coverID := volumeID
-			req.CoverAssetId = &coverID
-			logging.Logger.Info("finalizeVolumeSession: staged cover promoted", "volumeId", volumeID)
+		staged := newPromotion(volumeID, session.StagedCoverAssetId, session.SampleAssetIds)
+		if code, err := staged.copy(c.Request.Context(), assetsClient, authz.Token(c)); err != nil {
+			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: code, Message: err.Error()})
+			return
 		}
-		if len(session.SampleAssetIds) > 0 {
-			liveSampleIds := make([]string, len(session.SampleAssetIds))
-			for i, stagedID := range session.SampleAssetIds {
-				liveID := fmt.Sprintf("%s-%d", volumeID, i)
-				logging.Logger.Info("finalizeVolumeSession: promoting staged sample", "volumeId", volumeID, "stagedSampleAssetId", stagedID)
-				if err := assetsClient.Promote(c.Request.Context(), authz.Token(c), "sample-staged", stagedID, "sample", liveID); err != nil {
-					logging.Logger.Error("finalizeVolumeSession: staged sample promote failed", "volumeId", volumeID, "stagedSampleAssetId", stagedID, "error", err)
-					sentry.CaptureException(err)
-					c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "sample_promote_failed", Message: err.Error()})
-					return
-				}
-				liveSampleIds[i] = liveID
-				logging.Logger.Info("finalizeVolumeSession: staged sample promoted", "volumeId", volumeID, "liveSampleAssetId", liveID)
-			}
-			req.SampleAssetIds = &liveSampleIds
+		if staged.coverID != nil {
+			req.CoverAssetId = staged.coverID
+		}
+		if staged.sampleIDs != nil {
+			req.SampleAssetIds = &staged.sampleIDs
 		}
 
 		if !applyVolumePatch(c, existing, req, catalogmodels.VersionStateLive, store) {
 			logging.Logger.Debug("finalizeVolumeSession: exit", "volumeId", volumeID, "outcome", "apply_failed")
 			return
 		}
+		staged.deleteStaged(c.Request.Context(), assetsClient, authz.Token(c))
 		if err := editSessions.Delete(c.Request.Context(), sessionKey, recordTypeVolume); err != nil {
 			logging.Logger.Error("finalizeVolumeSession: session delete failed after apply", "userId", userID, "error", err)
 			sentry.CaptureException(err)

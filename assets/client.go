@@ -143,25 +143,15 @@ func (c *Client) Delete(ctx context.Context, token, kind, id string) error {
 	return nil
 }
 
-// Promote copies a staged asset (fromKind/fromID) to a live one (toKind/toID), then deletes the
-// staged copy - the promote-then-delete step every editor/admin finalize and accepted proposal
-// performs for a referenced staged cover/sample.
-func (c *Client) Promote(ctx context.Context, token, fromKind, fromID, toKind, toID string) error {
-	logging.Logger.Debug("assets.Promote: enter", "fromKind", fromKind, "fromId", fromID, "toKind", toKind, "toId", toID)
+// Copy writes the asset at fromKind/fromID to toKind/toID, leaving the source in place.
+func (c *Client) Copy(ctx context.Context, token, fromKind, fromID, toKind, toID string) error {
 	data, contentType, err := c.Get(ctx, token, fromKind, fromID)
+	if err == nil {
+		err = c.Store(ctx, token, toKind, toID, data, contentType)
+	}
 	if err != nil {
-		logging.Logger.Error("assets.Promote: get staged asset failed", "fromKind", fromKind, "fromId", fromID, "error", err)
-		return fmt.Errorf("assets: promote %s/%s -> %s/%s: %w", fromKind, fromID, toKind, toID, err)
+		return fmt.Errorf("assets: copy %s/%s -> %s/%s: %w", fromKind, fromID, toKind, toID, err)
 	}
-	if err := c.Store(ctx, token, toKind, toID, data, contentType); err != nil {
-		logging.Logger.Error("assets.Promote: store live asset failed", "toKind", toKind, "toId", toID, "error", err)
-		return fmt.Errorf("assets: promote %s/%s -> %s/%s: %w", fromKind, fromID, toKind, toID, err)
-	}
-	if err := c.Delete(ctx, token, fromKind, fromID); err != nil {
-		logging.Logger.Error("assets.Promote: delete staged asset failed", "fromKind", fromKind, "fromId", fromID, "error", err)
-		return fmt.Errorf("assets: promote %s/%s -> %s/%s: %w", fromKind, fromID, toKind, toID, err)
-	}
-	logging.Logger.Debug("assets.Promote: exit", "fromKind", fromKind, "fromId", fromID, "toKind", toKind, "toId", toID, "outcome", "ok")
 	return nil
 }
 
