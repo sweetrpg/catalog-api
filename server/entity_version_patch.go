@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -474,6 +475,10 @@ func retractEntityVersion[T any, V any](cfg entityVersionAPIConfig[T, V]) gin.Ha
 		}
 		retracted, err := cfg.retractVersion(c, id, version, authz.Viewer(c))
 		logging.Logger.Debug("retractEntityVersion: enter", "recordType", cfg.recordType, "id", id, "version", version)
+		if errors.Is(err, data.ErrVersionNotFound) {
+			c.JSON(http.StatusNotFound, apiv.ErrorVO{})
+			return
+		}
 		if err != nil {
 			sentry.CaptureException(err)
 			c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "retract_failed", Message: err.Error()})

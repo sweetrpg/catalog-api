@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -269,6 +270,11 @@ func retractVolumeVersion(c *gin.Context) {
 	logging.Logger.Debug("retractVolumeVersion: enter", "id", id, "version", version)
 
 	retracted, err := data.RetractVolumeVersion(c.Request.Context(), id, version, authz.Viewer(c))
+	if errors.Is(err, data.ErrVersionNotFound) {
+		logging.Logger.Debug("retractVolumeVersion: exit", "id", id, "version", version, "outcome", "not_found")
+		c.JSON(http.StatusNotFound, apiv.ErrorVO{})
+		return
+	}
 	if err != nil {
 		logging.Logger.Error("retractVolumeVersion: retract failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
@@ -374,6 +380,11 @@ func pullBackVolumeVersion(c *gin.Context, editSessions *editsession.Store) {
 		// without the other.
 		if delErr := editSessions.Delete(c.Request.Context(), sessionKey, recordTypeVolume); delErr != nil {
 			sentry.CaptureException(delErr)
+		}
+		if errors.Is(err, data.ErrVersionNotFound) {
+			logging.Logger.Debug("pullBackVolumeVersion: exit", "id", id, "outcome", "not_found")
+			c.JSON(http.StatusNotFound, apiv.ErrorVO{})
+			return
 		}
 		logging.Logger.Error("pullBackVolumeVersion: retract failed after session creation, session rolled back", "id", id, "version", version, "userId", userID, "error", err)
 		sentry.CaptureException(err)
