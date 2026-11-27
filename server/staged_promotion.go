@@ -34,7 +34,7 @@ func validateStagedIDs(subject, coverID string, sampleIDs []string) error {
 	}
 	for _, id := range sampleIDs {
 		index, found := strings.CutPrefix(id, owner+"-")
-		if _, err := strconv.ParseUint(index, 10, 32); owner == "" || !found || err != nil {
+		if _, err := strconv.ParseUint(index, 10, 64); owner == "" || !found || err != nil {
 			return fmt.Errorf("staged sample is not one of your uploads")
 		}
 	}

@@ -238,3 +238,10 @@ func TestAcceptPublishesStagedSamples(t *testing.T) {
 		}
 	}
 }
+
+// assets-web allows any decimal index, so a client can use a timestamp to keep names unique.
+func TestFinalizeAcceptsLargeSampleIndex(t *testing.T) {
+	seed := seedVolume(t, "Original Title")
+
+	submitStaged(t, seed.ID, "", []string{testOwner + "-1795756800000"})
+}
