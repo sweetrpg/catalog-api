@@ -113,9 +113,8 @@ func setupPersonHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 //	@Failure		500		{object}	interface{}
 //	@Router			/persons [get]
 func listPersons(c *gin.Context) {
-	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-	if qerr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+	params, ok := listParams(c, namedFields)
+	if !ok {
 		return
 	}
 
@@ -189,9 +188,8 @@ func searchPersons(c *gin.Context) {
 func getPersonVolumes(c *gin.Context) {
 	id := c.Param("id")
 
-	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-	if qerr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+	params, ok := listParams(c, nestedFixedFields)
+	if !ok {
 		return
 	}
 	inOp := "$in"
