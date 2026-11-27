@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/sweetrpg/catalog-api/assets"
 	"github.com/sweetrpg/catalog-api/editsession"
 	"github.com/sweetrpg/catalog-data.go/data"
+	catalogmodels "github.com/sweetrpg/catalog-objects.go/models"
 	"github.com/sweetrpg/common.go/logging"
 )
 
@@ -156,48 +156,34 @@ func acceptVolumeVersion(c *gin.Context, assetsClient *assets.Client) {
 		return
 	}
 
-	// Staged edit-session assets ride along with the submission as a whole rather than being a
-	// selectable field - see design.md's "Staged edit-session assets ride on the submitted
-	// version as separate staged fields". Promoting them here (rather than in AcceptVolumeVersion
-	// itself, which stays Mongo-only) mirrors finalizeVolumeSession's editor/admin promote-then-
-	// patch pattern.
-	var liveCoverAssetId *string
-	var liveSampleAssetIds []string
-	if submitted.StagedCoverAssetId != nil {
-		logging.Logger.Info("acceptVolumeVersion: promoting staged cover", "id", id, "version", version, "stagedCoverAssetId", *submitted.StagedCoverAssetId)
-		if err := assetsClient.Promote(c.Request.Context(), authz.Token(c), "cover-staged", *submitted.StagedCoverAssetId, "cover", id); err != nil {
-			logging.Logger.Error("acceptVolumeVersion: staged cover promote failed", "id", id, "version", version, "stagedCoverAssetId", *submitted.StagedCoverAssetId, "error", err)
-			sentry.CaptureException(err)
-			c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "cover_promote_failed", Message: err.Error()})
-			return
-		}
-		coverID := id
-		liveCoverAssetId = &coverID
-		logging.Logger.Info("acceptVolumeVersion: staged cover promoted", "id", id, "version", version)
-	}
-	if len(submitted.StagedSampleAssetIds) > 0 {
-		liveSampleAssetIds = make([]string, len(submitted.StagedSampleAssetIds))
-		for i, stagedID := range submitted.StagedSampleAssetIds {
-			liveID := fmt.Sprintf("%s-%d", id, i)
-			logging.Logger.Info("acceptVolumeVersion: promoting staged sample", "id", id, "version", version, "stagedSampleAssetId", stagedID)
-			if err := assetsClient.Promote(c.Request.Context(), authz.Token(c), "sample-staged", stagedID, "sample", liveID); err != nil {
-				logging.Logger.Error("acceptVolumeVersion: staged sample promote failed", "id", id, "version", version, "stagedSampleAssetId", stagedID, "error", err)
-				sentry.CaptureException(err)
-				c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: "sample_promote_failed", Message: err.Error()})
-				return
-			}
-			liveSampleAssetIds[i] = liveID
-			logging.Logger.Info("acceptVolumeVersion: staged sample promoted", "id", id, "version", version, "liveSampleAssetId", liveID)
-		}
+	// Checked before any file is copied: copying overwrites the live images.
+	if string(submitted.State) != string(catalogmodels.VersionStateSubmitted) {
+		logging.Logger.Warn("acceptVolumeVersion: not pending", "id", id, "version", version, "state", submitted.State)
+		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "accept_failed", Message: "version is not awaiting review"})
+		return
 	}
 
-	accepted, conflicts, err := data.AcceptVolumeVersion(c.Request.Context(), id, version, selectedFields, authz.Viewer(c), nil, liveCoverAssetId, liveSampleAssetIds)
+	// Staged edit-session assets ride along with the submission as a whole rather than being a
+	// selectable field - see design.md's "Staged edit-session assets ride on the submitted
+	// version as separate staged fields". Moving them here keeps AcceptVolumeVersion Mongo-only.
+	var stagedCoverID string
+	if submitted.StagedCoverAssetId != nil {
+		stagedCoverID = *submitted.StagedCoverAssetId
+	}
+	staged := newPromotion(id, stagedCoverID, submitted.StagedSampleAssetIds)
+	if code, err := staged.copy(c.Request.Context(), assetsClient, authz.Token(c)); err != nil {
+		c.JSON(http.StatusInternalServerError, apiv.ErrorVO{Error: code, Message: err.Error()})
+		return
+	}
+
+	accepted, conflicts, err := data.AcceptVolumeVersion(c.Request.Context(), id, version, selectedFields, authz.Viewer(c), nil, staged.coverID, staged.sampleIDs)
 	if err != nil {
 		logging.Logger.Error("acceptVolumeVersion: accept failed", "id", id, "version", version, "error", err)
 		sentry.CaptureException(err)
 		c.JSON(http.StatusBadRequest, apiv.ErrorVO{Error: "accept_failed", Message: err.Error()})
 		return
 	}
+	staged.deleteStaged(c.Request.Context(), assetsClient, authz.Token(c))
 
 	if volumeEventPublisher != nil {
 		result, err := data.GetVolume(c.Request.Context(), id)

@@ -23,11 +23,11 @@ func TestFinalizeSessionEditorAppliesFieldsAndPromotesCover(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	deps := newTestDeps(t, []string{authz.RoleEditor})
 
-	seedStagedAsset(t, deps, "cover-staged", "user-1", []byte("cover-bytes"))
+	seedStagedAsset(t, deps, "cover-staged", "auth0-test-reviewer", []byte("cover-bytes"))
 	seedEditSession(t, deps, "auth0|test-reviewer", "volume", editsession.Session{
 		RecordID:           seed.ID,
 		Fields:             map[string]any{"title": "Finalized Title"},
-		StagedCoverAssetId: "user-1",
+		StagedCoverAssetId: "auth0-test-reviewer",
 	})
 
 	rec := doPost(t, deps.Router, "/volumes/"+seed.ID+"/finalize-session", nil)
@@ -59,11 +59,11 @@ func TestFinalizeSessionSubmitterCreatesProposalWithStagedCover(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	deps := newTestDeps(t, []string{authz.RoleSubmitter})
 
-	seedStagedAsset(t, deps, "cover-staged", "user-2", []byte("cover-bytes"))
+	seedStagedAsset(t, deps, "cover-staged", "auth0-test-reviewer", []byte("cover-bytes"))
 	seedEditSession(t, deps, "auth0|test-reviewer", "volume", editsession.Session{
 		RecordID:           seed.ID,
 		Fields:             map[string]any{"title": "Proposed Title"},
-		StagedCoverAssetId: "user-2",
+		StagedCoverAssetId: "auth0-test-reviewer",
 	})
 
 	rec := doPost(t, deps.Router, "/volumes/"+seed.ID+"/finalize-session", nil)
