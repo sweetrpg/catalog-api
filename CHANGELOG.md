@@ -1,4 +1,12 @@
 
+## 0.38.1 - 2026-11-27
+
+### Fixed
+- Tighten staged asset handling on volume edits
+- Accept any decimal staged sample index
+
+
+
 ## 0.38.0 - 2026-11-26
 
 ### Added
