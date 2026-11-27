@@ -15,11 +15,11 @@ func TestAcceptPromotesStagedCover(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	deps := newTestDeps(t, []string{authz.RoleSubmitter})
 
-	seedStagedAsset(t, deps, "cover-staged", "user-3", []byte("cover-bytes"))
+	seedStagedAsset(t, deps, "cover-staged", "auth0-test-reviewer", []byte("cover-bytes"))
 	seedEditSession(t, deps, "auth0|test-reviewer", "volume", editsession.Session{
 		RecordID:           seed.ID,
 		Fields:             map[string]any{"title": "Proposed Title"},
-		StagedCoverAssetId: "user-3",
+		StagedCoverAssetId: "auth0-test-reviewer",
 	})
 	finalizeRec := doPost(t, deps.Router, "/volumes/"+seed.ID+"/finalize-session", nil)
 	if finalizeRec.Code != http.StatusAccepted {
@@ -50,11 +50,11 @@ func TestRejectReclaimsStagedCoverWithoutPromoting(t *testing.T) {
 	seed := seedVolume(t, "Original Title")
 	deps := newTestDeps(t, []string{authz.RoleSubmitter})
 
-	seedStagedAsset(t, deps, "cover-staged", "user-4", []byte("cover-bytes"))
+	seedStagedAsset(t, deps, "cover-staged", "auth0-test-reviewer", []byte("cover-bytes"))
 	seedEditSession(t, deps, "auth0|test-reviewer", "volume", editsession.Session{
 		RecordID:           seed.ID,
 		Fields:             map[string]any{"title": "Proposed Title"},
-		StagedCoverAssetId: "user-4",
+		StagedCoverAssetId: "auth0-test-reviewer",
 	})
 	finalizeRec := doPost(t, deps.Router, "/volumes/"+seed.ID+"/finalize-session", nil)
 	if finalizeRec.Code != http.StatusAccepted {
