@@ -1,4 +1,15 @@
 
+## 0.39.0 - 2026-11-28
+
+### Added
+- Accept tags.name as a volume filter
+
+
+### Fixed
+- Limit list query parameters to supported fields
+
+
+
 ## 0.38.1 - 2026-11-27
 
 ### Fixed
