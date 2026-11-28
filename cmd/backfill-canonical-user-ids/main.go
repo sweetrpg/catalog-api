@@ -1,9 +1,7 @@
-// Command backfill-canonical-user-ids rewrites legacy Auth0-subject values in the *_meta and
-// *_versions audit fields (created_by, updated_by, submitted_by, reviewed_by) to the canonical
-// users._id each subject maps to, using users-api's internal resolve-subjects batch endpoint.
-// Subjects that cannot be resolved to a user become the "system" actor. Idempotent: values that
-// are already 24-hex canonical ids or "system" are skipped. Dry-run by default; pass -apply to
-// write. Run once after the catalog-api release that adopts authz.Viewer.
+// Command backfill-canonical-user-ids rewrites legacy identity-provider subjects in the *_meta
+// and *_versions audit fields to the canonical users._id, using users-api's resolve-subjects
+// endpoint. Canonical ids, "system", unrecognized values and subjects that don't resolve are
+// left unchanged. Dry run by default; pass -apply to write. Both modes need an admin token.
 package main
 
 import (
@@ -15,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -43,13 +42,150 @@ var targets = []target{
 	{"licenses_versions", "submitted_by"}, {"licenses_versions", "reviewed_by"},
 }
 
-var canonicalIDRE = regexp.MustCompile(`^[0-9a-f]{24}$`)
+// isSubjectShaped reports whether v is an identity-provider subject ("<connection>|<id>" or
+// "<client-id>@clients"). Only these are ever rewritten: canonical ids, "system" and anything
+// unrecognized stay as they are.
+func isSubjectShaped(v string) bool {
+	return strings.Contains(v, "|") || strings.HasSuffix(v, "@clients")
+}
+
+// canonicalIDRE matches the two users._id forms: a UUID, or a 24-hex id.
+var canonicalIDRE = regexp.MustCompile(`^([0-9a-f]{24}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$`)
+
+type store interface {
+	distinct(ctx context.Context, t target) ([]string, error)
+	count(ctx context.Context, t target, value string) (int64, error)
+	rewrite(ctx context.Context, t target, from, to string) (int64, error)
+}
+
+type resolver func(ctx context.Context, subjects []string) (map[string]string, error)
+
+type summary struct {
+	subjects   int
+	unresolved int
+	// documents counts field rewrites made, or that would be made on a dry run.
+	documents int64
+}
+
+func findSubjects(ctx context.Context, s store) ([]string, error) {
+	seen := map[string]bool{}
+	var subjects []string
+	for _, t := range targets {
+		values, err := s.distinct(ctx, t)
+		if err != nil {
+			// Driver errors can echo stored values, so they're not wrapped.
+			return nil, fmt.Errorf("distinct failed on %s.%s", t.collection, t.field)
+		}
+		for _, v := range values {
+			if isSubjectShaped(v) && !seen[v] {
+				seen[v] = true
+				subjects = append(subjects, v)
+			}
+		}
+	}
+	return subjects, nil
+}
+
+// planRewrites keeps only subjects that resolved; the rest are left untouched.
+func planRewrites(subjects []string, resolved map[string]string) (map[string]string, error) {
+	plan := map[string]string{}
+	for _, s := range subjects {
+		id, ok := resolved[s]
+		if !ok {
+			continue
+		}
+		if !canonicalIDRE.MatchString(id) {
+			return nil, fmt.Errorf("resolver returned a non-canonical id")
+		}
+		plan[s] = id
+	}
+	return plan, nil
+}
+
+// run resolves everything before the first write, so a failed lookup changes nothing. A write
+// error can leave a partial run, which is safe to repeat.
+func run(ctx context.Context, s store, resolve resolver, apply bool) (summary, error) {
+	var sum summary
+	subjects, err := findSubjects(ctx, s)
+	if err != nil || len(subjects) == 0 {
+		return sum, err
+	}
+	sum.subjects = len(subjects)
+
+	resolved, err := resolve(ctx, subjects)
+	if err != nil {
+		return sum, fmt.Errorf("resolve subjects: %w", err)
+	}
+	plan, err := planRewrites(subjects, resolved)
+	if err != nil {
+		return sum, err
+	}
+	sum.unresolved = len(subjects) - len(plan)
+
+	for _, t := range targets {
+		for from, to := range plan {
+			var n int64
+			if apply {
+				n, err = s.rewrite(ctx, t, from, to)
+			} else {
+				n, err = s.count(ctx, t, from)
+			}
+			if err != nil {
+				return sum, fmt.Errorf("query failed on %s.%s after %d documents", t.collection, t.field, sum.documents)
+			}
+			sum.documents += n
+		}
+	}
+	return sum, nil
+}
+
+type mongoStore struct{}
+
+func (mongoStore) distinct(ctx context.Context, t target) ([]string, error) {
+	values, err := database.Db.Collection(t.collection).Distinct(ctx, t.field, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, v := range values {
+		if s, ok := v.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out, nil
+}
+
+func (mongoStore) count(ctx context.Context, t target, value string) (int64, error) {
+	return database.Db.Collection(t.collection).CountDocuments(ctx, bson.M{t.field: value})
+}
+
+func (mongoStore) rewrite(ctx context.Context, t target, from, to string) (int64, error) {
+	res, err := database.Db.Collection(t.collection).UpdateMany(ctx, bson.M{t.field: from}, bson.D{{Key: "$set", Value: bson.D{{Key: t.field, Value: to}}}})
+	if err != nil {
+		return 0, err
+	}
+	return res.ModifiedCount, nil
+}
 
 type resolveSubjectsRequest struct {
 	Subjects []string `json:"subjects"`
 }
 
+// httpResolver calls users-api's resolve-subjects with an admin user's bearer token (PADR-0037).
+func httpResolver(usersBaseURL, token string) resolver {
+	return func(ctx context.Context, subjects []string) (map[string]string, error) {
+		if token == "" {
+			return nil, fmt.Errorf("-users-admin-token / USERS_ADMIN_TOKEN is required")
+		}
+		return resolveSubjects(ctx, usersBaseURL, token, subjects)
+	}
+}
+
 func main() {
+	os.Exit(realMain())
+}
+
+func realMain() int {
 	_ = godotenv.Load(".env")
 	logging.Init()
 
@@ -60,93 +196,14 @@ func main() {
 	database.SetupDatabase()
 	defer database.TeardownDatabase()
 
-	usersBaseURL := util.GetEnv(constants.USERS_API_URL, "")
-
-	ctx := context.Background()
-
-	distinct := map[string]struct{}{}
-	for _, t := range targets {
-		coll := database.Db.Collection(t.collection)
-		values, err := coll.Distinct(ctx, t.field, bson.M{})
-		if err != nil {
-			logging.Logger.Error("backfill: distinct failed", "collection", t.collection, "field", t.field, "error", err.Error())
-			return
-		}
-		for _, v := range values {
-			s, ok := v.(string)
-			if !ok || s == "" || s == "system" || canonicalIDRE.MatchString(s) {
-				continue
-			}
-			distinct[s] = struct{}{}
-		}
+	sum, err := run(context.Background(), mongoStore{}, httpResolver(util.GetEnv(constants.USERS_API_URL, ""), *adminToken), *apply)
+	fields := []any{"apply", *apply, "subjects", sum.subjects, "unresolved_left_unchanged", sum.unresolved, "documents", sum.documents}
+	if err != nil {
+		logging.Logger.Error("backfill: failed", append(fields, "error", err.Error())...)
+		return 1
 	}
-	if len(distinct) == 0 {
-		logging.Logger.Info("backfill: no subject-shaped values found to resolve")
-		return
-	}
-	logging.Logger.Info("backfill: distinct subjects found", "count", len(distinct))
-
-	subjects := make([]string, 0, len(distinct))
-	for s := range distinct {
-		subjects = append(subjects, s)
-	}
-
-	resolved := map[string]string{}
-	if *adminToken == "" {
-		logging.Logger.Warn("backfill: no users-admin-token set, skipping subject resolution", "dry_run", !*apply)
-	} else {
-		var err error
-		resolved, err = resolveSubjects(ctx, usersBaseURL, *adminToken, subjects)
-		if err != nil {
-			logging.Logger.Error("backfill: resolve subjects failed", "error", err.Error())
-			return
-		}
-	}
-
-	rewritten := map[string]string{}
-	for _, s := range subjects {
-		if id := resolved[s]; id != "" {
-			rewritten[s] = id
-		} else {
-			logging.Logger.Warn("backfill: unmappable subject -> system", "subject", s)
-			rewritten[s] = "system"
-		}
-	}
-
-	var updated int64
-	for _, t := range targets {
-		coll := database.Db.Collection(t.collection)
-		for oldValue, newValue := range rewritten {
-			modifier := "would update"
-			affected := int64(0)
-			if *apply {
-				res, err := coll.UpdateMany(ctx, bson.M{t.field: oldValue}, bson.D{{Key: "$set", Value: bson.D{{Key: t.field, Value: newValue}}}})
-				if err != nil {
-					logging.Logger.Error("backfill: update failed", "collection", t.collection, "field", t.field, "value", oldValue, "error", err.Error())
-					return
-				}
-				modifier = "updated"
-				affected = res.ModifiedCount
-				updated += affected
-			} else {
-				count, err := coll.CountDocuments(ctx, bson.M{t.field: oldValue})
-				if err != nil {
-					logging.Logger.Error("backfill: count failed", "collection", t.collection, "field", t.field, "value", oldValue, "error", err.Error())
-					return
-				}
-				affected = count
-			}
-			if affected > 0 {
-				logging.Logger.Info("backfill: "+modifier, "collection", t.collection, "field", t.field, "value", oldValue, "replacement", newValue, "documents", affected)
-			}
-		}
-	}
-
-	if *apply {
-		logging.Logger.Info("backfill: complete", "documents_updated", updated)
-	} else {
-		fmt.Println("dry run complete - pass -apply to write changes; still remaining check via task 4.4")
-	}
+	logging.Logger.Info("backfill: complete", fields...)
+	return 0
 }
 
 func resolveSubjects(ctx context.Context, usersBaseURL, token string, subjects []string) (map[string]string, error) {
