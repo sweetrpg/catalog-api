@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
-	apiutil "github.com/sweetrpg/api-core.go/util"
 	_ "github.com/sweetrpg/api-core.go/vo"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-data.go/data"
@@ -38,9 +37,8 @@ func setupContributionHandlers(g *gin.Engine, store persistence.CacheStore, ttls
 //	@Failure		500		{object}	vo.ErrorVO
 //	@Router			/contributions [get]
 func listContributions(c *gin.Context) {
-	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-	if qerr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+	params, ok := listParams(c, contributionFields)
+	if !ok {
 		return
 	}
 

@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/jsonapi"
 	"github.com/sweetrpg/api-core.go/tracing"
-	apiutil "github.com/sweetrpg/api-core.go/util"
 	"github.com/sweetrpg/catalog-api/cachettl"
 	"github.com/sweetrpg/catalog-data.go/data"
 	"github.com/sweetrpg/common.go/logging"
@@ -36,9 +35,8 @@ func setupReviewHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 //	@Failure		500		{object}	interface{}
 //	@Router			/reviews [get]
 func listReviews(c *gin.Context) {
-	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-	if qerr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+	params, ok := listParams(c, reviewFields)
+	if !ok {
 		return
 	}
 	logging.Logger.Debug("listReviews: enter", "params", params)

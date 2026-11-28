@@ -119,9 +119,8 @@ func setupStudioHandlers(g *gin.Engine, store persistence.CacheStore, ttls cache
 //	@Failure		500		{object}	interface{}
 //	@Router			/studios [get]
 func listStudios(c *gin.Context) {
-	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-	if qerr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+	params, ok := listParams(c, namedFields)
+	if !ok {
 		return
 	}
 
@@ -196,9 +195,8 @@ func searchStudios(c *gin.Context) {
 func getStudioVolumes(c *gin.Context) {
 	id := c.Param("id")
 
-	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-	if qerr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+	params, ok := listParams(c, nestedVolumeFields)
+	if !ok {
 		return
 	}
 
