@@ -118,9 +118,8 @@ func getVolumeContributions(c *gin.Context) {
 func getVolumeReviews(c *gin.Context) {
 	id := c.Param("id")
 
-	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-	if qerr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+	params, ok := listParams(c, nestedFixedFields)
+	if !ok {
 		return
 	}
 
@@ -252,9 +251,8 @@ func restoreVolume(c *gin.Context, store persistence.CacheStore) {
 //	@Failure		500		{object}	interface{}
 //	@Router			/volumes [get]
 func listVolumes(c *gin.Context) {
-	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-	if qerr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+	params, ok := listParams(c, volumeFields)
+	if !ok {
 		return
 	}
 	logging.Logger.Debug("Listing volumes with params", "params", params)

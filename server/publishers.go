@@ -123,9 +123,8 @@ func setupPublisherHandlers(g *gin.Engine, store persistence.CacheStore, ttls ca
 //	@Failure		500		{object}	interface{}
 //	@Router			/publishers [get]
 func listPublishers(c *gin.Context) {
-	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-	if qerr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+	params, ok := listParams(c, namedFields)
+	if !ok {
 		return
 	}
 
@@ -200,9 +199,8 @@ func searchPublishers(c *gin.Context) {
 func getPublisherVolumes(c *gin.Context) {
 	id := c.Param("id")
 
-	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-	if qerr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+	params, ok := listParams(c, nestedVolumeFields)
+	if !ok {
 		return
 	}
 

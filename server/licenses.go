@@ -166,9 +166,8 @@ func setupLicenseHandlers(g *gin.Engine, store persistence.CacheStore, ttls cach
 //	@Failure		500		{object}	interface{}
 //	@Router			/licenses [get]
 func listLicenses(c *gin.Context) {
-	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-	if qerr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+	params, ok := listParams(c, licenseFields)
+	if !ok {
 		return
 	}
 
@@ -248,9 +247,8 @@ func getLicenseVolumes(c *gin.Context) {
 		return
 	}
 
-	params, qerr := apiutil.GetQueryParams(c.Request.URL.RawQuery)
-	if qerr != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": qerr.Error()})
+	params, ok := listParams(c, nestedVolumeFields)
+	if !ok {
 		return
 	}
 
